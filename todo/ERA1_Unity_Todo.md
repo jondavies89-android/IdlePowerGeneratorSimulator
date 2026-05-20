@@ -1,0 +1,194 @@
+# Era 1 Unity To-Do — "The Workshop"
+**Setting:** London, 14 March 1821 · 1 W → 1 kW  
+**New concept:** Effort makes power. Tap → number up.  
+**Aesthetic:** Candlelit workshop, sepia palette, Georgia serif, Bodoni numerals.
+
+---
+
+## 1. Project Setup
+
+- [ ] Set **Unity version** (recommend 2022 LTS or newer — required for C# record types if used)
+- [ ] Set **Android build target** in Build Settings; minimum API 24
+- [ ] Import **BreakInfinity.cs** (open source — needed for late-game numbers, wire up later)
+- [ ] Install **TextMeshPro** via Package Manager (all UI text)
+- [ ] Install **DOTween** or Unity Animations for SI-prefix transition animations (§6.5)
+
+---
+
+## 2. Assembly Definitions (§8.2)
+
+Create three `.asmdef` files to enforce layering — the code is already split into folders:
+
+| Assembly name          | Folder                          | References             |
+|------------------------|---------------------------------|------------------------|
+| `IdlePowerGen.Simulation` | `Assets/Scripts/Simulation`  | `Utils`                |
+| `IdlePowerGen.Economy`    | `Assets/Scripts/Economy`     | `Utils`, `Models`      |
+| `IdlePowerGen.Runtime`    | `Assets/Scripts` (root + all) | all three above        |
+
+- [ ] Right-click each folder → **Create → Assembly Definition**
+- [ ] Add correct Reference entries in the Inspector for each `.asmdef`
+
+---
+
+## 3. Scene Setup
+
+Create a single scene `Assets/Scenes/Era1_Workshop.unity`.
+
+### 3.1 Manager GameObjects (add to scene, mark DontDestroyOnLoad)
+
+- [ ] `GameManager` — attach `GameManager.cs`  
+- [ ] `SimulationTick` — attach `SimulationTick.cs`  
+- [ ] `GameClock` — attach `GameClock.cs`; set **Game Time Scale = 60** (1 real sec = 1 game min)  
+- [ ] `SaveManager` — attach `SaveManager.cs`  
+- [ ] `EraManager` — attach `EraManager.cs`  
+
+All five should be on a single empty `_Managers` GameObject or separate root objects —  
+either is fine; just be consistent.
+
+---
+
+## 4. ScriptableObject Assets
+
+### 4.1 Era Config
+
+- [ ] `Assets/ScriptableObjects/Eras/Era1Config.asset`  
+  - Era Number: **1**, Era Name: **"The Workshop"**  
+  - Min Watts: **1**, Max Watts: **1000**  
+  - Use Joules: ✓, Use Cash: ✗, Use Reputation: ✗  
+  - Offline Era Factor: **1.0**, Offline Tau Hours: **4**  
+  - Offline Flavor Text: *"Your apprentice cranked while you were away."*
+
+### 4.2 Upgrade Definitions
+
+Create one `UpgradeDefinition.asset` per row.  
+All values are in `Assets/Scripts/Data/Era1Data.cs` — use that as your reference.
+
+| Asset name                 | ID                      | Cost (J) | Effect               | CTV Multiplier | Prereq                  |
+|----------------------------|-------------------------|----------|----------------------|----------------|-------------------------|
+| `Upgrade_BetterCrank`      | `era1_better_crank`     | 5        | MultiplyCrankTapValue | 2.0            | —                       |
+| `Upgrade_IronFlywheel`     | `era1_iron_flywheel`    | 25       | MultiplyCrankTapValue | 2.0            | `era1_better_crank`     |
+| `Upgrade_GearTrain`        | `era1_gear_train`       | 125      | MultiplyCrankTapValue | 2.0            | `era1_iron_flywheel`    |
+| `Upgrade_LeatherBeltDrive` | `era1_belt_drive`       | 600      | MultiplyCrankTapValue | 2.0            | `era1_gear_train`       |
+| `Upgrade_CamMechanism`     | `era1_cam_mechanism`    | 3000     | MultiplyCrankTapValue | 2.0            | `era1_belt_drive`       |
+
+### 4.3 Generator Definitions
+
+| Asset name                 | Type            | Base Power | Base Cost (J) | Required Upgrade        |
+|----------------------------|-----------------|------------|---------------|-------------------------|
+| `Generator_SpinningJenny`  | SpinningJenny   | 1 W        | 50            | `era1_better_crank`     |
+| `Generator_Waterwheel`     | Waterwheel      | 20 W       | 3000          | `era1_belt_drive`       |
+| `Generator_SteamBoiler`    | SteamBoiler     | 100 W      | 15000         | `era1_cam_mechanism`    |
+
+> Fuel Consumption Per Second = 0 for all Era 1 generators (no fuel mechanic yet).
+
+### 4.4 Wire catalogues into GameManager
+
+- [ ] Drag all **Era Configs** into the `_eraConfigs` array on `GameManager`  
+- [ ] Drag all **Upgrade Definitions** into `_upgradeDefinitions`  
+- [ ] Drag all **Generator Definitions** into `_generatorDefinitions`
+
+---
+
+## 5. UI Canvas — Era 1 Layout
+
+**Aesthetic reference:** Appendix A, Era 1 mockup — candlelit sepia, Georgia/Bodoni fonts, single dominant ⚡ number.
+
+### 5.1 Hierarchy sketch
+
+```
+Canvas (Screen Space – Overlay)
+├── StoredChargeDisplay       ← dominant element, large Bodoni number + ⚡
+├── CrankButton               ← central tap target, minimum 44dp touch area (§8.5)
+├── UpgradePanel
+│   └── UpgradeButtonPrefab (× 5, one per upgrade)
+├── GeneratorPanel
+│   └── GeneratorRowPrefab  (× 3, one per generator type)
+└── MilestoneToast            ← temporary overlay for milestone messages
+```
+
+### 5.2 StoredChargeDisplay
+
+- [ ] TextMeshPro label; bind to `SimulationTick.Instance.Grid.StoredJoules`
+- [ ] Call `NumberFormatter.FormatJoules(value)` every UI tick (60 Hz, separate Update)
+- [ ] Animate SI prefix transition (W → kW) with a scale punch tween
+
+### 5.3 CrankButton
+
+- [ ] Large brass-style button image (source art or placeholder)
+- [ ] `OnClick` → `Era1TapController.OnCrankTapped()`
+- [ ] Attach `Era1TapController.cs` to a GameObject in scene; reference from button
+- [ ] Play crank SFX on tap (wire up in step 8)
+- [ ] Brief scale-down animation on press (DOTween or Animator)
+
+### 5.4 UpgradeButton Prefab
+
+Each button needs:
+- [ ] Name label (TMP)
+- [ ] Cost label (TMP) — auto-formats `costJoules` with `NumberFormatter.FormatJoules`
+- [ ] Effect label (e.g. "CTV ×2")
+- [ ] Greyed-out state when prerequisites not met OR cannot afford
+- [ ] `OnClick` → `GameManager.Instance.Upgrades.Purchase(def)`
+- [ ] Subscribe to `UpgradePurchasedEvent` to hide/disable after purchase
+
+### 5.5 GeneratorRow Prefab
+
+- [ ] Generator name + icon
+- [ ] "Owned: N" counter
+- [ ] Next cost label (calls `Era2GeneratorController.NextCost` — yes, this controller handles Era 1 passive generators too)
+- [ ] Buy button → `Era2GeneratorController.TryBuy(def)`
+
+---
+
+## 6. Era 1 Milestone Logic
+
+The code fires `EraAdvancedEvent` automatically when the first contract completes (Era 1 → 2 transition). Before that, wire up the milestone toasts:
+
+- [ ] Listen to `CurrencyChangedEvent` where `Currency == Joules`
+- [ ] Show toast at **50 J** ("Your first machine hums to life.")
+- [ ] Show toast at **500 J** ("A neighbour knocks — they want your power.") → this is the `FirstCustomerThreshold` that enables the first contract
+
+---
+
+## 7. Sepia / Candlelight Visual Theme
+
+- [ ] Main camera **background colour**: `#1A1208` (deep warm black)
+- [ ] Primary text colour: `#F5DEB3` (wheat / candlelight)
+- [ ] Accent / joule value colour: `#FFD700` (candlelit gold)
+- [ ] UI panel backgrounds: textured parchment sprite or solid `#2E1F0E`
+- [ ] Font: **Georgia** or **IM Fell English** (Google Fonts, free) for body text  
+  **Bodoni Moda** (Google Fonts) for numerals
+
+---
+
+## 8. Audio
+
+- [ ] **Crank SFX** — mechanical click/ratchet on each tap (1 AudioSource on CrankButton)
+- [ ] **Upgrade purchased** — brass bell or clockwork chime
+- [ ] **Ambient loop** — faint fire crackle + workshop ambience (low volume, loop)
+- [ ] **Milestone stinger** — warm orchestral hit
+
+---
+
+## 9. Testing Checklist
+
+Work through these in Play Mode before moving to Era 2:
+
+- [ ] Tap crank → stored charge increases by 1 J (with default CTV = 1 W)
+- [ ] Buy `Better Crank` (costs 5 J) → CTV becomes 2 W; next tap adds 2 J
+- [ ] All 5 crank upgrades chain correctly (prerequisites lock/unlock in order)
+- [ ] Spinning Jenny passive generator adds 1 W/s to `TotalOutputWatts`; joules tick up each second without tapping
+- [ ] At 500 J stored, milestone toast fires
+- [ ] Save → kill Play Mode → Play Mode again → joules, upgrades, generator counts restored
+- [ ] Set device time forward in OS → offline guard awards zero joules (§7.5)
+- [ ] Low-end simulation test: profile the 1 Hz tick; must run on a £150 Android device (§8.5)
+
+---
+
+## 10. What the Code Does NOT Include (Needs Unity Work)
+
+- All prefabs, sprites, fonts, audio clips — must be authored/sourced
+- Assembly Definition wiring (step 2)
+- Inspector references on GameManager (step 4.4)
+- All UI event wiring (OnClick callbacks, TextMeshPro bindings)
+- SI prefix transition animations
+- Era 1 scene itself
