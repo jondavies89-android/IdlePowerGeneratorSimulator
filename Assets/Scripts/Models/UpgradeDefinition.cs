@@ -23,7 +23,9 @@ namespace IdlePowerGen.Models
         [Header("Cost — One-time, next tier = prev × 5  §9.3")]
         public double costJoules;
         public double costPennies;
-        public float  costReputation;
+
+        [Header("Reputation Gate (required, not consumed)")]
+        public float  requiredReputation;
 
         [Header("Effect")]
         public UpgradeEffect effect;

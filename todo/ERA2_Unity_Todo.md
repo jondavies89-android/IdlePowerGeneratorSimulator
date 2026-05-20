@@ -41,7 +41,38 @@ Fuel consumption > 0 means the generator will trip when fuel reaches 0 — this 
 - [ ] Create all five assets in `Assets/ScriptableObjects/Generators/`
 - [ ] Add them to the `_generatorDefinitions` array on **GameManager**
 
-### 1.3 Contract Definitions
+### 1.3 Upgrade Definitions
+
+Era 2 upgrades are paid in **pennies** (the `costPennies` field). All values are in `Assets/Scripts/Data/Era2Data.cs`.
+
+**Generator unlocks** (effect `UnlockGenerator`, `unlocksId` = enum name):
+
+| Asset name                    | ID                          | Cost (d) | Unlocks ID         | Prereq                      |
+|-------------------------------|-----------------------------|----------|--------------------|-----------------------------|
+| `Upgrade_UnlockGasLamp`       | `era2_unlock_gas_lamp`      | 5        | `GasLampGenerator` | —                           |
+| `Upgrade_UnlockCoalBoiler`    | `era2_unlock_coal_boiler`   | 25       | `CoalFiredBoiler`  | `era2_unlock_gas_lamp`      |
+| `Upgrade_UnlockSteamEngine`   | `era2_unlock_steam_engine`  | 125      | `SteamEngine`      | `era2_unlock_coal_boiler`   |
+| `Upgrade_UnlockLargeSteam`    | `era2_unlock_large_steam`   | 625      | `LargeSteamEngine` | `era2_unlock_steam_engine`  |
+
+**Efficiency upgrades** (effect `MultiplyAllOutput`):
+
+| Asset name                       | ID                            | Cost (d) | Multiplier | Prereq                      |
+|----------------------------------|-------------------------------|----------|------------|-----------------------------|
+| `Upgrade_ApprenticeTraining`     | `era2_apprentice_training`    | 10       | 1.10       | —                           |
+| `Upgrade_ReinforcedBoilers`      | `era2_reinforced_boilers`     | 50       | 1.15       | `era2_unlock_coal_boiler`   |
+| `Upgrade_PressureControl`        | `era2_pressure_control`       | 250      | 1.25       | `era2_unlock_steam_engine`  |
+| `Upgrade_MasterEngineer`         | `era2_master_engineer`        | 1250     | 1.50       | `era2_pressure_control`     |
+
+**Prestige upgrades** — pennies + reputation gate (set `requiredReputation` field):
+
+| Asset name              | ID                     | Cost (d) | Req Reputation | Effect             | Effect Value | Unlocks ID                       |
+|-------------------------|------------------------|----------|----------------|--------------------|--------------|----------------------------------|
+| `Upgrade_TelegraphLines`| `era2_telegraph_lines` | 500      | 10             | UnlockFeature      | 0            | `feature_extra_contract_slot`    |
+| `Upgrade_RoyalWarrant`  | `era2_royal_warrant`   | 5000     | 25             | MultiplyAllOutput  | 2.0          | —                                |
+
+> Reputation is a gate, not a cost — `requiredReputation` must be met but is **not deducted** on purchase.
+
+### 1.4 Contract Definitions
 
 All values are in `Assets/Scripts/Data/Era2Data.cs`.
 

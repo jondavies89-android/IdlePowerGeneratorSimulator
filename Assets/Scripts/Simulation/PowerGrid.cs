@@ -14,6 +14,12 @@ namespace IdlePowerGen.Simulation
         public double StoredJoules     { get; private set; }
         public double GridFrequency    { get; private set; } = 50.0;
 
+        // Global multiplier applied to all generators (raised by upgrades).
+        public double GlobalOutputMultiplier { get; set; } = 1.0;
+
+        // Virtual passive watts added to the grid each tick (e.g. UpgradeEffect.AddPassiveWatts).
+        public double VirtualPassiveWatts { get; set; }
+
         private readonly List<GeneratorInstance> _generators = new();
         public IReadOnlyList<GeneratorInstance> Generators => _generators;
 
@@ -30,6 +36,8 @@ namespace IdlePowerGen.Simulation
                 gen.Tick(deltaTime);
                 TotalOutputWatts += gen.CurrentOutputWatts;
             }
+
+            TotalOutputWatts = TotalOutputWatts * GlobalOutputMultiplier + VirtualPassiveWatts;
 
             double surplus = TotalOutputWatts - TotalDemandWatts;
             StoredJoules = Math.Max(0, StoredJoules + surplus * deltaTime);

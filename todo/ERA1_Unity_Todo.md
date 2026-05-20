@@ -41,6 +41,7 @@ Create a single scene `Assets/Scenes/Era1_Workshop.unity`.
 - [ ] `GameClock` — attach `GameClock.cs`; set **Game Time Scale = 60** (1 real sec = 1 game min)  
 - [ ] `SaveManager` — attach `SaveManager.cs`  
 - [ ] `EraManager` — attach `EraManager.cs`  
+- [ ] `UpgradeEffectApplier` — attach `UpgradeEffectApplier.cs` (dispatches non-CTV upgrade effects)  
 
 All five should be on a single empty `_Managers` GameObject or separate root objects —  
 either is fine; just be consistent.
@@ -63,23 +64,40 @@ either is fine; just be consistent.
 Create one `UpgradeDefinition.asset` per row.  
 All values are in `Assets/Scripts/Data/Era1Data.cs` — use that as your reference.
 
-| Asset name                 | ID                      | Cost (J) | Effect               | CTV Multiplier | Prereq                  |
-|----------------------------|-------------------------|----------|----------------------|----------------|-------------------------|
-| `Upgrade_BetterCrank`      | `era1_better_crank`     | 5        | MultiplyCrankTapValue | 2.0            | —                       |
-| `Upgrade_IronFlywheel`     | `era1_iron_flywheel`    | 25       | MultiplyCrankTapValue | 2.0            | `era1_better_crank`     |
-| `Upgrade_GearTrain`        | `era1_gear_train`       | 125      | MultiplyCrankTapValue | 2.0            | `era1_iron_flywheel`    |
-| `Upgrade_LeatherBeltDrive` | `era1_belt_drive`       | 600      | MultiplyCrankTapValue | 2.0            | `era1_gear_train`       |
-| `Upgrade_CamMechanism`     | `era1_cam_mechanism`    | 3000     | MultiplyCrankTapValue | 2.0            | `era1_belt_drive`       |
+**Crank upgrades** (`CrankUpgrades` array, effect `MultiplyCrankTapValue`):
+
+| Asset name                 | ID                      | Cost (J) | Effect               | Effect Value | Prereq                  |
+|----------------------------|-------------------------|----------|----------------------|--------------|-------------------------|
+| `Upgrade_BetterCrank`      | `era1_better_crank`     | 5        | MultiplyCrankTapValue | 2.0          | —                       |
+| `Upgrade_IronFlywheel`     | `era1_iron_flywheel`    | 25       | MultiplyCrankTapValue | 2.0          | `era1_better_crank`     |
+| `Upgrade_GearTrain`        | `era1_gear_train`       | 125      | MultiplyCrankTapValue | 2.0          | `era1_iron_flywheel`    |
+| `Upgrade_LeatherBeltDrive` | `era1_belt_drive`       | 600      | MultiplyCrankTapValue | 2.0          | `era1_gear_train`       |
+| `Upgrade_CamMechanism`     | `era1_cam_mechanism`    | 3000     | MultiplyCrankTapValue | 2.0          | `era1_belt_drive`       |
+
+**Generator unlocks** (`GeneratorUnlocks` array, effect `UnlockGenerator`, `unlocksId` = enum name):
+
+| Asset name                       | ID                            | Cost (J) | Effect          | Unlocks ID       | Prereq                  |
+|----------------------------------|-------------------------------|----------|-----------------|------------------|-------------------------|
+| `Upgrade_UnlockSpinningJenny`    | `era1_unlock_spinning_jenny`  | 30       | UnlockGenerator | `SpinningJenny`  | `era1_better_crank`     |
+| `Upgrade_UnlockWaterwheel`       | `era1_unlock_waterwheel`      | 1500     | UnlockGenerator | `Waterwheel`     | `era1_belt_drive`       |
+| `Upgrade_UnlockSteamBoiler`      | `era1_unlock_steam_boiler`    | 8000     | UnlockGenerator | `SteamBoiler`    | `era1_cam_mechanism`    |
+
+**Capstone** (`ForemanUpgrade`, effect `MultiplyAllOutput`):
+
+| Asset name             | ID            | Cost (J) | Effect             | Effect Value | Prereq                  |
+|------------------------|---------------|----------|--------------------|--------------|-------------------------|
+| `Upgrade_HireForeman`  | `era1_foreman`| 12000    | MultiplyAllOutput  | 1.5          | `era1_cam_mechanism`    |
 
 ### 4.3 Generator Definitions
 
-| Asset name                 | Type            | Base Power | Base Cost (J) | Required Upgrade        |
-|----------------------------|-----------------|------------|---------------|-------------------------|
-| `Generator_SpinningJenny`  | SpinningJenny   | 1 W        | 50            | `era1_better_crank`     |
-| `Generator_Waterwheel`     | Waterwheel      | 20 W       | 3000          | `era1_belt_drive`       |
-| `Generator_SteamBoiler`    | SteamBoiler     | 100 W      | 15000         | `era1_cam_mechanism`    |
+| Asset name                 | Type            | Base Power | Base Cost (J) | Required Upgrade ID            |
+|----------------------------|-----------------|------------|---------------|--------------------------------|
+| `Generator_SpinningJenny`  | SpinningJenny   | 1 W        | 50            | `era1_unlock_spinning_jenny`   |
+| `Generator_Waterwheel`     | Waterwheel      | 20 W       | 3000          | `era1_unlock_waterwheel`       |
+| `Generator_SteamBoiler`    | SteamBoiler     | 100 W      | 15000         | `era1_unlock_steam_boiler`     |
 
 > Fuel Consumption Per Second = 0 for all Era 1 generators (no fuel mechanic yet).
+> Set the **Required Upgrade Id** field on each generator asset — `Era2GeneratorController.TryBuy` enforces it.
 
 ### 4.4 Wire catalogues into GameManager
 

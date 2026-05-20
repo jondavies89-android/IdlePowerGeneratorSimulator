@@ -40,6 +40,46 @@ namespace IdlePowerGen.Data
         // §3.1 — Era 2 base demand that the contract system draws from
         public const double BaseDemandWatts = 1_000.0; // 1 kW initial city load
 
+        // ---------------------------------------------------------------
+        // Era 2 upgrades.
+        // Bible §5.1.4: pennies are spent on upgrades; joules buy equipment.
+        // All Era 2 upgrades are paid in pennies (decimal).
+        // ---------------------------------------------------------------
+
+        // Generator unlock gates — UpgradeEffect.UnlockGenerator with unlocksId = GeneratorType name.
+        // Player starts Era 2 with SmallDynamo already accessible (free upgrade purchased on transition).
+        // Layout: (id, displayName, costPennies, unlocksGeneratorTypeName, prerequisiteId)
+        public static readonly UnlockSpec[] GeneratorUnlocks =
+        {
+            new("era2_unlock_gas_lamp",      "Gas Generator Schematic",   5m,    "GasLampGenerator",  null),
+            new("era2_unlock_coal_boiler",   "Coal Boiler Licence",       25m,   "CoalFiredBoiler",   "era2_unlock_gas_lamp"),
+            new("era2_unlock_steam_engine",  "Watt Steam Engine Patent",  125m,  "SteamEngine",       "era2_unlock_coal_boiler"),
+            new("era2_unlock_large_steam",   "Boulton & Watt Partnership", 625m, "LargeSteamEngine",  "era2_unlock_steam_engine"),
+        };
+
+        // Efficiency upgrades — UpgradeEffect.MultiplyAllOutput.
+        // §9.3 one-time cost growth g = 5.
+        // Layout: (id, displayName, costPennies, multiplier, prerequisiteId)
+        public static readonly EfficiencySpec[] EfficiencyUpgrades =
+        {
+            new("era2_apprentice_training", "Apprentice Training",     10m,    1.10, null),
+            new("era2_reinforced_boilers",  "Reinforced Boilers",      50m,    1.15, "era2_unlock_coal_boiler"),
+            new("era2_pressure_control",    "Steam Pressure Control",  250m,   1.25, "era2_unlock_steam_engine"),
+            new("era2_master_engineer",     "Master Engineer",         1_250m, 1.50, "era2_pressure_control"),
+        };
+
+        // Reputation-gated prestige upgrades — paid in pennies, with a reputation requirement.
+        // Layout: (id, displayName, costPennies, reputationRequired, multiplier, featureId)
+        public static readonly PrestigeUpgradeSpec[] PrestigeUpgrades =
+        {
+            // Telegraph: unlocks a feature flag the UI reads to display more contracts at once.
+            new("era2_telegraph_lines", "Telegraph Lines",     500m,   10f, 0.0, "feature_extra_contract_slot"),
+            // Royal warrant: global x2 output multiplier; the Era 2 capstone.
+            new("era2_royal_warrant",   "Royal Warrant",       5_000m, 25f, 2.0, null),
+        };
+
+        // -------------------------------------------------------
+
         // -------------------------------------------------------
 
         public readonly struct GeneratorSpec
@@ -55,6 +95,53 @@ namespace IdlePowerGen.Data
             {
                 Id = id; Name = name; BaseJoules = baseJ;
                 BasePowerWatts = watts; FuelPerSecond = fuelPerSec;
+            }
+        }
+
+        public readonly struct UnlockSpec
+        {
+            public readonly string  Id;
+            public readonly string  Name;
+            public readonly decimal CostPennies;
+            public readonly string  UnlocksGeneratorType;
+            public readonly string  PrerequisiteId;
+
+            public UnlockSpec(string id, string name, decimal cost, string unlocks, string prereq)
+            {
+                Id = id; Name = name; CostPennies = cost;
+                UnlocksGeneratorType = unlocks; PrerequisiteId = prereq;
+            }
+        }
+
+        public readonly struct EfficiencySpec
+        {
+            public readonly string  Id;
+            public readonly string  Name;
+            public readonly decimal CostPennies;
+            public readonly double  Multiplier;
+            public readonly string  PrerequisiteId;
+
+            public EfficiencySpec(string id, string name, decimal cost, double mult, string prereq)
+            {
+                Id = id; Name = name; CostPennies = cost;
+                Multiplier = mult; PrerequisiteId = prereq;
+            }
+        }
+
+        public readonly struct PrestigeUpgradeSpec
+        {
+            public readonly string  Id;
+            public readonly string  Name;
+            public readonly decimal CostPennies;
+            public readonly float   ReputationRequired;
+            public readonly double  Multiplier;     // 0 = no output effect (feature unlock only)
+            public readonly string  UnlocksFeatureId;
+
+            public PrestigeUpgradeSpec(string id, string name, decimal cost, float rep,
+                                       double mult, string featureId)
+            {
+                Id = id; Name = name; CostPennies = cost; ReputationRequired = rep;
+                Multiplier = mult; UnlocksFeatureId = featureId;
             }
         }
 

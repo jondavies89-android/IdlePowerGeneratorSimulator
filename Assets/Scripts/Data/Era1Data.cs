@@ -22,6 +22,20 @@ namespace IdlePowerGen.Data
             new("era1_cam_mechanism",  "Cam Mechanism",      3_000, 2.0, "era1_belt_drive"),
         };
 
+        // Generator unlocks — UpgradeEffect.UnlockGenerator with unlocksId = GeneratorType name.
+        // Layout: (id, displayName, costJoules, unlocksGeneratorTypeName, prerequisiteId)
+        public static readonly UnlockSpec[] GeneratorUnlocks =
+        {
+            new("era1_unlock_spinning_jenny", "Spinning Jenny Patent", 30,     "SpinningJenny", "era1_better_crank"),
+            new("era1_unlock_waterwheel",     "Walk Outside",          1_500,  "Waterwheel",    "era1_belt_drive"),
+            new("era1_unlock_steam_boiler",   "Steam Boiler Licence",  8_000,  "SteamBoiler",   "era1_cam_mechanism"),
+        };
+
+        // Final Era 1 upgrade — global x1.5 multiplier (UpgradeEffect.MultiplyAllOutput).
+        // Hints at the upcoming Era 2 economy.
+        public static readonly GlobalSpec ForemanUpgrade =
+            new("era1_foreman", "Hire a Foreman", 12_000, 1.5);
+
         // §5.1.2 — Stackable passive generators. cost(n) = baseJ × 1.15^n.
         // Layout: (id, displayName, baseJoules, basePowerWatts, requiredUpgradeId)
         public static readonly GeneratorSpec[] PassiveGenerators =
@@ -67,6 +81,34 @@ namespace IdlePowerGen.Data
             {
                 Id = id; Name = name; BaseJoules = baseJ; BasePowerWatts = watts;
                 RequiredUpgradeId = reqUpgrade;
+            }
+        }
+
+        public readonly struct UnlockSpec
+        {
+            public readonly string Id;
+            public readonly string Name;
+            public readonly double CostJoules;
+            public readonly string UnlocksGeneratorType;
+            public readonly string PrerequisiteId;
+
+            public UnlockSpec(string id, string name, double cost, string unlocks, string prereq)
+            {
+                Id = id; Name = name; CostJoules = cost;
+                UnlocksGeneratorType = unlocks; PrerequisiteId = prereq;
+            }
+        }
+
+        public readonly struct GlobalSpec
+        {
+            public readonly string Id;
+            public readonly string Name;
+            public readonly double CostJoules;
+            public readonly double Multiplier;
+
+            public GlobalSpec(string id, string name, double cost, double mult)
+            {
+                Id = id; Name = name; CostJoules = cost; Multiplier = mult;
             }
         }
     }

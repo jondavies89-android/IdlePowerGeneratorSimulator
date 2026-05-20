@@ -20,9 +20,9 @@ namespace IdlePowerGen.Economy
         public bool IsPurchased(string upgradeId) => _purchased.Contains(upgradeId);
 
         public bool CanAfford(UpgradeDefinition def) =>
-            _ledger.Joules     >= def.costJoules
-            && _ledger.Pennies >= (decimal)def.costPennies
-            && _ledger.Reputation >= def.costReputation;
+            _ledger.Joules        >= def.costJoules
+            && _ledger.Pennies    >= (decimal)def.costPennies
+            && _ledger.Reputation >= def.requiredReputation;
 
         public bool PrerequisitesMet(UpgradeDefinition def)
         {
@@ -40,9 +40,9 @@ namespace IdlePowerGen.Economy
         {
             if (!IsAvailable(def)) return false;
 
-            if (def.costJoules     > 0) _ledger.SpendJoules(def.costJoules);
-            if (def.costPennies    > 0) _ledger.SpendPennies((decimal)def.costPennies);
-            if (def.costReputation > 0) _ledger.AddReputation(-def.costReputation);
+            if (def.costJoules  > 0) _ledger.SpendJoules(def.costJoules);
+            if (def.costPennies > 0) _ledger.SpendPennies((decimal)def.costPennies);
+            // Reputation is a gate, not a cost — not deducted on purchase.
 
             _purchased.Add(def.upgradeId);
             EventBus.Publish(new UpgradePurchasedEvent(def));

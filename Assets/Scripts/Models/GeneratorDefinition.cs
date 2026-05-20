@@ -39,6 +39,10 @@ namespace IdlePowerGen.Models
         public float maintenanceAgeRate   = 0.005f; // +0.5 % / yr of age
         public float serviceIntervalHours = 720f;   // 30 in-game days
 
+        [Header("Unlock Gate")]
+        // Empty = always available; otherwise must be purchased before this generator can be built
+        public string requiredUpgradeId;
+
         [Header("Visuals")]
         public Sprite icon;
     }

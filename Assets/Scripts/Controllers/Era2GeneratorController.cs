@@ -28,9 +28,19 @@ namespace IdlePowerGen.Controllers
             return def.baseCostJoules * Math.Pow(1.15, n);
         }
 
-        // Returns false if the player cannot afford the purchase.
+        // Returns true if this generator type is available right now
+        // (no unlock prerequisite, or the unlocking upgrade has been purchased).
+        public bool IsUnlocked(GeneratorDefinition def)
+        {
+            if (string.IsNullOrEmpty(def.requiredUpgradeId)) return true;
+            var gm = Managers.GameManager.Instance;
+            return gm != null && gm.Upgrades.IsPurchased(def.requiredUpgradeId);
+        }
+
+        // Returns false if the player cannot afford the purchase or it is locked.
         public bool TryBuy(GeneratorDefinition def)
         {
+            if (!IsUnlocked(def)) return false;
             double cost = NextCost(def);
             if (_ledger == null || !_ledger.SpendJoules(cost)) return false;
 
