@@ -311,4 +311,4 @@ This is a non-functional Easter egg in Era 2 — it becomes mechanical in Era 3.
 - Era transition animation sequence
 - Demand model activation on `EraAdvancedEvent`
 - Weather glass sprite / tooltip
-- Inspector references (drag new generator/contract assets into GameManager catalogue arrays)
+- Inspector references — drag assets into the four GameManager catalogue arrays: `_eraConfigs`, `_upgradeDefinitions`, `_generatorDefinitions`, `_contractDefinitions`

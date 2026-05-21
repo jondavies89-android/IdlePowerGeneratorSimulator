@@ -42,7 +42,7 @@ namespace IdlePowerGen.Save
             };
 
             // Generators
-            var genCtrl = FindObjectOfType<Controllers.Era2GeneratorController>();
+            var genCtrl = FindFirstObjectByType<Controllers.Era2GeneratorController>();
             if (genCtrl != null)
             {
                 foreach (GeneratorType type in Enum.GetValues(typeof(GeneratorType)))
@@ -110,7 +110,7 @@ namespace IdlePowerGen.Save
             Utils.GameClock.Instance?.SetGameTime(data.gameTimeSeconds);
 
             // Restore generators
-            var genCtrl  = FindObjectOfType<Controllers.Era2GeneratorController>();
+            var genCtrl = FindFirstObjectByType<Controllers.Era2GeneratorController>();
             if (genCtrl != null && data.generators.Count > 0)
             {
                 var counts = new Dictionary<GeneratorType, int>();
@@ -169,11 +169,13 @@ namespace IdlePowerGen.Save
             }
         }
 
-        // Simple linear search — catalogue is small.
+        // Looks up a ContractDefinition by ID from the GameManager catalogue.
         private static ContractDefinition FindContractDef(string id)
         {
-            foreach (var obj in Resources.FindObjectsOfTypeAll<ContractDefinition>())
-                if (obj.contractId == id) return obj;
+            var catalogue = Managers.GameManager.Instance?.ContractCatalogue;
+            if (catalogue == null) return null;
+            foreach (var def in catalogue)
+                if (def.contractId == id) return def;
             return null;
         }
     }

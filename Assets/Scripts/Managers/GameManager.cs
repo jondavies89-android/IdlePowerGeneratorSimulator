@@ -10,9 +10,10 @@ namespace IdlePowerGen.Managers
         public static GameManager Instance { get; private set; }
 
         [Header("ScriptableObject Catalogues")]
-        [SerializeField] private Models.EraConfig[]          _eraConfigs;
-        [SerializeField] private Models.UpgradeDefinition[]  _upgradeDefinitions;
+        [SerializeField] private Models.EraConfig[]           _eraConfigs;
+        [SerializeField] private Models.UpgradeDefinition[]   _upgradeDefinitions;
         [SerializeField] private Models.GeneratorDefinition[] _generatorDefinitions;
+        [SerializeField] private Models.ContractDefinition[]  _contractDefinitions;
 
         public Economy.CurrencyLedger   Ledger    { get; private set; }
         public Economy.UpgradeRegistry  Upgrades  { get; private set; }
@@ -55,5 +56,6 @@ namespace IdlePowerGen.Managers
 
         public IReadOnlyList<Models.GeneratorDefinition> GeneratorCatalogue => _generatorDefinitions;
         public IReadOnlyList<Models.UpgradeDefinition>   UpgradeCatalogue   => _upgradeDefinitions;
+        public IReadOnlyList<Models.ContractDefinition>  ContractCatalogue  => _contractDefinitions;
     }
 }
