@@ -45,6 +45,14 @@ If this structure doesn't exist yet, follow it when creating new files. If a mea
 - **Sim tick: 1 Hz. UI tick: 60 Hz.** Grid dynamics need 1-second resolution; UI smooths over that. Don't increase sim tick without a real reason — it's a performance budget choice for low-end Android.
 - **Determinism + seeded RNG.** Every random concern (weather, faults, market noise) has its own `System.Random` seeded from a per-session seed. This is non-negotiable for save reproducibility.
 
+## Terminology
+
+A few words have specific meanings in this codebase. The bible occasionally uses them more loosely; the code does not.
+
+- **Reputation** — the soft progression resource introduced in Era 2. Earned from successful contracts, lost from failed ones. It is a *gate* on certain upgrades and contract tiers, not a currency you spend. Do not deduct reputation when an upgrade is purchased; check `requiredReputation` and leave the balance untouched.
+- **Prestige** — reserved for the **reset mechanic** that arrives from Era 3 onwards. In idle-game convention, prestige means a loop that wipes part of the run in exchange for a permanent currency (Engineering XP, Site Mastery Points, Engineering Legacy — bible §12). Do not use the word "prestige" for high-reputation contracts, reputation-gated upgrades, or any non-reset feature.
+- **Reputation-tier contract** — what the bible sometimes calls a "prestige contract." A high-paying contract gated by reputation. Use `ContractTier.Reputation`, never `ContractTier.Prestige`.
+
 ## Numerical conventions
 
 - `double` for power, energy, time, frequency — never `float`. Late-game numbers exceed `float` precision.
