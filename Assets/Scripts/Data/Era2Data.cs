@@ -33,7 +33,7 @@ namespace IdlePowerGen.Data
             new("c2_bakery",       "Whitmore's Bakery",    200,    2f,  1.0f, 0.5f, 0,  5f,  8f),
             new("c2_print_works",  "City Print Works",     500,    8f,  1.1f, 1.0f, 0,  6f, 18f),
             new("c2_hotel",        "The Grand Hotel",    1_000,   12f,  1.2f, 1.5f, 0,  0f, 24f),
-            // Prestige — higher pay × 1.3–1.6, reputation bonus §5.1.6
+            // Reputation tier — higher pay × 1.3–1.6, reputation bonus §5.1.6
             new("c2_exhibition",   "The Great Exhibition", 5_000,  6f,  1.5f, 5.0f, 1,  9f, 17f),
         };
 
@@ -68,9 +68,10 @@ namespace IdlePowerGen.Data
             new("era2_master_engineer",     "Master Engineer",         1_250m, 1.50, "era2_pressure_control"),
         };
 
-        // Reputation-gated prestige upgrades — paid in pennies, with a reputation requirement.
+        // Reputation-gated upgrades — paid in pennies, gated by a reputation threshold.
+        // ("Prestige" is reserved for the Era 3+ reset mechanic.)
         // Layout: (id, displayName, costPennies, reputationRequired, multiplier, featureId)
-        public static readonly PrestigeUpgradeSpec[] PrestigeUpgrades =
+        public static readonly ReputationUpgradeSpec[] ReputationUpgrades =
         {
             // Telegraph: unlocks a feature flag the UI reads to display more contracts at once.
             new("era2_telegraph_lines", "Telegraph Lines",     500m,   10f, 0.0, "feature_extra_contract_slot"),
@@ -128,7 +129,7 @@ namespace IdlePowerGen.Data
             }
         }
 
-        public readonly struct PrestigeUpgradeSpec
+        public readonly struct ReputationUpgradeSpec
         {
             public readonly string  Id;
             public readonly string  Name;
@@ -137,8 +138,8 @@ namespace IdlePowerGen.Data
             public readonly double  Multiplier;     // 0 = no output effect (feature unlock only)
             public readonly string  UnlocksFeatureId;
 
-            public PrestigeUpgradeSpec(string id, string name, decimal cost, float rep,
-                                       double mult, string featureId)
+            public ReputationUpgradeSpec(string id, string name, decimal cost, float rep,
+                                         double mult, string featureId)
             {
                 Id = id; Name = name; CostPennies = cost; ReputationRequired = rep;
                 Multiplier = mult; UnlocksFeatureId = featureId;
@@ -153,7 +154,7 @@ namespace IdlePowerGen.Data
             public readonly float  DurationHours;
             public readonly float  PayMultiplier;
             public readonly float  ReputationOnSuccess;
-            public readonly int    Tier;             // 0 = Standard, 1 = Prestige
+            public readonly int    Tier;             // 0 = Standard, 1 = Reputation tier
             public readonly float  StartHour;
             public readonly float  EndHour;
 

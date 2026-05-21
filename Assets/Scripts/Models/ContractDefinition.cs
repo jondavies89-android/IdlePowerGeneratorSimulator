@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace IdlePowerGen.Models
 {
-    public enum ContractTier { Standard, Prestige }
+    public enum ContractTier { Standard, Reputation }
 
     [CreateAssetMenu(fileName = "ContractDef", menuName = "IdlePowerGen/Contract Definition")]
     public class ContractDefinition : ScriptableObject
@@ -28,7 +28,7 @@ namespace IdlePowerGen.Models
         public float reputationOnFail    = -2f;
         public float failThreshold       = 0.5f; // below 50 % average output = fail
 
-        [Header("Prestige Bonus")]
-        public float prestigePayMultiplier = 1f; // 1.3–1.6× for prestige contracts
+        [Header("Reputation-Tier Bonus")]
+        public float reputationTierPayMultiplier = 1f; // 1.3–1.6× for reputation-tier contracts
     }
 }

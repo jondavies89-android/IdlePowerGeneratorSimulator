@@ -63,7 +63,8 @@ Era 2 upgrades are paid in **pennies** (the `costPennies` field). All values are
 | `Upgrade_PressureControl`        | `era2_pressure_control`       | 250      | 1.25       | `era2_unlock_steam_engine`  |
 | `Upgrade_MasterEngineer`         | `era2_master_engineer`        | 1250     | 1.50       | `era2_pressure_control`     |
 
-**Prestige upgrades** — pennies + reputation gate (set `requiredReputation` field):
+**Reputation-tier upgrades** — pennies + reputation gate (set `requiredReputation` field).  
+*("Prestige" is reserved for the Era 3+ reset mechanic.)*
 
 | Asset name              | ID                     | Cost (d) | Req Reputation | Effect             | Effect Value | Unlocks ID                       |
 |-------------------------|------------------------|----------|----------------|--------------------|--------------|----------------------------------|
@@ -82,7 +83,7 @@ All values are in `Assets/Scripts/Data/Era2Data.cs`.
 | `Contract_Bakery`           | `c2_bakery`        | Whitmore's Bakery       | 200        | 2     | 1.0      | 0.5 | Standard | 05:00–08:00  |
 | `Contract_PrintWorks`       | `c2_print_works`   | City Print Works        | 500        | 8     | 1.1      | 1.0 | Standard | 06:00–18:00  |
 | `Contract_Hotel`            | `c2_hotel`         | The Grand Hotel         | 1 000      | 12    | 1.2      | 1.5 | Standard | 00:00–24:00  |
-| `Contract_GreatExhibition`  | `c2_exhibition`    | The Great Exhibition    | 5 000      | 6     | 1.5      | 5.0 | Prestige | 09:00–17:00  |
+| `Contract_GreatExhibition`  | `c2_exhibition`    | The Great Exhibition    | 5 000      | 6     | 1.5      | 5.0 | Reputation | 09:00–17:00  |
 
 - [ ] Create all five assets in `Assets/ScriptableObjects/Contracts/`
 - [ ] Set **Fail Threshold = 0.5** on all (below 50 % average output = failed contract)
@@ -190,7 +191,7 @@ Each row shows:
 - [ ] Duration in in-game hours
 - [ ] Estimated pay (pre-calculated: `durationHours × requiredWatts × contractBaseRate × payMult`)
 - [ ] Time window (e.g. "Available 18:00–22:00")
-- [ ] Prestige badge if `tier == Prestige`
+- [ ] Reputation-tier badge if `tier == Reputation`
 - [ ] **Accept** button → `GameManager.Contracts.TryAccept(def, gameTime)`
 - [ ] Row hidden when outside `availableStartHour–availableEndHour` (compare `GameClock.HourOfDay`)
 
@@ -294,7 +295,7 @@ This is a non-functional Easter egg in Era 2 — it becomes mechanical in Era 3.
 - [ ] Accepting a contract records output correctly; progress bar updates each second
 - [ ] Contract completes → pennies paid correctly: `durationHours × requiredWatts × 0.001 × payMult`
 - [ ] Contract fails (output below 50 %) → -2 reputation applied; partial pay issued
-- [ ] Prestige contract (Great Exhibition) pays 1.5× base rate
+- [ ] Reputation-tier contract (Great Exhibition) pays 1.5× base rate
 - [ ] CoalFiredBoiler fuel drains; warning at 20 %; trips at 0 %; refuel restores it
 - [ ] Generator count and contract state survive save / load cycle
 - [ ] Offline joules awarded correctly for medium absence (5 min–6 h), using era factor 1.0 and tau 4 h
