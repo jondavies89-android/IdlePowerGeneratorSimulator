@@ -6,14 +6,28 @@ Project briefing for Claude Code and other AI agents working on this repository.
 
 An incremental idle game called **Idle Power Generator Simulator**, in the vein of *Antimatter Dimensions* and *Exponential Idle*. The player runs a power station, scaling from a hand-cranked generator in 1820 (Era 1) to a planetary fusion grid in 2080 (Era 11).
 
-The full design is in `docs/design_bible.docx` — a living document covering era progression, mechanics, formulas, UI grammar, and the eleven-era visual mockup gallery. **Read it before doing substantive design or implementation work.** Most "how should this work?" questions are answered there.
+The full design is in `docs/IdlePowerGen_DesignBible_v0_5.docx` (referred to below as the design bible / `design_bible.docx`) — a living document covering era progression, mechanics, formulas, UI grammar, and the eleven-era visual mockup gallery. **Read it before doing substantive design or implementation work.** Most "how should this work?" questions are answered there.
 
 ## Stack & target platform
 
-- **Engine**: Unity (LTS — currently 2022 LTS or later)
+- **Engine**: Unity 6.4 (`6000.4.6f1`), with Android and Web build modules installed
 - **Language**: C# (`.NET Standard 2.1`)
 - **Target**: Android mobile, portrait orientation, minimum 380dp width
+- **Development preview**: Web (WebGL) builds, played in a browser at a portrait phone-sized resolution
 - **Tertiary**: iOS later; desktop never
+
+## Development workflow: web first, then Android
+
+Develop and play-test with **Web builds** first; switch the build profile to Android once a slice is ready to try on a phone. It is one codebase. Keep it that way:
+
+- No platform-specific code paths unless unavoidable; if needed, use `#if UNITY_WEBGL` / `#if UNITY_ANDROID` in one small adapter, never scattered.
+- No threads (`System.Threading`) — WebGL is single-threaded. Use coroutines or the sim tick.
+- Saves must work on both: on Web, Unity persists `Application.persistentDataPath` to browser IndexedDB; call a save on `OnApplicationPause`/`OnApplicationFocus(false)` as well as on quit, because browser tabs rarely get a clean quit.
+- Test in the browser at a portrait resolution (e.g. 412×915) so layout problems show up before Android.
+
+## Unity Editor bridge (MCP)
+
+The project includes **MCP for Unity** (`com.coplaydev.unity-mcp` in `Packages/manifest.json`), which lets Claude Code inspect and edit scenes, GameObjects and components, read the Console, and run menu items in the open Editor. Start it from **Window > MCP for Unity**. Prefer editing C# files directly and use the bridge for scene/prefab/inspector work and for checking the Console after compiles.
 
 ## Repository structure
 
