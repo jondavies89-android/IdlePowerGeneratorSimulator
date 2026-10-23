@@ -143,34 +143,35 @@ Canvas (Screen Space – Overlay)
 
 ### 5.2 StoredChargeDisplay
 
-- [ ] TextMeshPro label; bind to `SimulationTick.Instance.Grid.StoredJoules`
-- [ ] Call `NumberFormatter.FormatJoules(value)` every UI tick (60 Hz, separate Update)
-- [ ] Animate SI prefix transition (W → kW) with a scale punch tween
+- [x] TextMeshPro label; bind to `SimulationTick.Instance.Grid.StoredJoules` — bound to `GameManager.Ledger.Joules` instead: the ledger is the one spendable store (see slice 3); `Grid.StoredJoules` never sees purchases
+- [x] Call `NumberFormatter.FormatJoules(value)` every UI tick (60 Hz, separate Update) — `UI/Era1StoredChargeView.cs`
+- [x] Animate SI prefix transition (W → kW) with a scale punch tween — `UiTween.Punch` when the unit changes (J → kJ)
 
 ### 5.3 CrankButton
 
-- [ ] Large brass-style button image (source art or placeholder)
-- [ ] `OnClick` → `Era1TapController.OnCrankTapped()`
-- [ ] Attach `Era1TapController.cs` to a GameObject in scene; reference from button
+- [x] Large brass-style button image (source art or placeholder) — procedural placeholder, `Assets/Sprites/UI/Era1/Crank.png`
+- [x] `OnClick` → `Era1TapController.OnCrankTapped()`
+- [x] Attach `Era1TapController.cs` to a GameObject in scene; reference from button — on `_Controllers`
 - [ ] Play crank SFX on tap (wire up in step 8)
-- [ ] Brief scale-down animation on press (DOTween or Animator)
+- [x] Brief scale-down animation on press (DOTween or Animator) — `UI/PressFeedback.cs`, also on every card
+- Extra: a "+1.00 J" pop rises from the crank on each tap (`Era1TapPopView`)
 
 ### 5.4 UpgradeButton Prefab
 
 Each button needs:
-- [ ] Name label (TMP)
-- [ ] Cost label (TMP) — auto-formats `costJoules` with `NumberFormatter.FormatJoules`
-- [ ] Effect label (e.g. "CTV ×2")
-- [ ] Greyed-out state when prerequisites not met OR cannot afford
-- [ ] `OnClick` → `GameManager.Instance.Upgrades.Purchase(def)`
-- [ ] Subscribe to `UpgradePurchasedEvent` to hide/disable after purchase
+- [x] Name label (TMP)
+- [x] Cost label (TMP) — auto-formats `costJoules` with `NumberFormatter.FormatJoules`
+- [x] Effect label (e.g. "CTV ×2") — plain English: "Each turn gives ×2", "New machine: Waterwheel"
+- [x] Greyed-out state when prerequisites not met OR cannot afford — locked cards say what they need ("Needs Better Crank")
+- [x] `OnClick` → `GameManager.Instance.Upgrades.Purchase(def)` — the whole card is the button
+- [x] Subscribe to `UpgradePurchasedEvent` to hide/disable after purchase — `UpgradeListView` hides bought cards and only shows cards at most one step away
 
 ### 5.5 GeneratorRow Prefab
 
-- [ ] Generator name + icon
-- [ ] "Owned: N" counter
-- [ ] Next cost label (calls `Era2GeneratorController.NextCost` — yes, this controller handles Era 1 passive generators too)
-- [ ] Buy button → `Era2GeneratorController.TryBuy(def)`
+- [x] Generator name + icon (placeholder disc icon; uses `GeneratorDefinition.icon` when set)
+- [x] "Owned: N" counter
+- [x] Next cost label (calls `Era2GeneratorController.NextCost` — yes, this controller handles Era 1 passive generators too)
+- [x] Buy button → `Era2GeneratorController.TryBuy(def)` — whole row; rows appear once their unlock upgrade is bought
 
 ---
 
