@@ -222,14 +222,16 @@ The code fires `EraAdvancedEvent` automatically when the first contract complete
 
 Work through these in Play Mode before moving to Era 2:
 
-- [ ] Tap crank → stored charge increases by 1 J (with default CTV = 1 W)
-- [ ] Buy `Better Crank` (costs 5 J) → CTV becomes 2 W; next tap adds 2 J
-- [ ] All 5 crank upgrades chain correctly (prerequisites lock/unlock in order)
-- [ ] Spinning Jenny passive generator adds 1 W/s to `TotalOutputWatts`; joules tick up each second without tapping
-- [ ] At 500 J stored, milestone toast fires
-- [ ] Save → kill Play Mode → Play Mode again → joules, upgrades, generator counts restored
-- [ ] Set device time forward in OS → offline guard awards zero joules (§7.5)
-- [ ] Low-end simulation test: profile the 1 Hz tick; must run on a £150 Android device (§8.5)
+Automated as PlayMode tests in `Assets/Tests/PlayMode/` (33 passing; run with Unity `-runTests -testPlatform PlayMode`).
+
+- [x] Tap crank → stored charge increases by 1 J (with default CTV = 1 W) — `Era1UiTests.CrankButtonAddsOneJoule`
+- [x] Buy `Better Crank` (costs 5 J) → CTV becomes 2 W; next tap adds 2 J
+- [x] All 5 crank upgrades chain correctly (prerequisites lock/unlock in order) — and all five give 32 J a turn
+- [x] Spinning Jenny passive generator adds 1 W/s to `TotalOutputWatts`; joules tick up each second without tapping
+- [x] At 500 J stored, milestone toast fires — `Era1MilestoneTests`
+- [x] Save → kill Play Mode → Play Mode again → joules, upgrades, generator counts restored — in-memory state is wiped and reloaded from the save file (also crank value); real browser reload checked on the Web build
+- [x] Set device time forward in OS → offline guard awards zero joules (§7.5) — the guard is for time set **back** (device clock earlier than the last save), per bible §7.5; tested both ways: clock set back → zero, 10 min genuinely away → paid, at most 70 % of online output
+- [ ] Low-end simulation test: profile the 1 Hz tick; must run on a £150 Android device (§8.5) — **not done**: needs a real device. Proxy only: an hour of ticks (3600) for a full Era 1 fleet runs in well under a second on desktop
 
 ---
 
