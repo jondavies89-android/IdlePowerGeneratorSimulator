@@ -93,6 +93,45 @@ namespace IdlePowerGen.Tests
         }
 
         [UnityTest]
+        public IEnumerator TappingTurnsTheCrank()
+        {
+            var spin = Object.FindAnyObjectByType<UI.Era1CrankSpinView>();
+            float before = spin.CurrentAngle;
+            FindButton("CrankButton").onClick.Invoke();
+            yield return new WaitForSeconds(0.1f);
+            Assert.That(spin.CurrentAngle, Is.Not.EqualTo(before));
+        }
+
+        [UnityTest]
+        public IEnumerator UntendedCrankWithoutAFlywheelComesToRest()
+        {
+            var spin = Object.FindAnyObjectByType<UI.Era1CrankSpinView>();
+            FindButton("CrankButton").onClick.Invoke();
+            yield return new WaitForSeconds(3f);
+            float settled = spin.CurrentAngle;
+            yield return new WaitForSeconds(0.2f);
+            Assert.That(spin.CurrentAngle, Is.EqualTo(settled).Within(0.5f));
+        }
+
+        // The reading refreshes at 10 Hz, so charge from the water wheel shows between
+        // the 1 Hz ticks that credit it.
+        [UnityTest]
+        public IEnumerator StoredChargeClimbsBetweenTicks()
+        {
+            SetLevels(("era1_better_crank", 1), ("era1_iron_flywheel", 1), ("era1_water_wheel", 1));
+            var label = GameObject.Find("Charge").GetComponent<TMPro.TMP_Text>();
+            yield return new WaitForSeconds(1.05f);
+            int changes = 0;
+            string last = label.text;
+            for (int i = 0; i < 8; i++)
+            {
+                yield return new WaitForSeconds(0.11f);
+                if (label.text != last) { changes++; last = label.text; }
+            }
+            Assert.That(changes, Is.GreaterThanOrEqualTo(4));
+        }
+
+        [UnityTest]
         public IEnumerator Era1ShowsNoMachinesSection()
         {
             yield return null;

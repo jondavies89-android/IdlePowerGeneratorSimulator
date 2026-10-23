@@ -39,7 +39,7 @@ public static class Era1AssetBuilder
         [Era1Data.BearingsId]     = "Oiled brass where there was dry wood. The wheel runs longer.",
         [Era1Data.MagnetsId]      = "Stronger lodestones double the current, and drag on the wheel.",
         [Era1Data.WaterWheelId]   = "There is a river behind the workshop. A wheel would turn all day.",
-        [Era1Data.BeltsGearingId] = "Better belts and gearing pass more of the river to the flywheel.",
+        [Era1Data.BeltsGearingId] = "Better belts and gearing pass more of the river to the dynamo.",
     };
 
     [MenuItem("IdlePowerGen/Build/Era 1 Assets")]

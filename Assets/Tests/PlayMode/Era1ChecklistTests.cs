@@ -164,10 +164,33 @@ namespace IdlePowerGen.Tests
         }
 
         [Test]
-        public void EachGearingLevelRaisesTheFloorTenWatts()
+        public void EachGearingLevelAddsTenWattsToTheWaterWheel()
         {
             SetLevels((BetterCrankId, 1), (IronFlywheelId, 1), (WaterWheelId, 1), (BeltsGearingId, 2));
-            Assert.That(Flywheel.FloorWatts, Is.EqualTo(45.0));
+            Assert.That(WaterWheel.BaseWatts, Is.EqualTo(45.0));
+        }
+
+        [Test]
+        public void MagnetsMultiplyTheWaterWheelToo()
+        {
+            SetLevels((BetterCrankId, 1), (IronFlywheelId, 1), (MagnetsId, 2), (WaterWheelId, 1));
+            Assert.That(WaterWheel.CurrentOutputWatts, Is.EqualTo(100.0));
+        }
+
+        [Test]
+        public void FlywheelAndWaterWheelOutputsAdd()
+        {
+            SetLevels((BetterCrankId, 1), (IronFlywheelId, 1), (WaterWheelId, 1));
+            for (int i = 0; i < 10; i++) Crank();
+            Assert.That(Simulation.SimulationTick.Instance.Grid.ComputeOutputWatts(), Is.EqualTo(30.0).Within(1e-9));
+        }
+
+        [Test]
+        public void TheWaterWheelDoesNotSpinTheFlywheel()
+        {
+            SetLevels((BetterCrankId, 1), (IronFlywheelId, 1), (WaterWheelId, 1));
+            Simulation.SimulationTick.Instance.CatchUpOffline(5);
+            Assert.That(Flywheel.SpinWatts, Is.EqualTo(0.0));
         }
 
         [Test]
@@ -216,10 +239,10 @@ namespace IdlePowerGen.Tests
         }
 
         [UnityTest]
-        public IEnumerator SaveAndLoadRestoresTheWaterWheelFloor()
+        public IEnumerator SaveAndLoadRestoresTheWaterWheel()
         {
             yield return SaveThenWipeThenLoad();
-            Assert.That(Flywheel.FloorWatts, Is.EqualTo(25.0));
+            Assert.That(WaterWheel.BaseWatts, Is.EqualTo(25.0));
         }
 
         // --- v2 → v3 migration ---

@@ -26,13 +26,14 @@ namespace IdlePowerGen.Data
         public const string BeltsGearingId = "era1_belts_gearing";
 
         // The whole Era 1 tree: crank → flywheel → bearings, magnets, water wheel → gearing.
-        // The water wheel is the era's only passive income: it holds the flywheel at a floor.
+        // The water wheel is the era's only passive income. It generates separately from
+        // the flywheel; both feed the one dynamo, so the magnets multiply both.
         //
         // Levelled upgrades grow ×1.5 a level rather than the generators' ×1.15: their
         // effects compound through crank → flywheel → magnets, and at ×1.15 a greedy player
         // cleared the era in about a minute. Bearings and magnets are tiers, so they use the
-        // one-time g = 5. A pacing sim (4 taps/s, always buying the cheapest) reaches 500 W
-        // sustained at ~7 min and a tapped 1 kW at ~13 min.
+        // one-time g = 5. A pacing sim (always buying the cheapest) reaches a tapped 1 kW and
+        // 500 W untended at ~6 min tapping 4 times a second, ~9 min at 2 a second.
         public static readonly UpgradeSpec[] Upgrades =
         {
             //  id              name                 effect                              value secondary cost   growth max prerequisite
@@ -42,8 +43,8 @@ namespace IdlePowerGen.Data
             // Each magnet doubles what the crank and flywheel deliver, but the stronger
             // field drags on the wheel: 25 % faster decay, which bearings can buy back.
             new(MagnetsId,      "Lodestone Magnets", UpgradeEffect.MultiplyCrankOutput,   2,    1.25,     750,   5,    4,  IronFlywheelId),
-            new(WaterWheelId,   "Water Wheel",       UpgradeEffect.AddFlywheelFloor,      25,   0,        5_000, 1,    1,  IronFlywheelId),
-            new(BeltsGearingId, "Belts & Gearing",   UpgradeEffect.AddFlywheelFloor,      10,   0,        6_000, 1.5,  20, WaterWheelId),
+            new(WaterWheelId,   "Water Wheel",       UpgradeEffect.AddWaterWheelWatts,    25,   0,        5_000, 1,    1,  IronFlywheelId),
+            new(BeltsGearingId, "Belts & Gearing",   UpgradeEffect.AddWaterWheelWatts,    10,   0,        6_000, 1.5,  20, WaterWheelId),
         };
 
         // §5.1.3 — Pacing milestones (stored joules → event)

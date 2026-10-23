@@ -171,7 +171,7 @@ namespace IdlePowerGen.Save
             foreach (var entry in data.upgradeLevels ?? new List<SaveData.UpgradeLevelEntry>())
                 levels[entry.upgradeId] = entry.level;
             gm.Upgrades.LoadFromSave(levels);
-            // Spin isn't saved; the flywheel restarts from its water-wheel floor.
+            // Spin isn't saved; the flywheel starts the session at rest.
             Simulation.SimulationTick.Instance?.Flywheel.Stop();
             Managers.Era1MilestoneTracker.Instance?.LoadFromSave(data.reachedMilestones);
 
@@ -239,7 +239,7 @@ namespace IdlePowerGen.Save
             else
             {
                 // Only what keeps running untended (the water wheel), never a flywheel
-                // spinning from the last few turns.
+                // still spinning from the last few turns.
                 double onlineWatts = sim?.Grid.ComputeSustainedOutputWatts() ?? 0;
                 double offlineJoules = Managers.OfflineProgressionManager.ComputeOfflineJoules(
                     onlineWatts, realSeconds, eraFactor, tauHours);

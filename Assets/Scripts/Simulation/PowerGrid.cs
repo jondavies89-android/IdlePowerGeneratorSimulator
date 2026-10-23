@@ -27,7 +27,7 @@ namespace IdlePowerGen.Simulation
         // positive part to the player's spendable joules.
         public double LastTickSurplusJoules { get; private set; }
 
-        // Non-generator sources (Era 1's flywheel). Not cleared with the generators: they
+        // Non-generator sources (Era 1's flywheel and water wheel). Not cleared with the generators: they
         // belong to the scene, not to the save.
         private readonly List<IPowerSource> _sources = new();
 
@@ -51,6 +51,17 @@ namespace IdlePowerGen.Simulation
             double sum = FleetWatts();
             foreach (var s in _sources) sum += s.SustainedOutputWatts;
             return sum * GlobalOutputMultiplier + VirtualPassiveWatts;
+        }
+
+        // Surplus energy produced since the last tick that the next tick will credit.
+        // The UI adds it to the stored charge so the reading climbs between 1 Hz ticks.
+        public double ComputePendingJoules(double secondsIntoTick)
+        {
+            double sources = 0;
+            foreach (var s in _sources) sources += s.PendingJoules(secondsIntoTick);
+            double produced = (FleetWatts() * secondsIntoTick + sources) * GlobalOutputMultiplier
+                              + VirtualPassiveWatts * secondsIntoTick;
+            return Math.Max(0, produced - TotalDemandWatts * secondsIntoTick);
         }
 
         private double FleetWatts()

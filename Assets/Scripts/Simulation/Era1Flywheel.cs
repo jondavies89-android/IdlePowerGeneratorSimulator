@@ -3,9 +3,8 @@ using System;
 namespace IdlePowerGen.Simulation
 {
     // The Era 1 crank's flywheel. Each turn of the crank adds spin, measured as the watts
-    // the spin would deliver; spin is held to a capacity and decays exponentially. A water
-    // wheel sets a floor the spin never falls below, which is the era's only income that
-    // doesn't need the player. Magnets multiply what the spin delivers.
+    // the spin would deliver; spin is held to a capacity and decays exponentially to rest.
+    // Magnets multiply what the spin delivers.
     //
     // Upgrade-derived parameters are rebuilt from the purchased levels on load, so only
     // the spin itself is state, and it's not saved: it runs down within seconds anyway.
@@ -19,7 +18,6 @@ namespace IdlePowerGen.Simulation
         private double _bankedJoules;
 
         public double CapacityWatts    { get; private set; }
-        public double FloorWatts       { get; private set; }
         public double DecayMultiplier  { get; private set; } = 1.0;
         public double OutputMultiplier { get; private set; } = 1.0;
 
@@ -30,22 +28,20 @@ namespace IdlePowerGen.Simulation
 
         public double DecayPerSecond => _baseDecayPerSecond * DecayMultiplier;
 
-        // The floor can exceed the capacity: the water wheel turns the flywheel regardless.
-        public double MaxSpinWatts => Math.Max(CapacityWatts, FloorWatts);
+        public double CurrentOutputWatts   => SpinWatts * OutputMultiplier;
 
-        public double CurrentOutputWatts   => Math.Max(SpinWatts, FloorWatts) * OutputMultiplier;
-        public double SustainedOutputWatts => FloorWatts * OutputMultiplier;
+        // A flywheel left alone stops; it is never income while the player is away.
+        public double SustainedOutputWatts => 0;
 
         // ---- Upgrade effects (each call is one level) ----
 
         public void ResetUpgrades()
         {
-            CapacityWatts = 0; FloorWatts = 0; DecayMultiplier = 1.0; OutputMultiplier = 1.0;
-            SpinWatts = Math.Min(SpinWatts, MaxSpinWatts);
+            CapacityWatts = 0; DecayMultiplier = 1.0; OutputMultiplier = 1.0;
+            SpinWatts = 0;
         }
 
         public void AddCapacity(double watts)     => CapacityWatts    += watts;
-        public void AddFloor(double watts)        => FloorWatts       += watts;
         public void MultiplyDecay(double factor)  => DecayMultiplier  *= factor;
         public void MultiplyOutput(double factor) => OutputMultiplier *= factor;
 
@@ -55,7 +51,7 @@ namespace IdlePowerGen.Simulation
         public void AddSpin(double watts, double secondsIntoTick = 0)
         {
             AdvanceTo(secondsIntoTick);
-            SpinWatts = Math.Min(MaxSpinWatts, Math.Max(SpinWatts, FloorWatts) + watts);
+            SpinWatts = Math.Min(CapacityWatts, SpinWatts + watts);
         }
 
         public void Stop()
@@ -66,12 +62,14 @@ namespace IdlePowerGen.Simulation
         }
 
         // Spin at a point in the current tick, with no more turns. The UI uses this to
-        // run the reading down smoothly; it doesn't change state.
-        public double SpinAt(double secondsIntoTick)
-        {
-            double ahead = Math.Max(0, secondsIntoTick - _advancedThisTick);
-            return SpinAfter(Math.Max(SpinWatts, FloorWatts), ahead);
-        }
+        // run the reading down between ticks; it doesn't change state.
+        public double SpinAt(double secondsIntoTick) =>
+            SpinAfter(SpinWatts, Math.Max(0, secondsIntoTick - _advancedThisTick));
+
+        // Energy delivered so far this tick, magnets included; the next Tick pays it out.
+        public double PendingJoules(double secondsIntoTick) =>
+            (_bankedJoules + EnergyOver(SpinWatts, Math.Max(0, secondsIntoTick - _advancedThisTick)))
+            * OutputMultiplier;
 
         public double Tick(double deltaTime)
         {
@@ -87,26 +85,19 @@ namespace IdlePowerGen.Simulation
             double dt = secondsIntoTick - _advancedThisTick;
             if (dt <= 0) return;
             _advancedThisTick = secondsIntoTick;
-
-            double start = Math.Max(SpinWatts, FloorWatts);
-            _bankedJoules += EnergyOver(start, dt);
-            SpinWatts = SpinAfter(start, dt);
+            _bankedJoules += EnergyOver(SpinWatts, dt);
+            SpinWatts = SpinAfter(SpinWatts, dt);
         }
 
         private double SpinAfter(double start, double seconds) =>
-            Math.Max(FloorWatts, start * Math.Exp(-DecayPerSecond * seconds));
+            start * Math.Exp(-DecayPerSecond * seconds);
 
         // Exact integral of the decaying spin, so the energy delivered doesn't depend on
         // step size (offline catch-up and live play agree).
         private double EnergyOver(double start, double seconds)
         {
             double k = DecayPerSecond;
-            if (start <= FloorWatts || k <= 0) return start * seconds;
-
-            // Time until the spin decays to the floor (never, with no floor).
-            double tFloor = FloorWatts > 0 ? Math.Log(start / FloorWatts) / k : double.PositiveInfinity;
-            double tDecay = Math.Min(seconds, tFloor);
-            return start * (1 - Math.Exp(-k * tDecay)) / k + FloorWatts * (seconds - tDecay);
+            return k <= 0 ? start * seconds : start * (1 - Math.Exp(-k * seconds)) / k;
         }
     }
 }

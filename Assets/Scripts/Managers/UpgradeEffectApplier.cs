@@ -45,9 +45,10 @@ namespace IdlePowerGen.Managers
         // Applies one level.
         private void Apply(UpgradeDefinition def)
         {
-            var sim      = Simulation.SimulationTick.Instance;
-            var grid     = sim?.Grid;
-            var flywheel = sim?.Flywheel;
+            var sim        = Simulation.SimulationTick.Instance;
+            var grid       = sim?.Grid;
+            var flywheel   = sim?.Flywheel;
+            var waterWheel = sim?.WaterWheel;
 
             switch (def.effect)
             {
@@ -77,13 +78,15 @@ namespace IdlePowerGen.Managers
                     flywheel?.MultiplyDecay(def.effectValue);
                     break;
 
+                // Magnets sit in the dynamo that the flywheel and water wheel both drive.
                 case UpgradeEffect.MultiplyCrankOutput:
                     flywheel?.MultiplyOutput(def.effectValue);
                     flywheel?.MultiplyDecay(def.secondaryValue);
+                    waterWheel?.MultiplyOutput(def.effectValue);
                     break;
 
-                case UpgradeEffect.AddFlywheelFloor:
-                    flywheel?.AddFloor(def.effectValue);
+                case UpgradeEffect.AddWaterWheelWatts:
+                    waterWheel?.AddWatts(def.effectValue);
                     break;
 
                 case UpgradeEffect.MultiplyCrankTapValue:
@@ -108,6 +111,7 @@ namespace IdlePowerGen.Managers
                 grid.VirtualPassiveWatts    = 0.0;
             }
             sim?.Flywheel.ResetUpgrades();
+            sim?.WaterWheel.ResetUpgrades();
             _unlockedFeatures.Clear();
             _unlockedGenerators.Clear();
 

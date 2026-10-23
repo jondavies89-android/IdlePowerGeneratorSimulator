@@ -217,9 +217,10 @@ public static class Era1SceneBuilder
         Fixed(area, 236);
 
         var button = Rect("CrankButton", area);
+        // Pivot at the centre: the wheel turns (Era1CrankSpinView) and presses about it.
         button.anchorMin = button.anchorMax = new Vector2(0.5f, 1f);
-        button.pivot = new Vector2(0.5f, 1f);
-        button.anchoredPosition = new Vector2(0, -6);
+        button.pivot = new Vector2(0.5f, 0.5f);
+        button.anchoredPosition = new Vector2(0, -6 - 98);
         button.sizeDelta = new Vector2(196, 196);
         var image = AddImage(button, Era1SpriteFactory.Crank, Color.white);
         var btn = button.gameObject.AddComponent<Button>();
@@ -229,6 +230,8 @@ public static class Era1SceneBuilder
         colors.pressedColor = new Color(0.85f, 0.8f, 0.7f);
         btn.colors = colors;
         button.gameObject.AddComponent<PressFeedback>();
+        // The wheel is round, so turning the button itself keeps the hit area in place.
+        button.gameObject.AddComponent<Era1CrankSpinView>();
         UnityEventTools.AddPersistentListener(btn.onClick, controllers.Tap.OnCrankTapped);
         // Todo §8: the crank's own AudioSource.
         var crankSource = button.gameObject.AddComponent<AudioSource>();

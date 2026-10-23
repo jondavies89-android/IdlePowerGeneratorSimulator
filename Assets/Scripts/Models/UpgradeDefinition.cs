@@ -15,8 +15,8 @@ namespace IdlePowerGen.Models
         AddCrankJoules,          // effectValue = joules added to every turn of the crank
         AddFlywheelCapacity,     // effectValue = watts of spin the flywheel can hold
         MultiplyFlywheelDecay,   // effectValue = multiplier on how fast the flywheel slows
-        MultiplyCrankOutput,     // effectValue = output multiplier; secondaryValue = decay multiplier
-        AddFlywheelFloor,        // effectValue = watts of spin the flywheel never drops below
+        MultiplyCrankOutput,     // effectValue = output multiplier; secondaryValue = flywheel decay multiplier
+        AddWaterWheelWatts,      // effectValue = steady watts from the water wheel
     }
 
     [CreateAssetMenu(fileName = "UpgradeDef", menuName = "IdlePowerGen/Upgrade Definition")]

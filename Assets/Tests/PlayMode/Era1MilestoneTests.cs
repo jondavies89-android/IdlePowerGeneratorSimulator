@@ -82,7 +82,7 @@ namespace IdlePowerGen.Tests
         public IEnumerator SupplyingTheNeighbourForAnHourAdvancesToEra2()
         {
             GM.Ledger.AddJoules(500);
-            // Water wheel and gearing hold the flywheel at 65 W; four magnets make it 1040 W.
+            // Water wheel and gearing make 65 W; four magnets make it 1040 W.
             SetLevels((Data.Era1Data.BetterCrankId, 1), (Data.Era1Data.IronFlywheelId, 1),
                       (Data.Era1Data.MagnetsId, 4), (Data.Era1Data.WaterWheelId, 1),
                       (Data.Era1Data.BeltsGearingId, 4));

@@ -85,13 +85,15 @@ base × growth^n, and each level applies the effect once more:
 | `Upgrade_IronFlywheel`     | `era1_iron_flywheel` | 50            | ×1.5   | 20  | AddFlywheelCapacity +5 W                   | `era1_better_crank`  |
 | `Upgrade_BrassBearings`    | `era1_bearings`      | 200           | ×5     | 4   | MultiplyFlywheelDecay ×0.8                 | `era1_iron_flywheel` |
 | `Upgrade_LodestoneMagnets` | `era1_magnets`       | 750           | ×5     | 4   | MultiplyCrankOutput ×2, decay ×1.25        | `era1_iron_flywheel` |
-| `Upgrade_WaterWheel`       | `era1_water_wheel`   | 5000          | —      | 1   | AddFlywheelFloor 25 W                      | `era1_iron_flywheel` |
-| `Upgrade_BeltsAndGearing`  | `era1_belts_gearing` | 6000          | ×1.5   | 20  | AddFlywheelFloor +10 W                     | `era1_water_wheel`   |
+| `Upgrade_WaterWheel`       | `era1_water_wheel`   | 5000          | —      | 1   | AddWaterWheelWatts 25 W                    | `era1_iron_flywheel` |
+| `Upgrade_BeltsAndGearing`  | `era1_belts_gearing` | 6000          | ×1.5   | 20  | AddWaterWheelWatts +10 W                   | `era1_water_wheel`   |
 
 Each turn pays its joules at once and adds the same watts of spin to the flywheel (up to its
-capacity). Spin decays 25 %/s, never below the water wheel's floor; magnets multiply both
-the turn and the spin's output. The floor is Era 1's only untended income, and the only part
-offline progress pays on.
+capacity). Spin decays 25 %/s to rest. The water wheel generates separately and the two
+outputs add at the dynamo, so magnets multiply the turn, the flywheel and the water wheel.
+The water wheel is Era 1's only untended income, and the only part offline progress pays on.
+The crank wheel turns once per tap and keeps turning at a speed that follows the flywheel's
+spin; the stored-charge and output readings refresh 10 times a second.
 
 ### 4.3 Generator Definitions
 
@@ -208,12 +210,12 @@ The code fires `EraAdvancedEvent` automatically when the first contract complete
 
 Work through these in Play Mode before moving to Era 2:
 
-Automated as PlayMode tests in `Assets/Tests/PlayMode/` (59 passing; run with Unity `-runTests -testPlatform PlayMode`).
+Automated as PlayMode tests in `Assets/Tests/PlayMode/` (67 passing; run with Unity `-runTests -testPlatform PlayMode`).
 
 - [x] Tap crank → stored charge increases by 1 J — `Era1UiTests.CrankButtonAddsOneJoule`
 - [x] Buy `Better Crank` (costs 15 J) → next tap adds 2 J; each further level adds 1 J and costs ×1.5
 - [x] Prerequisites lock/unlock in order: flywheel unlocks bearings, magnets and the water wheel; the water wheel unlocks gearing
-- [x] Flywheel fills to its capacity from turns and winds down untended; the water wheel holds output at its floor without tapping
+- [x] Flywheel fills to its capacity from turns and winds down untended; the water wheel adds steady output without tapping
 - [x] At 500 J stored, milestone toast fires — `Era1MilestoneTests`
 - [x] Save → kill Play Mode → Play Mode again → joules, upgrade levels, crank value and water-wheel floor restored; real browser reload checked on the Web build
 - [x] Set device time forward in OS → offline guard awards zero joules (§7.5) — the guard is for time set **back** (device clock earlier than the last save), per bible §7.5; tested both ways: clock set back → zero, 10 min genuinely away → paid, at most 70 % of the water wheel's output

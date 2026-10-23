@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: IdlePowerGen.Models::IdlePowerGen.Models.UpgradeDefinition
   upgradeId: era1_belts_gearing
   displayName: Belts & Gearing
-  description: Better belts and gearing pass more of the river to the flywheel.
+  description: Better belts and gearing pass more of the river to the dynamo.
   minEra: 1
   costJoules: 6000
   costPennies: 0

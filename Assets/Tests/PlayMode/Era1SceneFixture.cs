@@ -46,6 +46,7 @@ namespace IdlePowerGen.Tests
             throw new System.ArgumentException(id);
         }
 
-        protected static Simulation.Era1Flywheel Flywheel => Simulation.SimulationTick.Instance.Flywheel;
+        protected static Simulation.Era1Flywheel   Flywheel   => Simulation.SimulationTick.Instance.Flywheel;
+        protected static Simulation.Era1WaterWheel WaterWheel => Simulation.SimulationTick.Instance.WaterWheel;
     }
 }

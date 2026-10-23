@@ -12,7 +12,8 @@ namespace IdlePowerGen.Simulation
 
         public PowerGrid    Grid     { get; private set; }
         public DemandModel  Demand   { get; private set; }
-        public Era1Flywheel Flywheel { get; private set; }
+        public Era1Flywheel   Flywheel   { get; private set; }
+        public Era1WaterWheel WaterWheel { get; private set; }
 
         private float _accumulator;
         private const float TickInterval = 1.0f;
@@ -29,9 +30,11 @@ namespace IdlePowerGen.Simulation
             Grid   = new PowerGrid();
             Demand = new DemandModel(0, new SeededRandom(seed: 1001));
 
-            // Idle (no capacity, no floor) until Era 1 upgrades set it up.
-            Flywheel = new Era1Flywheel(Data.Era1Data.FlywheelBaseDecayPerSecond);
+            // Both idle (no capacity, no watts) until Era 1 upgrades set them up.
+            Flywheel   = new Era1Flywheel(Data.Era1Data.FlywheelBaseDecayPerSecond);
+            WaterWheel = new Era1WaterWheel();
             Grid.AddSource(Flywheel);
+            Grid.AddSource(WaterWheel);
         }
 
         private void Update()
