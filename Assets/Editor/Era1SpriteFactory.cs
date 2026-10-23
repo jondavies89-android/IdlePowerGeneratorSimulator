@@ -15,10 +15,14 @@ public static class Era1SpriteFactory
     public static Sprite Crank  => Load("Crank");
     public static Sprite Bolt   => Load("Bolt");
     public static Sprite White  => Load("White");
+    public static Sprite PanelEdged => Load("PanelEdged");
+    public static Sprite Glow   => Load("Glow");
 
     public static void Build()
     {
         Era1AssetBuilder.EnsureFolder(Folder);
+        Write("PanelEdged", 64, PanelEdgedPixel, border: 20);
+        Write("Glow", 256, GlowPixel);
         // Filled images (progress bars) need a sprite; a sliced panel would distort.
         Write("White", 8, (x, y, s) => Color.white);
         Write("Panel", 64, PanelPixel, border: 20);
@@ -39,6 +43,28 @@ public static class Era1SpriteFactory
         float qy = Mathf.Max(Mathf.Abs(y - size / 2f) - (size / 2f - r), 0f);
         float sd = Mathf.Sqrt(qx * qx + qy * qy) - r;
         return new Color(1, 1, 1, Coverage(sd));
+    }
+
+    // Panel with a faint lit rim, like the edge of a worn parchment card catching the candle.
+    // White so it tints to any panel colour; the rim is brighter than the face.
+    private static Color PanelEdgedPixel(float x, float y, int size)
+    {
+        const float r = 16f;
+        float qx = Mathf.Max(Mathf.Abs(x - size / 2f) - (size / 2f - r), 0f);
+        float qy = Mathf.Max(Mathf.Abs(y - size / 2f) - (size / 2f - r), 0f);
+        float sd = Mathf.Sqrt(qx * qx + qy * qy) - r;
+        float rim = Mathf.Clamp01(1f - Mathf.Abs(sd + 1.5f) / 1.5f);
+        float face = 0.86f;
+        float v = Mathf.Lerp(face, 1.6f, rim * 0.6f);
+        return new Color(Mathf.Min(v, 1f), Mathf.Min(v * 0.97f, 1f), Mathf.Min(v * 0.9f, 1f), Coverage(sd));
+    }
+
+    // Soft radial falloff for the candle glow.
+    private static Color GlowPixel(float x, float y, int size)
+    {
+        float d = Vector2.Distance(new Vector2(x, y), Vector2.one * size / 2f) / (size / 2f);
+        float a = Mathf.Clamp01(1f - d);
+        return new Color(1, 1, 1, a * a * (3f - 2f * a));
     }
 
     private static Color DiscPixel(float x, float y, int size)

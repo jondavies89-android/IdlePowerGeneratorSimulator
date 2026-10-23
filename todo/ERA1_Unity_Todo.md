@@ -194,12 +194,14 @@ The code fires `EraAdvancedEvent` automatically when the first contract complete
 
 ## 7. Sepia / Candlelight Visual Theme
 
-- [ ] Main camera **background colour**: `#1A1208` (deep warm black)
-- [ ] Primary text colour: `#F5DEB3` (wheat / candlelight)
-- [ ] Accent / joule value colour: `#FFD700` (candlelit gold)
-- [ ] UI panel backgrounds: textured parchment sprite or solid `#2E1F0E`
-- [ ] Font: **Georgia** or **IM Fell English** (Google Fonts, free) for body text  
-  **Bodoni Moda** (Google Fonts) for numerals
+- [x] Main camera **background colour**: `#1A1208` (deep warm black)
+- [x] Primary text colour: `#F5DEB3` (wheat / candlelight)
+- [x] Accent / joule value colour: `#FFD700` (candlelit gold)
+- [x] UI panel backgrounds: textured parchment sprite or solid `#2E1F0E` — `#2E1F0E` on a rounded panel sprite with a faint lit rim, plus a warm candle-glow behind the reading and crank
+- [x] Font: **Georgia** or **IM Fell English** (Google Fonts, free) for body text  
+  **Bodoni Moda** (Google Fonts) for numerals — IM Fell English (with its real italic face) + Bodoni Moda, both OFL, as dynamic TMP font assets (`Assets/Editor/Era1FontBuilder.cs`); Georgia skipped because its licence doesn't allow redistribution in a build
+
+> All theme values live in `Assets/Editor/Era1Theme.cs`.
 
 ---
 

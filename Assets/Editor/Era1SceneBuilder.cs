@@ -28,6 +28,7 @@ public static class Era1SceneBuilder
     public static void Build()
     {
         Era1SpriteFactory.Build();
+        Era1FontBuilder.Build();
         BuildPrefabs();
 
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
@@ -136,6 +137,13 @@ public static class Era1SceneBuilder
         var bg = Rect("Background", canvasGo.transform);
         Stretch(bg);
         AddImage(bg, null, Era1Theme.ScreenBackground).raycastTarget = false;
+
+        // Candle light pooled around the reading and the crank — the room is otherwise dark.
+        var glow = Rect("CandleGlow", bg);
+        glow.anchorMin = glow.anchorMax = new Vector2(0.5f, 1f);
+        glow.sizeDelta = new Vector2(640, 640);
+        glow.anchoredPosition = new Vector2(0, -300);
+        AddImage(glow, Era1SpriteFactory.Glow, Era1Theme.Glow).raycastTarget = false;
 
         var safe = Rect("SafeArea", canvasGo.transform);
         Stretch(safe);
