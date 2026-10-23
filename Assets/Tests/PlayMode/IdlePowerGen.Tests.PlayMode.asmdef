@@ -1,0 +1,25 @@
+{
+    "name": "IdlePowerGen.Tests.PlayMode",
+    "rootNamespace": "IdlePowerGen.Tests",
+    "references": [
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner",
+        "IdlePowerGen.Utils",
+        "IdlePowerGen.Models",
+        "IdlePowerGen.Simulation",
+        "IdlePowerGen.Economy",
+        "IdlePowerGen.Runtime",
+        "Unity.TextMeshPro",
+        "UnityEngine.UI"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ]
+}

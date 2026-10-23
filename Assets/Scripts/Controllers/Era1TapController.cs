@@ -8,33 +8,34 @@ namespace IdlePowerGen.Controllers
     // No stamina or rate cap — idle generators dominate by minute 5.
     public class Era1TapController : MonoBehaviour
     {
-        private double _crankTapValue = 1.0; // watts per tap
+        private double _crankTapValue = Data.Era1Data.InitialCrankTapValue; // watts per tap
 
         // Each tap is treated as delivering CTV watts for 1 second (= CTV joules).
         private const double TapDurationSeconds = 1.0;
 
-        private Economy.CurrencyLedger _ledger;
-        private Simulation.PowerGrid   _grid;
+        private Economy.CurrencyLedger Ledger => Managers.GameManager.Instance?.Ledger;
 
-        private void Start()
+        // Subscribed in Awake so a load that happens during another object's Start
+        // can't slip past before this controller is listening.
+        private void Awake()
         {
-            _ledger = Managers.GameManager.Instance?.Ledger;
-            _grid   = Simulation.SimulationTick.Instance?.Grid;
-
             EventBus.Subscribe<UpgradePurchasedEvent>(OnUpgradePurchased);
+            EventBus.Subscribe<GameLoadedEvent>(OnGameLoaded);
         }
+
+        private void Start() => RecomputeFromPurchased();
 
         private void OnDestroy()
         {
             EventBus.Unsubscribe<UpgradePurchasedEvent>(OnUpgradePurchased);
+            EventBus.Unsubscribe<GameLoadedEvent>(OnGameLoaded);
         }
 
         // Wired to the crank button's OnClick.
         public void OnCrankTapped()
         {
             double joules = _crankTapValue * TapDurationSeconds;
-            _ledger?.AddJoules(joules);
-            _grid?.AddTapEnergy(joules);
+            Ledger?.AddJoules(joules);
             EventBus.Publish(new TapEvent(_crankTapValue, joules));
         }
 
@@ -45,9 +46,23 @@ namespace IdlePowerGen.Controllers
                 _crankTapValue *= def.effectValue;
         }
 
-        public double CrankTapValue => _crankTapValue;
+        private void OnGameLoaded(GameLoadedEvent _) => RecomputeFromPurchased();
 
-        // Used by SaveManager on load.
-        public void SetCrankTapValue(double value) => _crankTapValue = value;
+        // CTV isn't saved; it is the starting value times every purchased crank multiplier.
+        private void RecomputeFromPurchased()
+        {
+            var gm = Managers.GameManager.Instance;
+            _crankTapValue = Data.Era1Data.InitialCrankTapValue;
+            if (gm == null) return;
+
+            foreach (var def in gm.UpgradeCatalogue)
+            {
+                if (def.effect == Models.UpgradeEffect.MultiplyCrankTapValue
+                    && gm.Upgrades.IsPurchased(def.upgradeId))
+                    _crankTapValue *= def.effectValue;
+            }
+        }
+
+        public double CrankTapValue => _crankTapValue;
     }
 }

@@ -20,22 +20,27 @@ namespace IdlePowerGen.Managers
         {
             if (Instance != null) { Destroy(gameObject); return; }
             Instance = this;
+
+            // Subscribed in Awake: GameManager.Start loads the save, and that may run
+            // before this component's Start.
+            EventBus.Subscribe<UpgradePurchasedEvent>(OnUpgradePurchased);
+            EventBus.Subscribe<GameLoadedEvent>(OnGameLoaded);
+            EventBus.Subscribe<EraAdvancedEvent>(OnEraAdvanced);
         }
 
-        private void Start()
-        {
-            EventBus.Subscribe<UpgradePurchasedEvent>(OnUpgradePurchased);
-            // Re-apply effects after save load
-            EventBus.Subscribe<EraAdvancedEvent>(_ => ReapplyFromPurchasedSet());
-            ReapplyFromPurchasedSet();
-        }
+        private void Start() => ReapplyFromPurchasedSet();
 
         private void OnDestroy()
         {
+            if (Instance != this) return;
             EventBus.Unsubscribe<UpgradePurchasedEvent>(OnUpgradePurchased);
+            EventBus.Unsubscribe<GameLoadedEvent>(OnGameLoaded);
+            EventBus.Unsubscribe<EraAdvancedEvent>(OnEraAdvanced);
         }
 
         private void OnUpgradePurchased(UpgradePurchasedEvent evt) => Apply(evt.Definition);
+        private void OnGameLoaded(GameLoadedEvent _)              => ReapplyFromPurchasedSet();
+        private void OnEraAdvanced(EraAdvancedEvent _)            => ReapplyFromPurchasedSet();
 
         private void Apply(UpgradeDefinition def)
         {

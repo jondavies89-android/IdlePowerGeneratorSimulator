@@ -1,18 +1,23 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using UnityEngine;
 using IdlePowerGen.Models;
+using IdlePowerGen.Utils;
 
 namespace IdlePowerGen.Save
 {
-    // Â§7 â€” save, load, migration, and offline-progression dispatch.
+    // §7 — save, load, migration, and offline-progression dispatch.
     public class SaveManager : MonoBehaviour
     {
         public static SaveManager Instance { get; private set; }
 
         private const int CurrentVersion = 1;
-        private string SavePath => Path.Combine(Application.persistentDataPath, "save.json");
+
+        // Tests point this at a scratch file so they never touch a real player's save.
+        public static string SaveFileName = "save.json";
+        private static string SavePath => Path.Combine(Application.persistentDataPath, SaveFileName);
 
         private void Awake()
         {
@@ -33,7 +38,7 @@ namespace IdlePowerGen.Save
                 version           = CurrentVersion,
                 saveTimestampUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                 joules            = gm.Ledger.Joules,
-                pennies           = gm.Ledger.Pennies.ToString(),
+                pennies           = gm.Ledger.Pennies.ToString(CultureInfo.InvariantCulture),
                 reputation        = gm.Ledger.Reputation,
                 currentEra        = Managers.EraManager.Instance?.CurrentEra ?? 1f,
                 gameTimeSeconds   = Utils.GameClock.Instance?.GameTimeSeconds ?? 0,
@@ -66,6 +71,16 @@ namespace IdlePowerGen.Save
             }
 
             File.WriteAllText(SavePath, JsonUtility.ToJson(data));
+            PersistentStorage.Flush();
+        }
+
+        // Wipes the save and returns every system to a fresh Era 1 start, in place.
+        // Reloading the scene wouldn't work: the managers are DontDestroyOnLoad singletons.
+        public void ResetProgress()
+        {
+            if (File.Exists(SavePath)) File.Delete(SavePath);
+            PersistentStorage.Flush();
+            ApplyToGame(new SaveData { pennies = "0", currentEra = 1f });
         }
 
         // ---- Load ----
@@ -102,16 +117,19 @@ namespace IdlePowerGen.Save
             var gm = Managers.GameManager.Instance;
             if (gm == null) return;
 
-            decimal pennies = decimal.TryParse(data.pennies, out var p) ? p : 0m;
+            decimal pennies = decimal.TryParse(data.pennies, NumberStyles.Number,
+                                               CultureInfo.InvariantCulture, out var p) ? p : 0m;
             gm.Ledger.SetFromSave(data.joules, pennies, data.reputation);
             gm.Upgrades.LoadFromSave(data.purchasedUpgradeIds);
 
             Managers.EraManager.Instance?.SetEraFromSave(data.currentEra);
             Utils.GameClock.Instance?.SetGameTime(data.gameTimeSeconds);
 
-            // Restore generators
+            // Restore generators. The grid is cleared first so a reset or a second load
+            // can't stack a duplicate fleet on top of the current one.
+            Simulation.SimulationTick.Instance?.Grid.ClearGenerators();
             var genCtrl  = FindAnyObjectByType<Controllers.Era2GeneratorController>();
-            if (genCtrl != null && data.generators.Count > 0)
+            if (genCtrl != null)
             {
                 var counts = new Dictionary<GeneratorType, int>();
                 foreach (var entry in data.generators)
@@ -127,12 +145,16 @@ namespace IdlePowerGen.Save
             gm.Contracts.ClearActive();
             foreach (var entry in data.activeContracts)
             {
-                var def = FindContractDef(entry.contractId);
+                var def = gm.FindContract(entry.contractId);
                 if (def == null) continue;
                 var instance = new Economy.ContractInstance(def, entry.startGameTime);
                 instance.SetAccumulatedFromSave(entry.accumulatedWattSeconds);
                 gm.Contracts.AddFromSave(instance);
             }
+
+            // Upgrade effects and crank value are runtime state derived from the purchased
+            // set; their owners rebuild them on this event.
+            EventBus.Publish(new GameLoadedEvent());
         }
 
         // ---- Offline progression ----
@@ -140,41 +162,38 @@ namespace IdlePowerGen.Save
         private static void DispatchOfflineProgression(SaveData data)
         {
             long nowUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            if (data.saveTimestampUnix > nowUnix) return; // Â§7.5 tamper guard
+            if (data.saveTimestampUnix > nowUnix) return; // §7.5 tamper guard
 
-            var clock = Utils.GameClock.Instance;
-            float scale = clock != null ? clock.GameTimeScale : 60f;
-            double realSeconds   = nowUnix - data.saveTimestampUnix;
-            double gameSeconds   = realSeconds * scale;
+            // Generators produce per real second (the sim tick runs on real time), so the
+            // absence is measured in real seconds. GameClock's 60× scale is only for
+            // time-of-day and contract durations.
+            double realSeconds = nowUnix - data.saveTimestampUnix;
+            if (realSeconds <= 0) return;
 
             var gm  = Managers.GameManager.Instance;
             var cfg = gm?.GetEraConfig((int)data.currentEra);
             float eraFactor = cfg != null ? cfg.offlineEraFactor : 1f;
             float tauHours  = cfg != null ? cfg.offlineTauHours  : 4f;
 
-            var tier = Managers.OfflineProgressionManager.ClassifyAbsence(gameSeconds);
+            var sim = Simulation.SimulationTick.Instance;
+            double before = gm?.Ledger.Joules ?? 0;
 
+            var tier = Managers.OfflineProgressionManager.ClassifyAbsence(realSeconds);
             if (tier == Managers.OfflineProgressionManager.OfflineTier.Short)
             {
-                Simulation.SimulationTick.Instance?.CatchUpOffline(gameSeconds);
+                sim?.CatchUpOffline(realSeconds);
             }
             else
             {
-                var sim = Simulation.SimulationTick.Instance;
-                double onlineWatts = sim?.Grid.TotalOutputWatts ?? 0;
+                double onlineWatts = sim?.Grid.ComputeOutputWatts() ?? 0;
                 double offlineJoules = Managers.OfflineProgressionManager.ComputeOfflineJoules(
-                    onlineWatts, gameSeconds, eraFactor, tauHours);
+                    onlineWatts, realSeconds, eraFactor, tauHours);
                 gm?.Ledger.AddJoules(offlineJoules);
-                sim?.Grid.AddTapEnergy(offlineJoules);
             }
-        }
 
-        // Simple linear search â€” catalogue is small.
-        private static ContractDefinition FindContractDef(string id)
-        {
-            foreach (var obj in Resources.FindObjectsOfTypeAll<ContractDefinition>())
-                if (obj.contractId == id) return obj;
-            return null;
+            double earned = (gm?.Ledger.Joules ?? 0) - before;
+            EventBus.Publish(new OfflineProgressEvent(realSeconds, earned,
+                                                      cfg != null ? cfg.offlineFlavorText : null));
         }
     }
 }

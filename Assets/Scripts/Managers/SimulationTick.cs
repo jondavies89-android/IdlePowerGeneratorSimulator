@@ -59,9 +59,14 @@ namespace IdlePowerGen.Simulation
             double demand = Demand.Evaluate(gameTime, era);
             Grid.Tick(delta, demand);
 
-            // Contract ledger needs the current output to record per-contract performance
-            var ledger = Managers.GameManager.Instance?.Contracts;
+            // The ledger is the one spendable store of joules (taps and purchases already go
+            // through it), so generator output has to land there too.
             var eco    = Managers.GameManager.Instance;
+            if (eco != null && Grid.LastTickSurplusJoules > 0)
+                eco.Ledger.AddJoules(Grid.LastTickSurplusJoules);
+
+            // Contract ledger needs the current output to record per-contract performance
+            var ledger = eco?.Contracts;
             if (ledger != null && eco != null)
             {
                 var cfg = eco.GetEraConfig((int)era);

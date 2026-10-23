@@ -12,14 +12,10 @@ namespace IdlePowerGen.Controllers
     {
         private readonly Dictionary<GeneratorType, int> _owned = new();
 
-        private Economy.CurrencyLedger _ledger;
-        private Simulation.PowerGrid   _grid;
-
-        private void Start()
-        {
-            _ledger = Managers.GameManager.Instance?.Ledger;
-            _grid   = Simulation.SimulationTick.Instance?.Grid;
-        }
+        // Looked up on use rather than cached in Start: the save loads during
+        // GameManager.Start, which can run before this component's Start.
+        private Economy.CurrencyLedger Ledger => Managers.GameManager.Instance?.Ledger;
+        private Simulation.PowerGrid   Grid   => Simulation.SimulationTick.Instance?.Grid;
 
         // Cost of the next unit of this generator type.
         public double NextCost(GeneratorDefinition def)
@@ -42,10 +38,10 @@ namespace IdlePowerGen.Controllers
         {
             if (!IsUnlocked(def)) return false;
             double cost = NextCost(def);
-            if (_ledger == null || !_ledger.SpendJoules(cost)) return false;
+            if (Ledger == null || !Ledger.SpendJoules(cost)) return false;
 
             var instance = new Simulation.GeneratorInstance(def);
-            _grid?.AddGenerator(instance);
+            Grid?.AddGenerator(instance);
 
             _owned[def.generatorType] = _owned.GetValueOrDefault(def.generatorType, 0) + 1;
             EventBus.Publish(new GeneratorPurchasedEvent(def, _owned[def.generatorType]));
@@ -65,7 +61,7 @@ namespace IdlePowerGen.Controllers
                 var def = catalogue.Find(d => d.generatorType == type);
                 if (def == null) continue;
                 for (int i = 0; i < count; i++)
-                    _grid?.AddGenerator(new Simulation.GeneratorInstance(def));
+                    Grid?.AddGenerator(new Simulation.GeneratorInstance(def));
             }
         }
     }

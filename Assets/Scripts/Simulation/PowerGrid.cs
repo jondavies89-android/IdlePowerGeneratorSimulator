@@ -23,8 +23,23 @@ namespace IdlePowerGen.Simulation
         private readonly List<GeneratorInstance> _generators = new();
         public IReadOnlyList<GeneratorInstance> Generators => _generators;
 
+        // Energy left over after demand on the most recent tick. The economy credits the
+        // positive part to the player's spendable joules.
+        public double LastTickSurplusJoules { get; private set; }
+
         public void AddGenerator(GeneratorInstance gen)    => _generators.Add(gen);
         public bool RemoveGenerator(GeneratorInstance gen) => _generators.Remove(gen);
+        public void ClearGenerators()                      => _generators.Clear();
+
+        // Output the online fleet would deliver right now, without advancing time.
+        // Offline catch-up needs this straight after a load, before the first tick has run.
+        public double ComputeOutputWatts()
+        {
+            double sum = 0;
+            foreach (var gen in _generators)
+                if (gen.IsOnline) sum += gen.Definition.basePowerWatts;
+            return sum * GlobalOutputMultiplier + VirtualPassiveWatts;
+        }
 
         public void Tick(double deltaTime, double demandWatts)
         {
@@ -40,7 +55,8 @@ namespace IdlePowerGen.Simulation
             TotalOutputWatts = TotalOutputWatts * GlobalOutputMultiplier + VirtualPassiveWatts;
 
             double surplus = TotalOutputWatts - TotalDemandWatts;
-            StoredJoules = Math.Max(0, StoredJoules + surplus * deltaTime);
+            LastTickSurplusJoules = surplus * deltaTime;
+            StoredJoules = Math.Max(0, StoredJoules + LastTickSurplusJoules);
 
             UpdateFrequency(surplus, deltaTime);
         }

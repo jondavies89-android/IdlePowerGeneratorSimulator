@@ -12,6 +12,23 @@ namespace IdlePowerGen
         public TapEvent(double wpt, double j) { WattsPerTap = wpt; JoulesProduced = j; }
     }
 
+    // --- Persistence ---
+
+    // Raised after a save (or a reset) has been applied. Owners of derived runtime state
+    // (upgrade effects, crank value) rebuild it from the purchased-upgrade set.
+    public readonly struct GameLoadedEvent { }
+
+    public readonly struct OfflineProgressEvent
+    {
+        public readonly double SecondsAway;
+        public readonly double JoulesEarned;
+        public readonly string FlavorText;
+        public OfflineProgressEvent(double seconds, double joules, string flavor)
+        {
+            SecondsAway = seconds; JoulesEarned = joules; FlavorText = flavor;
+        }
+    }
+
     // --- Era ---
 
     public readonly struct EraAdvancedEvent
