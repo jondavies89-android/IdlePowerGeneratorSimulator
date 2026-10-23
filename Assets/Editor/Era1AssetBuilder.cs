@@ -16,6 +16,7 @@ public static class Era1AssetBuilder
     private const string EraFolder       = "Assets/ScriptableObjects/Eras";
     private const string UpgradeFolder   = "Assets/ScriptableObjects/Upgrades/Era1";
     private const string GeneratorFolder = "Assets/ScriptableObjects/Generators/Era1";
+    private const string ContractFolder  = "Assets/ScriptableObjects/Contracts/Era1";
 
     public const string EraConfigPath = EraFolder + "/Era1Config.asset";
 
@@ -60,6 +61,7 @@ public static class Era1AssetBuilder
         BuildEraConfig();
         BuildUpgrades();
         BuildGenerators();
+        BuildContracts();
 
         AssetDatabase.SaveAssets();
         Debug.Log("[Era1AssetBuilder] Era 1 assets written");
@@ -134,6 +136,26 @@ public static class Era1AssetBuilder
         }
     }
 
+    private static void BuildContracts()
+    {
+        EnsureFolder(ContractFolder);
+        var def = LoadOrCreate<ContractDefinition>($"{ContractFolder}/Contract_FirstCustomer.asset");
+        def.contractId          = Era1Data.FirstCustomerContractId;
+        def.clientName          = "Mr Hale, next door";
+        def.description         = "He wants his workshop lit through the evening. He'll pay a shilling.";
+        def.tier                = ContractTier.Standard;
+        def.minEra              = 1;
+        def.requiredWatts       = Era1Data.MaxWatts;
+        def.durationHours       = Era1Data.FirstCustomerHours;
+        def.availableStartHour  = 0f;
+        def.availableEndHour    = 24f;
+        def.payRateMultiplier   = Era1Data.FirstCustomerPayMult;
+        def.reputationOnSuccess = 0f; // reputation doesn't exist until Era 2
+        def.reputationOnFail    = 0f;
+        def.failThreshold       = 0.5f;
+        EditorUtility.SetDirty(def);
+    }
+
     // ---- Catalogue queries used by the scene builder ----
 
     public static T[] LoadAll<T>(string folder) where T : ScriptableObject =>
@@ -149,6 +171,8 @@ public static class Era1AssetBuilder
         LoadAll<GeneratorDefinition>(GeneratorFolder).OrderBy(g => g.baseCostJoules).ToArray();
 
     public static EraConfig[] EraConfigs() => LoadAll<EraConfig>(EraFolder);
+
+    public static ContractDefinition[] Contracts() => LoadAll<ContractDefinition>(ContractFolder);
 
     // ---- Helpers ----
 

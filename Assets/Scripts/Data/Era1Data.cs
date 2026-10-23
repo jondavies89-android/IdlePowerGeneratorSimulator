@@ -51,6 +51,24 @@ namespace IdlePowerGen.Data
         public const double Milestone_FirstKilowatt   = 1_000.0;
         public const double Milestone_EraExit         = FirstCustomerThreshold;
 
+        // Todo §6 — stored-charge toasts. Ids are saved, so never rename one.
+        public const string FirstMachineMilestoneId  = "era1_first_machine";
+        public const string FirstCustomerMilestoneId = "era1_neighbour_knocks";
+
+        public static readonly MilestoneSpec[] Milestones =
+        {
+            new(FirstMachineMilestoneId,  Milestone_FirstPassiveGen, "Your first machine hums to life."),
+            new(FirstCustomerMilestoneId, FirstCustomerThreshold,    "A neighbour knocks — they want your power."),
+        };
+
+        // The neighbour's contract closes the era. Bible §5.1.3: Era 2 unlocks at 1 kW
+        // sustained, so the contract asks for the era's top wattage for one in-game hour
+        // (one real minute at GameClock's 60×). Pay multiplier 12 makes the pay
+        // 1 h × 1000 W × 0.001 × 12 = 12d — one shilling, the first cash of bible §9.2.
+        public const string FirstCustomerContractId = "era1_first_customer";
+        public const float  FirstCustomerHours      = 1f;
+        public const float  FirstCustomerPayMult    = 12f;
+
         // §7.7 Era 1 offline flavour
         public const string OfflineFlavorText = "Your apprentice cranked while you were away.";
 
@@ -97,6 +115,18 @@ namespace IdlePowerGen.Data
             {
                 Id = id; Name = name; CostJoules = cost;
                 UnlocksGeneratorType = unlocks; PrerequisiteId = prereq;
+            }
+        }
+
+        public readonly struct MilestoneSpec
+        {
+            public readonly string Id;
+            public readonly double StoredJoules;
+            public readonly string Message;
+
+            public MilestoneSpec(string id, double joules, string message)
+            {
+                Id = id; StoredJoules = joules; Message = message;
             }
         }
 

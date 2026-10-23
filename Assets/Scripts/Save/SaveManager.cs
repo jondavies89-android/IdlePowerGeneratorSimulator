@@ -13,7 +13,8 @@ namespace IdlePowerGen.Save
     {
         public static SaveManager Instance { get; private set; }
 
-        private const int CurrentVersion = 1;
+        // v1 → v2: reachedMilestones added.
+        public const int CurrentVersion = 2;
 
         // Tests point this at a scratch file so they never touch a real player's save.
         public static string SaveFileName = "save.json";
@@ -43,6 +44,9 @@ namespace IdlePowerGen.Save
                 currentEra        = Managers.EraManager.Instance?.CurrentEra ?? 1f,
                 gameTimeSeconds   = Utils.GameClock.Instance?.GameTimeSeconds ?? 0,
                 purchasedUpgradeIds = new List<string>(gm.Upgrades.PurchasedIds),
+                reachedMilestones = Managers.Era1MilestoneTracker.Instance != null
+                                    ? new List<string>(Managers.Era1MilestoneTracker.Instance.Reached)
+                                    : new List<string>(),
                 lifetimeMWh       = 0, // updated by stats tracker in later eras
             };
 
@@ -104,10 +108,21 @@ namespace IdlePowerGen.Save
 
         // ---- Migration chain ----
 
-        private static void Migrate(SaveData data)
+        // Each step upgrades exactly one version, so any old save walks the whole chain.
+        public static void Migrate(SaveData data)
         {
-            // Add version-to-version migration functions here as the game evolves.
-            // Example: if (data.version < 2) MigrateV1ToV2(data);
+            if (data.version < 2) MigrateV1ToV2(data);
+        }
+
+        // v1 had no milestone record. Anything a v1 player had already passed is marked
+        // reached, so loading an old save never replays toasts for ground already covered.
+        private static void MigrateV1ToV2(SaveData data)
+        {
+            data.reachedMilestones ??= new List<string>();
+            foreach (var m in Data.Era1Data.Milestones)
+                if (data.joules >= m.StoredJoules && !data.reachedMilestones.Contains(m.Id))
+                    data.reachedMilestones.Add(m.Id);
+            data.version = 2;
         }
 
         // ---- Apply ----
@@ -121,6 +136,7 @@ namespace IdlePowerGen.Save
                                                CultureInfo.InvariantCulture, out var p) ? p : 0m;
             gm.Ledger.SetFromSave(data.joules, pennies, data.reputation);
             gm.Upgrades.LoadFromSave(data.purchasedUpgradeIds);
+            Managers.Era1MilestoneTracker.Instance?.LoadFromSave(data.reachedMilestones);
 
             Managers.EraManager.Instance?.SetEraFromSave(data.currentEra);
             Utils.GameClock.Instance?.SetGameTime(data.gameTimeSeconds);

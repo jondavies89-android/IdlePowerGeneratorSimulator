@@ -72,6 +72,7 @@ public static class Era1SceneBuilder
         go.AddComponent<IdlePowerGen.Save.SaveManager>();
         go.AddComponent<IdlePowerGen.Managers.EraManager>();
         go.AddComponent<IdlePowerGen.Managers.UpgradeEffectApplier>();
+        go.AddComponent<IdlePowerGen.Managers.Era1MilestoneTracker>();
     }
 
     // Todo §4.4 — the Inspector drag-and-drop, done from the asset folders.
@@ -81,6 +82,7 @@ public static class Era1SceneBuilder
         SetArray(so.FindProperty("_eraConfigs"),           Era1AssetBuilder.EraConfigs());
         SetArray(so.FindProperty("_upgradeDefinitions"),   Era1AssetBuilder.Upgrades());
         SetArray(so.FindProperty("_generatorDefinitions"), Era1AssetBuilder.Generators());
+        SetArray(so.FindProperty("_contractDefinitions"),  Era1AssetBuilder.Contracts());
         so.ApplyModifiedPropertiesWithoutUndo();
     }
 
@@ -88,6 +90,7 @@ public static class Era1SceneBuilder
     {
         public Era1TapController Tap;
         public Era2GeneratorController Generators;
+        public Era1FirstCustomerController FirstCustomer;
     }
 
     // Scene-scoped (not DontDestroyOnLoad): they belong to the Era 1 screen.
@@ -96,8 +99,9 @@ public static class Era1SceneBuilder
         var go = new GameObject("_Controllers");
         return new Controllers
         {
-            Tap        = go.AddComponent<Era1TapController>(),
-            Generators = go.AddComponent<Era2GeneratorController>(),
+            Tap           = go.AddComponent<Era1TapController>(),
+            Generators    = go.AddComponent<Era2GeneratorController>(),
+            FirstCustomer = go.AddComponent<Era1FirstCustomerController>(),
         };
     }
 
@@ -152,6 +156,7 @@ public static class Era1SceneBuilder
         CreateLists(column, controllers);
 
         CreateToast(canvasGo.transform);
+        CreateEndOfEra(canvasGo.transform);
     }
 
     private static void CreateHeader(Transform parent)
@@ -264,6 +269,8 @@ public static class Era1SceneBuilder
         scroll.viewport = viewport;
         scroll.content = content;
 
+        CreateFirstCustomer(content, controllers);
+
         Text(content, "ImprovementsHeader", "Improvements", 18, Era1Theme.Text, TextAlignmentOptions.Left);
         var upgradePanel = Stack("UpgradePanel", content);
         var empty = Text(content, "NothingToImprove", "Nothing more to improve for now.", 14, Era1Theme.TextMuted,
@@ -304,6 +311,104 @@ public static class Era1SceneBuilder
 
         var view = toast.gameObject.AddComponent<ToastView>();
         Wire(view, ("_group", group), ("_label", label));
+
+        var presenter = toast.gameObject.AddComponent<Era1MilestoneToastPresenter>();
+        Wire(presenter, ("_toast", view));
+    }
+
+    // Todo §6 — the neighbour's contract card, first in the list once he has knocked.
+    // The holder stays active (it runs the view); the card inside is shown and hidden.
+    private static void CreateFirstCustomer(Transform content, Controllers controllers)
+    {
+        var holder = Stack("FirstCustomer", content, spacing: 0);
+
+        var card = Card("FirstCustomerCard", out var button, out var group);
+        card.SetParent(holder, false);
+        // A column, not a row: title, story, progress, then the call to action.
+        Object.DestroyImmediate(card.GetComponent<HorizontalLayoutGroup>());
+        var vlg = card.gameObject.AddComponent<VerticalLayoutGroup>();
+        vlg.padding = new RectOffset(14, 14, 12, 12);
+        vlg.spacing = 4;
+        vlg.childControlWidth = vlg.childControlHeight = true;
+        vlg.childForceExpandWidth = true;
+        vlg.childForceExpandHeight = false;
+        card.GetComponent<Image>().color = Era1Theme.PanelRaised;
+
+        var title = Text(card, "Title", "", 19, Era1Theme.Accent, TextAlignmentOptions.Left);
+        var body = Text(card, "Body", "", 14, Era1Theme.Text, TextAlignmentOptions.Left, FontStyles.Italic);
+
+        var bar = Rect("Progress", card);
+        Fixed(bar, 8);
+        AddImage(bar, Era1SpriteFactory.White, Era1Theme.ScreenBackground).raycastTarget = false;
+        var fillRt = Rect("Fill", bar);
+        Stretch(fillRt);
+        var fill = AddImage(fillRt, Era1SpriteFactory.White, Era1Theme.Healthy);
+        fill.raycastTarget = false;
+        fill.type = Image.Type.Filled;
+        fill.fillMethod = Image.FillMethod.Horizontal;
+        fill.fillAmount = 0f;
+
+        var status = Text(card, "Status", "", 16, Era1Theme.Text, TextAlignmentOptions.Left);
+
+        var view = holder.gameObject.AddComponent<Era1FirstCustomerView>();
+        Wire(view, ("_controller", controllers.FirstCustomer), ("_card", card.gameObject),
+                   ("_titleLabel", title), ("_bodyLabel", body), ("_statusLabel", status),
+                   ("_button", button), ("_group", group), ("_progressFill", fill));
+        card.gameObject.SetActive(false);
+    }
+
+    // Shown once the first shilling arrives; the end of the playable Era 1 slice.
+    private static void CreateEndOfEra(Transform canvas)
+    {
+        var holder = Rect("EndOfEra", canvas);
+        Stretch(holder);
+
+        var panel = Rect("Panel", holder);
+        Stretch(panel);
+        // Blocks taps on the workshop underneath while open.
+        AddImage(panel, Era1SpriteFactory.White, Era1Theme.Overlay);
+        var group = panel.gameObject.AddComponent<CanvasGroup>();
+
+        var box = Stack("Box", panel, spacing: 12);
+        box.anchorMin = new Vector2(0, 0.5f);
+        box.anchorMax = new Vector2(1, 0.5f);
+        box.pivot = new Vector2(0.5f, 0.5f);
+        box.offsetMin = new Vector2(Gutter, 0);
+        box.offsetMax = new Vector2(-Gutter, 0);
+        var boxVlg = box.GetComponent<VerticalLayoutGroup>();
+        boxVlg.padding = new RectOffset(20, 20, 24, 20);
+        box.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        AddImage(box, Era1Theme.PanelSprite, Era1Theme.PanelRaised).type = Image.Type.Sliced;
+
+        Text(box, "Kicker", "End of Era 1", 14, Era1Theme.TextMuted, TextAlignmentOptions.Center, FontStyles.Italic);
+        Text(box, "Title", "The first shilling", 28, Era1Theme.Achievement, TextAlignmentOptions.Center);
+        Text(box, "Body",
+             "Mr Hale's workshop stayed lit all evening, and he paid you a shilling for it. " +
+             "You are no longer tinkering — you are selling power.\n\n" +
+             "Era 2, The Demonstration (1851), is still being built.",
+             16, Era1Theme.Text, TextAlignmentOptions.Center);
+
+        var keep = MakeButton(box, "KeepTinkering", "Keep tinkering");
+        var restart = MakeButton(box, "StartAgain", "Start again from 1 W");
+
+        var view = holder.gameObject.AddComponent<Era1EndOfEraView>();
+        Wire(view, ("_panel", panel.gameObject), ("_group", group),
+                   ("_continueButton", keep), ("_restartButton", restart));
+        panel.gameObject.SetActive(false);
+    }
+
+    private static Button MakeButton(Transform parent, string name, string label)
+    {
+        var rt = Rect(name, parent);
+        Fixed(rt, 52);
+        var image = AddImage(rt, Era1Theme.PanelSprite, Era1Theme.Panel);
+        image.type = Image.Type.Sliced;
+        var button = rt.gameObject.AddComponent<Button>();
+        button.targetGraphic = image;
+        rt.gameObject.AddComponent<PressFeedback>();
+        var text = Text(rt, "Label", label, 18, Era1Theme.Text, TextAlignmentOptions.Center);
+        Stretch(text.rectTransform);
+        return button;
     }
 
     // =====================================================================

@@ -29,6 +29,15 @@ namespace IdlePowerGen
         }
     }
 
+    // --- Milestones ---
+
+    public readonly struct MilestoneReachedEvent
+    {
+        public readonly string Id;
+        public readonly string Message;
+        public MilestoneReachedEvent(string id, string message) { Id = id; Message = message; }
+    }
+
     // --- Era ---
 
     public readonly struct EraAdvancedEvent

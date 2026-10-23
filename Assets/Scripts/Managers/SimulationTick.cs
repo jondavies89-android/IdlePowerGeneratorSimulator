@@ -71,7 +71,11 @@ namespace IdlePowerGen.Simulation
             {
                 var cfg = eco.GetEraConfig((int)era);
                 double baseRate = cfg != null ? cfg.contractBaseRate : 0.001;
-                ledger.Tick(Grid.TotalOutputWatts, delta, gameTime, eco.Ledger, baseRate);
+                // Contract durations are in game time, so their delivered energy must be too:
+                // one real-second tick covers GameTimeScale game seconds. Using the real delta
+                // left every contract at 1/60 of its target, i.e. always failed.
+                double gameDelta = delta * (GameClock.Instance != null ? GameClock.Instance.GameTimeScale : 1f);
+                ledger.Tick(Grid.TotalOutputWatts, gameDelta, gameTime, eco.Ledger, baseRate);
             }
 
             EventBus.Publish(new SimTickEvent(Grid, delta));

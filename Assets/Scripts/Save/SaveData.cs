@@ -30,6 +30,9 @@ namespace IdlePowerGen.Save
         // --- Contracts ---
         public List<ContractEntry> activeContracts = new();
 
+        // --- Milestones (v2) ---
+        public List<string> reachedMilestones = new();
+
         // --- Lifetime stats (prestige §12) ---
         public double lifetimeMWh;
         public int    engineeringXP;

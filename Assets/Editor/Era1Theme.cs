@@ -11,6 +11,12 @@ public static class Era1Theme
     public static readonly Color Text             = new(0.92f, 0.92f, 0.92f);
     public static readonly Color TextMuted        = new(0.65f, 0.65f, 0.65f);
     public static readonly Color Accent           = new(1.00f, 0.84f, 0.00f);
+    public static readonly Color PanelRaised      = new(0.26f, 0.26f, 0.26f);
+    public static readonly Color Overlay          = new(0.00f, 0.00f, 0.00f, 0.80f);
+
+    // Colour grammar (CLAUDE.md): green healthy, amber caution, red alarm, gold achievement.
+    public static readonly Color Healthy          = new(0.45f, 0.75f, 0.35f);
+    public static readonly Color Achievement      = new(1.00f, 0.84f, 0.00f);
 
     public static TMP_FontAsset BodyFont     => null; // null = TMP default font
     public static TMP_FontAsset NumeralFont  => null;

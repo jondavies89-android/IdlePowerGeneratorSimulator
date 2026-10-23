@@ -179,9 +179,16 @@ Each button needs:
 
 The code fires `EraAdvancedEvent` automatically when the first contract completes (Era 1 → 2 transition). Before that, wire up the milestone toasts:
 
-- [ ] Listen to `CurrencyChangedEvent` where `Currency == Joules`
-- [ ] Show toast at **50 J** ("Your first machine hums to life.")
-- [ ] Show toast at **500 J** ("A neighbour knocks — they want your power.") → this is the `FirstCustomerThreshold` that enables the first contract
+- [x] Listen to `CurrencyChangedEvent` where `Currency == Joules` — `Managers/Era1MilestoneTracker.cs`; each milestone fires once and is saved (save format v2)
+- [x] Show toast at **50 J** ("Your first machine hums to life.")
+- [x] Show toast at **500 J** ("A neighbour knocks — they want your power.") → this is the `FirstCustomerThreshold` that enables the first contract
+
+> The knock at 500 J puts Mr Hale's contract card at the top of the list, but it can only be accepted once
+> the machines make **1 kW** (bible §5.1.3: "Era 2 unlock at 1 kW sustained"). Otherwise the era would
+> end around minute 2 and the rest of the upgrade tree (up to 15 kJ) would never be used. The contract
+> (`Contract_FirstCustomer`) asks for 1 kW for one in-game hour (one real minute), pays 12d (a shilling),
+> and its completion fires `EraAdvancedEvent` → an end-of-era screen with "Keep tinkering" / "Start again".
+> Welcome-back toasts (`OfflineProgressEvent`) use the same toast with the Era 1 flavour text.
 
 ---
 

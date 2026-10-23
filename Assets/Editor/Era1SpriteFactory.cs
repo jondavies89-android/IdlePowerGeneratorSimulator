@@ -14,10 +14,13 @@ public static class Era1SpriteFactory
     public static Sprite Disc   => Load("Disc");
     public static Sprite Crank  => Load("Crank");
     public static Sprite Bolt   => Load("Bolt");
+    public static Sprite White  => Load("White");
 
     public static void Build()
     {
         Era1AssetBuilder.EnsureFolder(Folder);
+        // Filled images (progress bars) need a sprite; a sliced panel would distort.
+        Write("White", 8, (x, y, s) => Color.white);
         Write("Panel", 64, PanelPixel, border: 20);
         Write("Disc", 128, DiscPixel);
         Write("Crank", 512, CrankPixel);
