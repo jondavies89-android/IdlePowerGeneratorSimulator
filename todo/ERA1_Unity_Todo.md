@@ -7,11 +7,11 @@
 
 ## 1. Project Setup
 
-- [ ] Set **Unity version** (recommend 2022 LTS or newer — required for C# record types if used)
-- [ ] Set **Android build target** in Build Settings; minimum API 24
-- [ ] Import **BreakInfinity.cs** (open source — needed for late-game numbers, wire up later)
-- [ ] Install **TextMeshPro** via Package Manager (all UI text)
-- [ ] Install **DOTween** or Unity Animations for SI-prefix transition animations (§6.5)
+- [x] Set **Unity version** (recommend 2022 LTS or newer — required for C# record types if used) — Unity 6.4 (6000.4.6f1)
+- [x] Set **Android build target** in Build Settings; minimum API 24 — set to **25**: Unity 6.4 rejects 24. Active target stays Web (web-first workflow); `ProjectSetup.Apply` holds the Android settings
+- [x] Import **BreakInfinity.cs** (open source — needed for late-game numbers, wire up later) — `Assets/Plugins/BreakInfinity` with its own asmdef
+- [x] Install **TextMeshPro** via Package Manager (all UI text) — `com.unity.ugui` 2.0 (TMP lives there in Unity 6) + TMP Essential Resources
+- [x] Install **DOTween** or Unity Animations for SI-prefix transition animations (§6.5) — neither: a small coroutine tween helper (`UI/UiTween.cs`, slice 5) avoids an Asset Store dependency
 
 ---
 

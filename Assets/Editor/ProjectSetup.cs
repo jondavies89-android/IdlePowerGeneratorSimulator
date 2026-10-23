@@ -15,8 +15,9 @@ public static class ProjectSetup
     {
         PlayerSettings.productName = "Idle Power Generator Simulator";
 
-        // Android 7.0 — the floor the todo sets for the £150-device target.
-        PlayerSettings.Android.minSdkVersion = AndroidSdkVersions.AndroidApiLevel24;
+        // The todo asks for API 24, but Unity 6.4 refuses anything below 25 (Android 7.1),
+        // which still covers the £150-device target.
+        PlayerSettings.Android.minSdkVersion = AndroidSdkVersions.AndroidApiLevel25;
 
         ImportTmpEssentials();
         AssetDatabase.SaveAssets();

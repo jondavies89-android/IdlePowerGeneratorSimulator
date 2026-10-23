@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
@@ -6,7 +6,7 @@ using IdlePowerGen.Models;
 
 namespace IdlePowerGen.Save
 {
-    // §7 — save, load, migration, and offline-progression dispatch.
+    // Â§7 â€” save, load, migration, and offline-progression dispatch.
     public class SaveManager : MonoBehaviour
     {
         public static SaveManager Instance { get; private set; }
@@ -42,7 +42,7 @@ namespace IdlePowerGen.Save
             };
 
             // Generators
-            var genCtrl = FindObjectOfType<Controllers.Era2GeneratorController>();
+            var genCtrl = FindAnyObjectByType<Controllers.Era2GeneratorController>();
             if (genCtrl != null)
             {
                 foreach (GeneratorType type in Enum.GetValues(typeof(GeneratorType)))
@@ -110,7 +110,7 @@ namespace IdlePowerGen.Save
             Utils.GameClock.Instance?.SetGameTime(data.gameTimeSeconds);
 
             // Restore generators
-            var genCtrl  = FindObjectOfType<Controllers.Era2GeneratorController>();
+            var genCtrl  = FindAnyObjectByType<Controllers.Era2GeneratorController>();
             if (genCtrl != null && data.generators.Count > 0)
             {
                 var counts = new Dictionary<GeneratorType, int>();
@@ -140,7 +140,7 @@ namespace IdlePowerGen.Save
         private static void DispatchOfflineProgression(SaveData data)
         {
             long nowUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            if (data.saveTimestampUnix > nowUnix) return; // §7.5 tamper guard
+            if (data.saveTimestampUnix > nowUnix) return; // Â§7.5 tamper guard
 
             var clock = Utils.GameClock.Instance;
             float scale = clock != null ? clock.GameTimeScale : 60f;
@@ -169,7 +169,7 @@ namespace IdlePowerGen.Save
             }
         }
 
-        // Simple linear search — catalogue is small.
+        // Simple linear search â€” catalogue is small.
         private static ContractDefinition FindContractDef(string id)
         {
             foreach (var obj in Resources.FindObjectsOfTypeAll<ContractDefinition>())
