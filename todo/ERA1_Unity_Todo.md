@@ -25,8 +25,14 @@ Create three `.asmdef` files to enforce layering — the code is already split i
 | `IdlePowerGen.Economy`    | `Assets/Scripts/Economy`     | `Utils`, `Models`      |
 | `IdlePowerGen.Runtime`    | `Assets/Scripts` (root + all) | all three above        |
 
-- [ ] Right-click each folder → **Create → Assembly Definition**
-- [ ] Add correct Reference entries in the Inspector for each `.asmdef`
+- [x] Right-click each folder → **Create → Assembly Definition**
+- [x] Add correct Reference entries in the Inspector for each `.asmdef`
+
+> Done with five assemblies, not three: the table's `Utils` and `Models` references only work if those
+> folders are assemblies of their own (otherwise Simulation → Runtime → Simulation is circular).
+> `IdlePowerGen.Utils` and `IdlePowerGen.Models` reference nothing; Simulation and Economy reference both.
+> `SimulationTick` moved to `Managers/` (it reaches into GameManager/EraManager), and `Events.cs` was split
+> so simulation and economy events live in their own assemblies.
 
 ---
 

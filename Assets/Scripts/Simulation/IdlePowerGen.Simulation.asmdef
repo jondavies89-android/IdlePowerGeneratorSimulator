@@ -1,0 +1,9 @@
+{
+    "name": "IdlePowerGen.Simulation",
+    "rootNamespace": "IdlePowerGen.Simulation",
+    "references": [
+        "IdlePowerGen.Utils",
+        "IdlePowerGen.Models"
+    ],
+    "autoReferenced": true
+}

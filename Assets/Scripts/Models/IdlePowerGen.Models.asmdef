@@ -1,0 +1,6 @@
+{
+    "name": "IdlePowerGen.Models",
+    "rootNamespace": "IdlePowerGen.Models",
+    "references": [],
+    "autoReferenced": true
+}

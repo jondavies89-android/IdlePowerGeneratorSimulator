@@ -1,0 +1,9 @@
+{
+    "name": "IdlePowerGen.Economy",
+    "rootNamespace": "IdlePowerGen.Economy",
+    "references": [
+        "IdlePowerGen.Utils",
+        "IdlePowerGen.Models"
+    ],
+    "autoReferenced": true
+}

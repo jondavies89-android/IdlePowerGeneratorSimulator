@@ -1,0 +1,14 @@
+{
+    "name": "IdlePowerGen.Runtime",
+    "rootNamespace": "IdlePowerGen",
+    "references": [
+        "IdlePowerGen.Utils",
+        "IdlePowerGen.Models",
+        "IdlePowerGen.Simulation",
+        "IdlePowerGen.Economy",
+        "BreakInfinity",
+        "Unity.TextMeshPro",
+        "UnityEngine.UI"
+    ],
+    "autoReferenced": true
+}

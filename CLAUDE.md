@@ -33,14 +33,19 @@ The project includes **MCP for Unity** (`com.coplaydev.unity-mcp` in `Packages/m
 
 ```
 /Assets/
-  /Scripts/
-    /Simulation/      # Headless sim — frequency, dispatch, dynamics, demand
-    /Economy/         # Cash, RP, OXP, reputation, prestige currencies
-    /Contracts/       # Contract lifecycle and dispatch
-    /Era/             # Era state, transitions, unlocked mechanics
-    /Persistence/     # Save/load, versioned migrations, offline catch-up
-    /UI/              # MonoBehaviours, per-era views, presenters
-  /ScriptableObjects/ # Generator definitions, upgrade defs, era configs
+  /Scripts/                 # IdlePowerGen.Runtime (root + Controllers, Managers, Save, Data, UI)
+    /Utils/                 # IdlePowerGen.Utils — EventBus, GameClock, NumberFormatter, SeededRandom
+    /Models/                # IdlePowerGen.Models — ScriptableObject definitions
+    /Simulation/            # IdlePowerGen.Simulation — headless grid, generators, demand (+ Events/)
+    /Economy/               # IdlePowerGen.Economy — currencies, upgrades, contracts (+ EconomyEvents)
+    /Controllers/           # Per-era input controllers (Era1TapController, …)
+    /Managers/              # Scene MonoBehaviours, incl. SimulationTick (drives the headless sim)
+    /Save/                  # Save/load, versioned migrations, offline dispatch
+    /UI/                    # MonoBehaviours, per-era views, presenters
+  /ScriptableObjects/       # Generator definitions, upgrade defs, era configs, contracts
+  /Editor/                  # BuildScript, ProjectSetup, scene/asset builders
+  /Tests/                   # EditMode + PlayMode test assemblies
+  /Plugins/BreakInfinity/   # BigDouble (own asmdef)
   /Prefabs/
   /Scenes/
 /Packages/
@@ -48,6 +53,8 @@ The project includes **MCP for Unity** (`com.coplaydev.unity-mcp` in `Packages/m
   design_bible.docx   # The canonical design reference
   README.md           # Player-facing project description
 ```
+
+Assembly references only point downwards: Utils and Models reference nothing; Simulation and Economy reference Utils + Models; Runtime references everything. If a simulation type needs a manager, the dependency is upside down — put the glue in Runtime.
 
 If this structure doesn't exist yet, follow it when creating new files. If a meaningfully different structure is already in place, follow what's there and update this file.
 
