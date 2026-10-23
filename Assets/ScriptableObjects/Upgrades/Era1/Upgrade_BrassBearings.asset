@@ -10,20 +10,23 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1c6c43ca333bc2c4993a73e352ede6b8, type: 3}
-  m_Name: Upgrade_LeatherBeltDrive
+  m_Name: Upgrade_BrassBearings
   m_EditorClassIdentifier: IdlePowerGen.Models::IdlePowerGen.Models.UpgradeDefinition
-  upgradeId: era1_belt_drive
-  displayName: Leather Belt Drive
-  description: A leather belt from a foot treadle joins in.
+  upgradeId: era1_bearings
+  displayName: Brass Bearings
+  description: Oiled brass where there was dry wood. The wheel runs longer.
   minEra: 1
-  costJoules: 600
+  costJoules: 200
   costPennies: 0
+  costGrowth: 5
+  maxLevel: 4
   requiredReputation: 0
-  effect: 0
-  effectValue: 2
+  effect: 7
+  effectValue: 0.8
+  secondaryValue: 0
   unlocksId: 
   requiredUpgradeIds:
-  - era1_gear_train
+  - era1_iron_flywheel
   requiredStoredJoules: 0
   requiredPennies: 0
   icon: {fileID: 0}

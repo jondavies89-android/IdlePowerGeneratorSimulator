@@ -10,20 +10,23 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1c6c43ca333bc2c4993a73e352ede6b8, type: 3}
-  m_Name: Upgrade_HireForeman
+  m_Name: Upgrade_LodestoneMagnets
   m_EditorClassIdentifier: IdlePowerGen.Models::IdlePowerGen.Models.UpgradeDefinition
-  upgradeId: era1_foreman
-  displayName: Hire a Foreman
-  description: Someone to keep every machine oiled and running.
+  upgradeId: era1_magnets
+  displayName: Lodestone Magnets
+  description: Stronger lodestones double the current, and drag on the wheel.
   minEra: 1
-  costJoules: 12000
+  costJoules: 750
   costPennies: 0
+  costGrowth: 5
+  maxLevel: 4
   requiredReputation: 0
-  effect: 4
-  effectValue: 1.5
+  effect: 8
+  effectValue: 2
+  secondaryValue: 1.25
   unlocksId: 
   requiredUpgradeIds:
-  - era1_cam_mechanism
+  - era1_iron_flywheel
   requiredStoredJoules: 0
   requiredPennies: 0
   icon: {fileID: 0}

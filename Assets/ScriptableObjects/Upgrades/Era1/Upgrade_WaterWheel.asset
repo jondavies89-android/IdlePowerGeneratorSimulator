@@ -10,17 +10,20 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1c6c43ca333bc2c4993a73e352ede6b8, type: 3}
-  m_Name: Upgrade_GearTrain
+  m_Name: Upgrade_WaterWheel
   m_EditorClassIdentifier: IdlePowerGen.Models::IdlePowerGen.Models.UpgradeDefinition
-  upgradeId: era1_gear_train
-  displayName: Gear Train
-  description: Brass gears spin the magnet faster than any wrist.
+  upgradeId: era1_water_wheel
+  displayName: Water Wheel
+  description: There is a river behind the workshop. A wheel would turn all day.
   minEra: 1
-  costJoules: 125
+  costJoules: 5000
   costPennies: 0
+  costGrowth: 1
+  maxLevel: 1
   requiredReputation: 0
-  effect: 0
-  effectValue: 2
+  effect: 9
+  effectValue: 25
+  secondaryValue: 0
   unlocksId: 
   requiredUpgradeIds:
   - era1_iron_flywheel

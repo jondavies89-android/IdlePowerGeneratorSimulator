@@ -1,3 +1,5 @@
+using IdlePowerGen.Models;
+
 namespace IdlePowerGen.Data
 {
     // Numeric constants for Era 1 — "The Workshop" (1 W → 1 kW, London 1821).
@@ -8,42 +10,40 @@ namespace IdlePowerGen.Data
         public const int    EraNumber              = 1;
         public const double MinWatts               = 1.0;
         public const double MaxWatts               = 1_000.0;
-        public const double InitialCrankTapValue   = 1.0;  // W per tap → 1 J per tap
+        public const double InitialCrankTapValue   = 1.0;  // J per turn before any upgrade
         public const double FirstCustomerThreshold = 500.0; // stored ⚡ that unlocks first contract
 
-        // §5.1.2 — One-time upgrades.  cost = prev × 5 (g = 5), each doubles CTV.
-        // Layout: (id, displayName, costJoules, ctvMultiplier, prerequisiteId)
-        public static readonly UpgradeSpec[] CrankUpgrades =
-        {
-            new("era1_better_crank",   "Better Crank",       5,     2.0, null),
-            new("era1_iron_flywheel",  "Iron Flywheel",      25,    2.0, "era1_better_crank"),
-            new("era1_gear_train",     "Gear Train",         125,   2.0, "era1_iron_flywheel"),
-            new("era1_belt_drive",     "Leather Belt Drive", 600,   2.0, "era1_gear_train"),
-            new("era1_cam_mechanism",  "Cam Mechanism",      3_000, 2.0, "era1_belt_drive"),
-        };
+        // Without bearings the flywheel loses a quarter of its spin each second, so a turn's
+        // charge is mostly spent within ~10 s: the player feels it run down and keeps cranking.
+        public const double FlywheelBaseDecayPerSecond = 0.25;
 
-        // Generator unlocks — UpgradeEffect.UnlockGenerator with unlocksId = GeneratorType name.
-        // Layout: (id, displayName, costJoules, unlocksGeneratorTypeName, prerequisiteId)
-        public static readonly UnlockSpec[] GeneratorUnlocks =
-        {
-            new("era1_unlock_spinning_jenny", "Spinning Jenny Patent", 30,     "SpinningJenny", "era1_better_crank"),
-            new("era1_unlock_waterwheel",     "Walk Outside",          1_500,  "Waterwheel",    "era1_belt_drive"),
-            new("era1_unlock_steam_boiler",   "Steam Boiler Licence",  8_000,  "SteamBoiler",   "era1_cam_mechanism"),
-        };
+        // Upgrade ids. Saved, so never rename one.
+        public const string BetterCrankId  = "era1_better_crank";
+        public const string IronFlywheelId = "era1_iron_flywheel";
+        public const string BearingsId     = "era1_bearings";
+        public const string MagnetsId      = "era1_magnets";
+        public const string WaterWheelId   = "era1_water_wheel";
+        public const string BeltsGearingId = "era1_belts_gearing";
 
-        // Final Era 1 upgrade — global x1.5 multiplier (UpgradeEffect.MultiplyAllOutput).
-        // Hints at the upcoming Era 2 economy.
-        public static readonly GlobalSpec ForemanUpgrade =
-            new("era1_foreman", "Hire a Foreman", 12_000, 1.5, "era1_cam_mechanism");
-
-        // §5.1.2 — Stackable passive generators. cost(n) = baseJ × 1.15^n.
-        // Each is gated by its GeneratorUnlocks entry above, not by the crank chain directly.
-        // Layout: (generatorTypeName, displayName, baseJoules, basePowerWatts, requiredUpgradeId)
-        public static readonly GeneratorSpec[] PassiveGenerators =
+        // The whole Era 1 tree: crank → flywheel → bearings, magnets, water wheel → gearing.
+        // The water wheel is the era's only passive income: it holds the flywheel at a floor.
+        //
+        // Levelled upgrades grow ×1.5 a level rather than the generators' ×1.15: their
+        // effects compound through crank → flywheel → magnets, and at ×1.15 a greedy player
+        // cleared the era in about a minute. Bearings and magnets are tiers, so they use the
+        // one-time g = 5. A pacing sim (4 taps/s, always buying the cheapest) reaches 500 W
+        // sustained at ~7 min and a tapped 1 kW at ~13 min.
+        public static readonly UpgradeSpec[] Upgrades =
         {
-            new("SpinningJenny", "Spinning Jenny", 50,      1.0,   "era1_unlock_spinning_jenny"),
-            new("Waterwheel",    "Waterwheel",     3_000,   20.0,  "era1_unlock_waterwheel"),
-            new("SteamBoiler",   "Steam Boiler",   15_000,  100.0, "era1_unlock_steam_boiler"),
+            //  id              name                 effect                              value secondary cost   growth max prerequisite
+            new(BetterCrankId,  "Better Crank",      UpgradeEffect.AddCrankJoules,        1,    0,        15,    1.5,  20, null),
+            new(IronFlywheelId, "Iron Flywheel",     UpgradeEffect.AddFlywheelCapacity,   5,    0,        50,    1.5,  20, BetterCrankId),
+            new(BearingsId,     "Brass Bearings",    UpgradeEffect.MultiplyFlywheelDecay, 0.8,  0,        200,   5,    4,  IronFlywheelId),
+            // Each magnet doubles what the crank and flywheel deliver, but the stronger
+            // field drags on the wheel: 25 % faster decay, which bearings can buy back.
+            new(MagnetsId,      "Lodestone Magnets", UpgradeEffect.MultiplyCrankOutput,   2,    1.25,     750,   5,    4,  IronFlywheelId),
+            new(WaterWheelId,   "Water Wheel",       UpgradeEffect.AddFlywheelFloor,      25,   0,        5_000, 1,    1,  IronFlywheelId),
+            new(BeltsGearingId, "Belts & Gearing",   UpgradeEffect.AddFlywheelFloor,      10,   0,        6_000, 1.5,  20, WaterWheelId),
         };
 
         // §5.1.3 — Pacing milestones (stored joules → event)
@@ -76,45 +76,21 @@ namespace IdlePowerGen.Data
 
         public readonly struct UpgradeSpec
         {
-            public readonly string Id;
-            public readonly string Name;
-            public readonly double CostJoules;
-            public readonly double CtvMultiplier;
-            public readonly string PrerequisiteId;
+            public readonly string        Id;
+            public readonly string        Name;
+            public readonly UpgradeEffect Effect;
+            public readonly double        Value;
+            public readonly double        SecondaryValue;
+            public readonly double        CostJoules;
+            public readonly double        CostGrowth;
+            public readonly int           MaxLevel;
+            public readonly string        PrerequisiteId;
 
-            public UpgradeSpec(string id, string name, double cost, double ctv, string prereq)
+            public UpgradeSpec(string id, string name, UpgradeEffect effect, double value, double secondary,
+                               double cost, double growth, int maxLevel, string prereq)
             {
-                Id = id; Name = name; CostJoules = cost; CtvMultiplier = ctv; PrerequisiteId = prereq;
-            }
-        }
-
-        public readonly struct GeneratorSpec
-        {
-            public readonly string Id;
-            public readonly string Name;
-            public readonly double BaseJoules;
-            public readonly double BasePowerWatts;
-            public readonly string RequiredUpgradeId;
-
-            public GeneratorSpec(string id, string name, double baseJ, double watts, string reqUpgrade)
-            {
-                Id = id; Name = name; BaseJoules = baseJ; BasePowerWatts = watts;
-                RequiredUpgradeId = reqUpgrade;
-            }
-        }
-
-        public readonly struct UnlockSpec
-        {
-            public readonly string Id;
-            public readonly string Name;
-            public readonly double CostJoules;
-            public readonly string UnlocksGeneratorType;
-            public readonly string PrerequisiteId;
-
-            public UnlockSpec(string id, string name, double cost, string unlocks, string prereq)
-            {
-                Id = id; Name = name; CostJoules = cost;
-                UnlocksGeneratorType = unlocks; PrerequisiteId = prereq;
+                Id = id; Name = name; Effect = effect; Value = value; SecondaryValue = secondary;
+                CostJoules = cost; CostGrowth = growth; MaxLevel = maxLevel; PrerequisiteId = prereq;
             }
         }
 
@@ -127,20 +103,6 @@ namespace IdlePowerGen.Data
             public MilestoneSpec(string id, double joules, string message)
             {
                 Id = id; StoredJoules = joules; Message = message;
-            }
-        }
-
-        public readonly struct GlobalSpec
-        {
-            public readonly string Id;
-            public readonly string Name;
-            public readonly double CostJoules;
-            public readonly double Multiplier;
-            public readonly string PrerequisiteId;
-
-            public GlobalSpec(string id, string name, double cost, double mult, string prereq)
-            {
-                Id = id; Name = name; CostJoules = cost; Multiplier = mult; PrerequisiteId = prereq;
             }
         }
     }

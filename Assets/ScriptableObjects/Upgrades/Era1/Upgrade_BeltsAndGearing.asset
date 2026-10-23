@@ -10,20 +10,23 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1c6c43ca333bc2c4993a73e352ede6b8, type: 3}
-  m_Name: Upgrade_UnlockWaterwheel
+  m_Name: Upgrade_BeltsAndGearing
   m_EditorClassIdentifier: IdlePowerGen.Models::IdlePowerGen.Models.UpgradeDefinition
-  upgradeId: era1_unlock_waterwheel
-  displayName: Walk Outside
-  description: There is a river behind the workshop. A wheel would turn all day.
+  upgradeId: era1_belts_gearing
+  displayName: Belts & Gearing
+  description: Better belts and gearing pass more of the river to the flywheel.
   minEra: 1
-  costJoules: 1500
+  costJoules: 6000
   costPennies: 0
+  costGrowth: 1.5
+  maxLevel: 20
   requiredReputation: 0
-  effect: 2
-  effectValue: 0
-  unlocksId: Waterwheel
+  effect: 9
+  effectValue: 10
+  secondaryValue: 0
+  unlocksId: 
   requiredUpgradeIds:
-  - era1_belt_drive
+  - era1_water_wheel
   requiredStoredJoules: 0
   requiredPennies: 0
   icon: {fileID: 0}

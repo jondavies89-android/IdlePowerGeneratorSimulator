@@ -6,9 +6,9 @@ using IdlePowerGen.Utils;
 namespace IdlePowerGen.Managers
 {
     // Central dispatcher for UpgradeEffect.
-    // Subscribes to UpgradePurchasedEvent and applies the effect globally.
-    // MultiplyCrankTapValue is intentionally left to Era1TapController, since CTV
-    // is per-controller state.
+    // Subscribes to UpgradePurchasedEvent and applies one level of the effect each time.
+    // Crank effects (MultiplyCrankTapValue, AddCrankJoules) are left to Era1TapController,
+    // since the value of a turn is per-controller state.
     public class UpgradeEffectApplier : MonoBehaviour
     {
         public static UpgradeEffectApplier Instance { get; private set; }
@@ -42,9 +42,12 @@ namespace IdlePowerGen.Managers
         private void OnGameLoaded(GameLoadedEvent _)              => ReapplyFromPurchasedSet();
         private void OnEraAdvanced(EraAdvancedEvent _)            => ReapplyFromPurchasedSet();
 
+        // Applies one level.
         private void Apply(UpgradeDefinition def)
         {
-            var grid = Simulation.SimulationTick.Instance?.Grid;
+            var sim      = Simulation.SimulationTick.Instance;
+            var grid     = sim?.Grid;
+            var flywheel = sim?.Flywheel;
 
             switch (def.effect)
             {
@@ -66,34 +69,52 @@ namespace IdlePowerGen.Managers
                         _unlockedFeatures.Add(def.unlocksId);
                     break;
 
+                case UpgradeEffect.AddFlywheelCapacity:
+                    flywheel?.AddCapacity(def.effectValue);
+                    break;
+
+                case UpgradeEffect.MultiplyFlywheelDecay:
+                    flywheel?.MultiplyDecay(def.effectValue);
+                    break;
+
+                case UpgradeEffect.MultiplyCrankOutput:
+                    flywheel?.MultiplyOutput(def.effectValue);
+                    flywheel?.MultiplyDecay(def.secondaryValue);
+                    break;
+
+                case UpgradeEffect.AddFlywheelFloor:
+                    flywheel?.AddFloor(def.effectValue);
+                    break;
+
                 case UpgradeEffect.MultiplyCrankTapValue:
-                    // Era1TapController handles this directly.
+                case UpgradeEffect.AddCrankJoules:
+                    // Era1TapController handles these directly.
                     break;
             }
         }
 
-        // After load: rebuild applied effects from the purchased-upgrade set.
-        // Required because effects mutate runtime state and the save only stores upgrade IDs.
+        // After load: rebuild applied effects from the purchased levels.
+        // Required because effects mutate runtime state and the save only stores levels.
         public void ReapplyFromPurchasedSet()
         {
             var gm = GameManager.Instance;
             if (gm == null) return;
 
-            var grid = Simulation.SimulationTick.Instance?.Grid;
+            var sim  = Simulation.SimulationTick.Instance;
+            var grid = sim?.Grid;
             if (grid != null)
             {
                 grid.GlobalOutputMultiplier = 1.0;
                 grid.VirtualPassiveWatts    = 0.0;
             }
+            sim?.Flywheel.ResetUpgrades();
             _unlockedFeatures.Clear();
             _unlockedGenerators.Clear();
 
-            foreach (var id in gm.Upgrades.PurchasedIds)
+            foreach (var def in gm.UpgradeCatalogue)
             {
-                foreach (var def in gm.UpgradeCatalogue)
-                {
-                    if (def.upgradeId == id) { Apply(def); break; }
-                }
+                int level = gm.Upgrades.Level(def.upgradeId);
+                for (int i = 0; i < level; i++) Apply(def);
             }
         }
 

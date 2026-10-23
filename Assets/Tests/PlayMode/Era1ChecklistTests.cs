@@ -7,107 +7,188 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
-using IdlePowerGen.Models;
+using static IdlePowerGen.Data.Era1Data;
 
 namespace IdlePowerGen.Tests
 {
-    // Todo §9 testing checklist, one behaviour per test.
+    // Todo §9 testing checklist and the levelled crank / flywheel tree, one behaviour per test.
     public class Era1ChecklistTests : Era1SceneFixture
     {
         private static Managers.GameManager GM => Managers.GameManager.Instance;
         private static Controllers.Era1TapController Tap => UnityEngine.Object.FindAnyObjectByType<Controllers.Era1TapController>();
-        private static Controllers.Era2GeneratorController Gens => UnityEngine.Object.FindAnyObjectByType<Controllers.Era2GeneratorController>();
-
-        private static readonly string[] CrankChain =
-            { "era1_better_crank", "era1_iron_flywheel", "era1_gear_train", "era1_belt_drive", "era1_cam_mechanism" };
-
-        private static UpgradeDefinition Upgrade(string id)
-        {
-            foreach (var u in GM.UpgradeCatalogue) if (u.upgradeId == id) return u;
-            throw new ArgumentException(id);
-        }
-
-        private static GeneratorDefinition Generator(GeneratorType type)
-        {
-            foreach (var g in GM.GeneratorCatalogue) if (g.generatorType == type) return g;
-            throw new ArgumentException(type.ToString());
-        }
 
         private static void Crank() => GameObject.Find("CrankButton").GetComponent<Button>().onClick.Invoke();
 
         private static string SavePath =>
             Path.Combine(Application.persistentDataPath, Save.SaveManager.SaveFileName);
 
-        // --- Tapping and the crank chain ---
+        // --- Better Crank ---
 
         [UnityTest]
         public IEnumerator AfterBetterCrankEachTapAddsTwoJoules()
         {
-            GM.Ledger.AddJoules(5);
-            GM.Upgrades.Purchase(Upgrade("era1_better_crank"));
+            GM.Ledger.AddJoules(15);
+            GM.Upgrades.Purchase(Upgrade(BetterCrankId));
             yield return null;
             Crank();
             Assert.That(GM.Ledger.Joules, Is.EqualTo(2.0));
         }
 
         [Test]
-        public void EachCrankUpgradeIsLockedUntilThePreviousIsBought()
+        public void BetterCrankLevelsAddOneJouleEach()
         {
-            GM.Ledger.AddJoules(100_000);
-            for (int i = 1; i < CrankChain.Length; i++)
-            {
-                GM.Upgrades.Purchase(Upgrade(CrankChain[i - 1]));
-                Assume.That(GM.Upgrades.PrerequisitesMet(Upgrade(CrankChain[i])), Is.True, CrankChain[i]);
-                if (i + 1 < CrankChain.Length)
-                    Assert.That(GM.Upgrades.PrerequisitesMet(Upgrade(CrankChain[i + 1])), Is.False, CrankChain[i + 1]);
-            }
+            SetLevels((BetterCrankId, 3));
+            Assert.That(Tap.CrankTapValue, Is.EqualTo(4.0));
         }
 
         [Test]
-        public void AllFiveCrankUpgradesMakeEachTurnWorth32Joules()
+        public void BetterCrankCostsHalfAgainEachLevel()
         {
-            GM.Ledger.AddJoules(100_000);
-            foreach (var id in CrankChain) GM.Upgrades.Purchase(Upgrade(id));
-            Assert.That(Tap.CrankTapValue, Is.EqualTo(32.0));
+            SetLevels((BetterCrankId, 1));
+            Assert.That(GM.Upgrades.NextCostJoules(Upgrade(BetterCrankId)), Is.EqualTo(22.5));
         }
 
-        // --- Passive generation ---
-
-        [UnityTest]
-        public IEnumerator SpinningJennyAddsOneWattOfOutput()
+        [Test]
+        public void BetterCrankCannotBeBoughtPastItsMaxLevel()
         {
-            GM.Upgrades.LoadFromSave(new[] { "era1_better_crank", "era1_unlock_spinning_jenny" });
-            GM.Ledger.AddJoules(50);
-            Assume.That(Gens.TryBuy(Generator(GeneratorType.SpinningJenny)), Is.True);
-            yield return new WaitForSeconds(1.1f);
-            Assert.That(Simulation.SimulationTick.Instance.Grid.TotalOutputWatts, Is.EqualTo(1.0));
+            SetLevels((BetterCrankId, Upgrade(BetterCrankId).maxLevel));
+            GM.Ledger.AddJoules(1e12);
+            Assert.That(GM.Upgrades.Purchase(Upgrade(BetterCrankId)), Is.False);
+        }
+
+        // --- Iron Flywheel ---
+
+        [Test]
+        public void WithoutAFlywheelTurnsStoreNoSpin()
+        {
+            Crank();
+            Assert.That(Flywheel.SpinWatts, Is.EqualTo(0.0));
+        }
+
+        [Test]
+        public void TurnsSpinTheFlywheelUpToItsCapacity()
+        {
+            SetLevels((BetterCrankId, 1), (IronFlywheelId, 1));
+            for (int i = 0; i < 10; i++) Crank();
+            Assert.That(Flywheel.SpinWatts, Is.EqualTo(5.0).Within(1e-9));
+        }
+
+        [Test]
+        public void EachFlywheelLevelAddsFiveWattsOfCapacity()
+        {
+            SetLevels((BetterCrankId, 1), (IronFlywheelId, 3));
+            Assert.That(Flywheel.CapacityWatts, Is.EqualTo(15.0));
         }
 
         [UnityTest]
-        public IEnumerator SpinningJennyEarnsJoulesWithoutTapping()
+        public IEnumerator SpinningFlywheelEarnsJoulesAfterTheTurnsStop()
         {
-            GM.Upgrades.LoadFromSave(new[] { "era1_better_crank", "era1_unlock_spinning_jenny" });
-            GM.Ledger.AddJoules(50);
-            Gens.TryBuy(Generator(GeneratorType.SpinningJenny));
-            yield return new WaitForSeconds(3.1f);
-            Assert.That(GM.Ledger.Joules, Is.GreaterThanOrEqualTo(3.0));
+            SetLevels((BetterCrankId, 1), (IronFlywheelId, 4));
+            for (int i = 0; i < 10; i++) Crank();
+            double afterTurns = GM.Ledger.Joules;
+            yield return new WaitForSeconds(2.1f);
+            Assert.That(GM.Ledger.Joules, Is.GreaterThan(afterTurns + 5));
+        }
+
+        [UnityTest]
+        public IEnumerator UntendedFlywheelWindsDown()
+        {
+            SetLevels((BetterCrankId, 1), (IronFlywheelId, 4));
+            for (int i = 0; i < 10; i++) Crank();
+            yield return new WaitForSeconds(2.1f);
+            Assert.That(Flywheel.SpinWatts, Is.LessThan(20.0 * 0.8));
+        }
+
+        // --- Bearings ---
+
+        [Test]
+        public void BearingsAreLockedUntilTheFlywheelIsBought()
+        {
+            SetLevels((BetterCrankId, 1));
+            Assert.That(GM.Upgrades.PrerequisitesMet(Upgrade(BearingsId)), Is.False);
+        }
+
+        [Test]
+        public void BuyingTheFlywheelUnlocksBearings()
+        {
+            SetLevels((BetterCrankId, 1), (IronFlywheelId, 1));
+            Assert.That(GM.Upgrades.PrerequisitesMet(Upgrade(BearingsId)), Is.True);
+        }
+
+        [Test]
+        public void EachBearingLevelSlowsTheDecayByAFifth()
+        {
+            SetLevels((BetterCrankId, 1), (IronFlywheelId, 1), (BearingsId, 2));
+            Assert.That(Flywheel.DecayPerSecond, Is.EqualTo(FlywheelBaseDecayPerSecond * 0.64).Within(1e-12));
+        }
+
+        // --- Magnets ---
+
+        [Test]
+        public void MagnetsDoubleWhatATurnPays()
+        {
+            SetLevels((BetterCrankId, 1), (IronFlywheelId, 1), (MagnetsId, 1));
+            Assert.That(Tap.CrankTapValue, Is.EqualTo(4.0));
+        }
+
+        [Test]
+        public void MagnetsDoubleTheFlywheelOutput()
+        {
+            SetLevels((BetterCrankId, 1), (IronFlywheelId, 1), (MagnetsId, 1));
+            for (int i = 0; i < 10; i++) Crank();
+            Assert.That(Flywheel.CurrentOutputWatts, Is.EqualTo(10.0).Within(1e-9));
+        }
+
+        [Test]
+        public void MagnetsMakeTheFlywheelSlowFaster()
+        {
+            SetLevels((BetterCrankId, 1), (IronFlywheelId, 1), (MagnetsId, 1));
+            Assert.That(Flywheel.DecayPerSecond, Is.GreaterThan(FlywheelBaseDecayPerSecond));
+        }
+
+        // --- Water wheel and gearing ---
+
+        [UnityTest]
+        public IEnumerator WaterWheelKeepsOutputWithoutTurning()
+        {
+            SetLevels((BetterCrankId, 1), (IronFlywheelId, 1), (WaterWheelId, 1));
+            yield return new WaitForSeconds(2.1f);
+            Assert.That(Simulation.SimulationTick.Instance.Grid.TotalOutputWatts, Is.EqualTo(25.0).Within(1e-9));
+        }
+
+        [Test]
+        public void GearingIsLockedUntilTheWaterWheel()
+        {
+            SetLevels((BetterCrankId, 1), (IronFlywheelId, 1));
+            Assert.That(GM.Upgrades.PrerequisitesMet(Upgrade(BeltsGearingId)), Is.False);
+        }
+
+        [Test]
+        public void EachGearingLevelRaisesTheFloorTenWatts()
+        {
+            SetLevels((BetterCrankId, 1), (IronFlywheelId, 1), (WaterWheelId, 1), (BeltsGearingId, 2));
+            Assert.That(Flywheel.FloorWatts, Is.EqualTo(45.0));
+        }
+
+        [Test]
+        public void WithoutAWaterWheelNothingIsSustained()
+        {
+            SetLevels((BetterCrankId, 5), (IronFlywheelId, 5), (MagnetsId, 2));
+            for (int i = 0; i < 10; i++) Crank();
+            Assert.That(Simulation.SimulationTick.Instance.Grid.ComputeSustainedOutputWatts(), Is.EqualTo(0.0));
         }
 
         // --- Save / restore ---
 
         private IEnumerator SaveThenWipeThenLoad()
         {
-            GM.Ledger.AddJoules(5 + 30 + 50 + 1234);
-            GM.Upgrades.Purchase(Upgrade("era1_better_crank"));
-            GM.Upgrades.Purchase(Upgrade("era1_unlock_spinning_jenny"));
-            Gens.TryBuy(Generator(GeneratorType.SpinningJenny));
+            SetLevels((BetterCrankId, 3), (IronFlywheelId, 2), (WaterWheelId, 1));
+            GM.Ledger.AddJoules(1234);
             Save.SaveManager.Instance.Save();
 
             // What a killed process loses: every bit of in-memory state.
             GM.Ledger.SetFromSave(0, 0m, 0f);
-            GM.Upgrades.LoadFromSave(Array.Empty<string>());
-            Gens.LoadFromSave(new Dictionary<GeneratorType, int>(), new List<GeneratorDefinition>());
-            Simulation.SimulationTick.Instance.Grid.ClearGenerators();
+            SetLevels();
 
             Save.SaveManager.Instance.Load();
             yield return null;
@@ -117,33 +198,62 @@ namespace IdlePowerGen.Tests
         public IEnumerator SaveAndLoadRestoresJoules()
         {
             yield return SaveThenWipeThenLoad();
-            Assert.That(GM.Ledger.Joules, Is.EqualTo(1234.0).Within(2.0)); // ≤1 s of offline catch-up on top
+            Assert.That(GM.Ledger.Joules, Is.EqualTo(1234.0).Within(60.0)); // ≤1 s of 25 W catch-up on top
         }
 
         [UnityTest]
-        public IEnumerator SaveAndLoadRestoresUpgrades()
+        public IEnumerator SaveAndLoadRestoresUpgradeLevels()
         {
             yield return SaveThenWipeThenLoad();
-            Assert.That(GM.Upgrades.IsPurchased("era1_unlock_spinning_jenny"), Is.True);
-        }
-
-        [UnityTest]
-        public IEnumerator SaveAndLoadRestoresGeneratorCounts()
-        {
-            yield return SaveThenWipeThenLoad();
-            Assert.That(Gens.GetOwned(GeneratorType.SpinningJenny), Is.EqualTo(1));
+            Assert.That(GM.Upgrades.Level(BetterCrankId), Is.EqualTo(3));
         }
 
         [UnityTest]
         public IEnumerator SaveAndLoadRestoresCrankValue()
         {
             yield return SaveThenWipeThenLoad();
-            Assert.That(Tap.CrankTapValue, Is.EqualTo(2.0));
+            Assert.That(Tap.CrankTapValue, Is.EqualTo(4.0));
+        }
+
+        [UnityTest]
+        public IEnumerator SaveAndLoadRestoresTheWaterWheelFloor()
+        {
+            yield return SaveThenWipeThenLoad();
+            Assert.That(Flywheel.FloorWatts, Is.EqualTo(25.0));
+        }
+
+        // --- v2 → v3 migration ---
+
+        private static Save.SaveData V2Save() => new()
+        {
+            version = 2,
+            joules = 300,
+            purchasedUpgradeIds = new List<string>
+                { "era1_better_crank", "era1_gear_train", "era1_unlock_waterwheel", "era2_some_upgrade" },
+            generators = new List<Save.SaveData.GeneratorEntry>
+                { new() { generatorType = "SpinningJenny", count = 4 } },
+        };
+
+        [Test]
+        public void V2SaveKeepsSurvivingUpgradesAsLevelOne()
+        {
+            var data = V2Save();
+            Save.SaveManager.Migrate(data);
+            Assert.That(data.upgradeLevels.ConvertAll(e => $"{e.upgradeId}:{e.level}"),
+                        Is.EquivalentTo(new[] { $"{BetterCrankId}:1", $"{WaterWheelId}:1", "era2_some_upgrade:1" }));
+        }
+
+        [Test]
+        public void V2SaveDropsTheRemovedEra1Machines()
+        {
+            var data = V2Save();
+            Save.SaveManager.Migrate(data);
+            Assert.That(data.generators, Is.Empty);
         }
 
         // --- Offline guard (bible §7.5) ---
 
-        private static void WriteSaveWithJenny(long timestamp, double joules)
+        private static void WriteSaveWithWaterWheel(long timestamp, double joules)
         {
             var data = new Save.SaveData
             {
@@ -152,43 +262,43 @@ namespace IdlePowerGen.Tests
                 joules = joules,
                 pennies = "0",
                 currentEra = 1f,
-                purchasedUpgradeIds = new List<string> { "era1_better_crank", "era1_unlock_spinning_jenny" },
-                generators = new List<Save.SaveData.GeneratorEntry>
-                    { new() { generatorType = nameof(GeneratorType.SpinningJenny), count = 1 } },
+                upgradeLevels = new List<Save.SaveData.UpgradeLevelEntry>
+                {
+                    new() { upgradeId = BetterCrankId,  level = 1 },
+                    new() { upgradeId = IronFlywheelId, level = 1 },
+                    new() { upgradeId = WaterWheelId,   level = 1 },
+                },
             };
             File.WriteAllText(SavePath, JsonUtility.ToJson(data));
         }
 
-        [UnityTest]
-        public IEnumerator ClockSetBackBeforeTheLastSaveAwardsNoOfflineJoules()
+        // No frame in between: a live tick of the water wheel would muddy the reading.
+        [Test]
+        public void ClockSetBackBeforeTheLastSaveAwardsNoOfflineJoules()
         {
-            WriteSaveWithJenny(DateTimeOffset.UtcNow.ToUnixTimeSeconds() + 3600, 100);
+            WriteSaveWithWaterWheel(DateTimeOffset.UtcNow.ToUnixTimeSeconds() + 3600, 100);
             Save.SaveManager.Instance.Load();
-            yield return null;
             Assert.That(GM.Ledger.Joules, Is.EqualTo(100.0));
         }
 
         [UnityTest]
-        public IEnumerator TenMinutesAwayAwardsAtMostSeventyPercentOfOnlineOutput()
+        public IEnumerator TenMinutesAwayAwardsAtMostSeventyPercentOfTheWaterWheel()
         {
-            WriteSaveWithJenny(DateTimeOffset.UtcNow.ToUnixTimeSeconds() - 600, 100);
+            WriteSaveWithWaterWheel(DateTimeOffset.UtcNow.ToUnixTimeSeconds() - 600, 100);
             Save.SaveManager.Instance.Load();
             yield return null;
-            // 1 W for 600 s = 600 J online; offline pays at most 70 % of that (bible §7.2).
-            Assert.That(GM.Ledger.Joules - 100, Is.InRange(1.0, 0.7 * 600 + 1));
+            // 25 W for 600 s = 15 kJ untended; offline pays at most 70 % of that (bible §7.2).
+            Assert.That(GM.Ledger.Joules - 100, Is.InRange(1.0, 0.7 * 25 * 600 + 30));
         }
 
         // --- Performance proxy (not a device profile) ---
 
         [Test]
-        public void AnHourOfFullEra1FleetTicksRunsWellUnderASecond()
+        public void AnHourOfFullEra1TicksRunsWellUnderASecond()
         {
-            Gens.LoadFromSave(new Dictionary<GeneratorType, int>
-            {
-                [GeneratorType.SpinningJenny] = 50,
-                [GeneratorType.Waterwheel]    = 20,
-                [GeneratorType.SteamBoiler]   = 10,
-            }, new List<GeneratorDefinition>(GM.GeneratorCatalogue));
+            SetLevels((BetterCrankId, 20), (IronFlywheelId, 20), (BearingsId, 4), (MagnetsId, 4),
+                      (WaterWheelId, 1), (BeltsGearingId, 20));
+            for (int i = 0; i < 50; i++) Crank();
 
             var sw = Stopwatch.StartNew();
             Simulation.SimulationTick.Instance.CatchUpOffline(3600);

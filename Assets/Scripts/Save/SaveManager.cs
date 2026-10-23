@@ -14,7 +14,8 @@ namespace IdlePowerGen.Save
         public static SaveManager Instance { get; private set; }
 
         // v1 → v2: reachedMilestones added.
-        public const int CurrentVersion = 2;
+        // v2 → v3: upgrades have levels; the Era 1 tree and its machines were replaced.
+        public const int CurrentVersion = 3;
 
         // Tests point this at a scratch file so they never touch a real player's save.
         public static string SaveFileName = "save.json";
@@ -43,12 +44,14 @@ namespace IdlePowerGen.Save
                 reputation        = gm.Ledger.Reputation,
                 currentEra        = Managers.EraManager.Instance?.CurrentEra ?? 1f,
                 gameTimeSeconds   = Utils.GameClock.Instance?.GameTimeSeconds ?? 0,
-                purchasedUpgradeIds = new List<string>(gm.Upgrades.PurchasedIds),
                 reachedMilestones = Managers.Era1MilestoneTracker.Instance != null
                                     ? new List<string>(Managers.Era1MilestoneTracker.Instance.Reached)
                                     : new List<string>(),
                 lifetimeMWh       = 0, // updated by stats tracker in later eras
             };
+
+            foreach (var (id, level) in gm.Upgrades.Levels)
+                data.upgradeLevels.Add(new SaveData.UpgradeLevelEntry { upgradeId = id, level = level });
 
             // Generators
             var genCtrl = FindAnyObjectByType<Controllers.Era2GeneratorController>();
@@ -112,6 +115,35 @@ namespace IdlePowerGen.Save
         public static void Migrate(SaveData data)
         {
             if (data.version < 2) MigrateV1ToV2(data);
+            if (data.version < 3) MigrateV2ToV3(data);
+        }
+
+        // v2 upgrade ids that survive into the levelled tree, and what they became.
+        // The rest (gear train, belt drive, cam, foreman, the machine patents) and the
+        // Era 1 machines are gone; the stored joules are kept, so nothing earned is lost.
+        private static readonly Dictionary<string, string> V2UpgradeRenames = new()
+        {
+            ["era1_better_crank"]      = Data.Era1Data.BetterCrankId,
+            ["era1_iron_flywheel"]     = Data.Era1Data.IronFlywheelId,
+            ["era1_unlock_waterwheel"] = Data.Era1Data.WaterWheelId,
+        };
+
+        private static readonly string[] V2Era1Machines = { "SpinningJenny", "Waterwheel", "SteamBoiler" };
+
+        private static void MigrateV2ToV3(SaveData data)
+        {
+            data.upgradeLevels ??= new List<SaveData.UpgradeLevelEntry>();
+            foreach (var id in data.purchasedUpgradeIds ?? new List<string>())
+            {
+                // Ids from later eras carry over unchanged; dropped Era 1 ids don't.
+                string newId = V2UpgradeRenames.TryGetValue(id, out var renamed) ? renamed
+                             : id.StartsWith("era1_") ? null : id;
+                if (newId != null)
+                    data.upgradeLevels.Add(new SaveData.UpgradeLevelEntry { upgradeId = newId, level = 1 });
+            }
+            data.purchasedUpgradeIds = new List<string>();
+            data.generators?.RemoveAll(g => Array.IndexOf(V2Era1Machines, g.generatorType) >= 0);
+            data.version = 3;
         }
 
         // v1 had no milestone record. Anything a v1 player had already passed is marked
@@ -135,7 +167,12 @@ namespace IdlePowerGen.Save
             decimal pennies = decimal.TryParse(data.pennies, NumberStyles.Number,
                                                CultureInfo.InvariantCulture, out var p) ? p : 0m;
             gm.Ledger.SetFromSave(data.joules, pennies, data.reputation);
-            gm.Upgrades.LoadFromSave(data.purchasedUpgradeIds);
+            var levels = new Dictionary<string, int>();
+            foreach (var entry in data.upgradeLevels ?? new List<SaveData.UpgradeLevelEntry>())
+                levels[entry.upgradeId] = entry.level;
+            gm.Upgrades.LoadFromSave(levels);
+            // Spin isn't saved; the flywheel restarts from its water-wheel floor.
+            Simulation.SimulationTick.Instance?.Flywheel.Stop();
             Managers.Era1MilestoneTracker.Instance?.LoadFromSave(data.reachedMilestones);
 
             Managers.EraManager.Instance?.SetEraFromSave(data.currentEra);
@@ -201,7 +238,9 @@ namespace IdlePowerGen.Save
             }
             else
             {
-                double onlineWatts = sim?.Grid.ComputeOutputWatts() ?? 0;
+                // Only what keeps running untended (the water wheel), never a flywheel
+                // spinning from the last few turns.
+                double onlineWatts = sim?.Grid.ComputeSustainedOutputWatts() ?? 0;
                 double offlineJoules = Managers.OfflineProgressionManager.ComputeOfflineJoules(
                     onlineWatts, realSeconds, eraFactor, tauHours);
                 gm?.Ledger.AddJoules(offlineJoules);

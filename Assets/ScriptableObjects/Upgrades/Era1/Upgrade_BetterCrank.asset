@@ -16,11 +16,14 @@ MonoBehaviour:
   displayName: Better Crank
   description: A longer handle and a surer grip.
   minEra: 1
-  costJoules: 5
+  costJoules: 15
   costPennies: 0
+  costGrowth: 1.5
+  maxLevel: 20
   requiredReputation: 0
-  effect: 0
-  effectValue: 2
+  effect: 5
+  effectValue: 1
+  secondaryValue: 0
   unlocksId: 
   requiredUpgradeIds: []
   requiredStoredJoules: 0

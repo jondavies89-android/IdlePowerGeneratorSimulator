@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
-using IdlePowerGen.Models;
 
 namespace IdlePowerGen.Tests
 {
@@ -83,9 +82,10 @@ namespace IdlePowerGen.Tests
         public IEnumerator SupplyingTheNeighbourForAnHourAdvancesToEra2()
         {
             GM.Ledger.AddJoules(500);
-            var gens = Object.FindAnyObjectByType<Controllers.Era2GeneratorController>();
-            gens.LoadFromSave(new Dictionary<GeneratorType, int> { [GeneratorType.SteamBoiler] = 10 },
-                              new List<GeneratorDefinition>(GM.GeneratorCatalogue));
+            // Water wheel and gearing hold the flywheel at 65 W; four magnets make it 1040 W.
+            SetLevels((Data.Era1Data.BetterCrankId, 1), (Data.Era1Data.IronFlywheelId, 1),
+                      (Data.Era1Data.MagnetsId, 4), (Data.Era1Data.WaterWheelId, 1),
+                      (Data.Era1Data.BeltsGearingId, 4));
             yield return null;
 
             var customer = Object.FindAnyObjectByType<Controllers.Era1FirstCustomerController>();

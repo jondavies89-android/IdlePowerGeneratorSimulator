@@ -26,11 +26,17 @@ namespace IdlePowerGen.UI
             PunchOnPrefixChange(charge);
 
             if (_rateLabel == null) return;
-            double machines = sim != null ? sim.Grid.ComputeOutputWatts() : 0;
             string turn = $"Each turn of the crank: {NumberFormatter.FormatJoules(_tapController.CrankTapValue)}";
-            _rateLabel.text = machines > 0
-                ? $"Machines: {NumberFormatter.FormatWatts(machines)}\n{turn}"
-                : turn;
+            var flywheel = sim != null ? sim.Flywheel : null;
+            if (flywheel == null || flywheel.MaxSpinWatts <= 0)
+            {
+                _rateLabel.text = turn;
+                return;
+            }
+            // Spin decays continuously but the sim ticks at 1 Hz; project it forward so the
+            // reading runs down smoothly instead of stepping once a second.
+            double watts = flywheel.SpinAt(sim.SecondsSinceTick) * flywheel.OutputMultiplier;
+            _rateLabel.text = $"Flywheel: {NumberFormatter.FormatWatts(watts)}\n{turn}";
         }
 
         // §6.5 — the prefix (J → kJ) must never change silently.

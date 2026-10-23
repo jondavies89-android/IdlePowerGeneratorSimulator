@@ -22,13 +22,12 @@ namespace IdlePowerGen.UI
         private const float DimmedAlpha = 0.45f;
 
         public UpgradeDefinition Definition { get; private set; }
+        public string CostText => _costLabel.text;
 
         public void Bind(UpgradeDefinition def)
         {
             Definition = def;
-            _nameLabel.text        = def.displayName;
             _descriptionLabel.text = def.description;
-            _costLabel.text        = NumberFormatter.FormatJoules(def.costJoules);
             _button.onClick.AddListener(OnClicked);
             Refresh();
         }
@@ -65,20 +64,37 @@ namespace IdlePowerGen.UI
 
             bool prereqsMet = registry.PrerequisitesMet(Definition);
             bool affordable = registry.CanAfford(Definition);
+            int  level      = registry.Level(Definition.upgradeId);
 
-            _effectLabel.text = prereqsMet ? EffectText(Definition) : NeedsText(Definition);
-            _button.interactable = prereqsMet && affordable && !registry.IsPurchased(Definition.upgradeId);
+            _nameLabel.text   = NameText(Definition, level);
+            _costLabel.text   = NumberFormatter.FormatJoules(registry.NextCostJoules(Definition));
+            _effectLabel.text = prereqsMet ? EffectText(Definition, level) : NeedsText(Definition);
+            _button.interactable = prereqsMet && affordable && !registry.IsMaxed(Definition);
             _group.alpha = _button.interactable ? 1f : DimmedAlpha;
         }
 
-        // Plain-English effect line; no "CTV".
-        private static string EffectText(UpgradeDefinition def)
+        // Levelled upgrades show how far along they are; one-time ones just their name.
+        private static string NameText(UpgradeDefinition def, int level) =>
+            def.maxLevel > 1 && level > 0 ? $"{def.displayName}  {level}/{def.maxLevel}" : def.displayName;
+
+        // Plain-English effect line; no "CTV", no "decay".
+        private static string EffectText(UpgradeDefinition def, int level)
         {
+            string watts = NumberFormatter.FormatWatts(def.effectValue);
             switch (def.effect)
             {
                 case UpgradeEffect.MultiplyCrankTapValue: return $"Each turn gives ×{def.effectValue:0.##}";
+                case UpgradeEffect.AddCrankJoules:        return $"Each turn gives +{NumberFormatter.FormatJoules(def.effectValue)}";
+                case UpgradeEffect.AddFlywheelCapacity:
+                    return level == 0 ? $"Turns keep a flywheel spinning, up to {watts}"
+                                      : $"Flywheel holds +{watts}";
+                case UpgradeEffect.MultiplyFlywheelDecay: return $"Flywheel slows {1 - def.effectValue:0%} less";
+                case UpgradeEffect.MultiplyCrankOutput:   return $"Everything ×{def.effectValue:0.##}, but the flywheel slows faster";
+                case UpgradeEffect.AddFlywheelFloor:
+                    return level == 0 && def.maxLevel == 1 ? $"Keeps the flywheel turning at {watts}, even untended"
+                                                           : $"The water wheel holds the flywheel {watts} higher";
                 case UpgradeEffect.MultiplyAllOutput:     return $"Every machine ×{def.effectValue:0.##}";
-                case UpgradeEffect.AddPassiveWatts:       return $"+{NumberFormatter.FormatWatts(def.effectValue)} without cranking";
+                case UpgradeEffect.AddPassiveWatts:       return $"+{watts} without cranking";
                 case UpgradeEffect.UnlockGenerator:       return $"New machine: {GeneratorName(def.unlocksId)}";
                 default:                                  return string.Empty;
             }

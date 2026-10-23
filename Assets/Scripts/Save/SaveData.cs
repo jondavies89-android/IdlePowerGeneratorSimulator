@@ -22,7 +22,9 @@ namespace IdlePowerGen.Save
         public double gameTimeSeconds;
 
         // --- Upgrades ---
+        // v1–v2: one-time purchases. v3 moves them into upgradeLevels and leaves this empty.
         public List<string> purchasedUpgradeIds = new();
+        public List<UpgradeLevelEntry> upgradeLevels = new();
 
         // --- Generators (Era 2+) ---
         public List<GeneratorEntry> generators = new();
@@ -38,6 +40,13 @@ namespace IdlePowerGen.Save
         public int    engineeringXP;
 
         // -------------------------------------------------------
+
+        [Serializable]
+        public class UpgradeLevelEntry
+        {
+            public string upgradeId;
+            public int    level;
+        }
 
         [Serializable]
         public class GeneratorEntry

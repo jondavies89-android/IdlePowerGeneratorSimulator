@@ -1,15 +1,17 @@
+using System;
 using System.Collections.Generic;
 using IdlePowerGen.Models;
 using IdlePowerGen.Utils;
 
 namespace IdlePowerGen.Economy
 {
-    // Tracks purchased upgrades; enforces prerequisites and cost checks.
+    // Tracks the level bought of each upgrade; enforces prerequisites and cost checks.
+    // A one-time upgrade is one with maxLevel 1.
     public class UpgradeRegistry
     {
-        private readonly HashSet<string>       _purchased = new();
-        private readonly List<UpgradeDefinition> _catalogue;
-        private readonly CurrencyLedger          _ledger;
+        private readonly Dictionary<string, int> _levels = new();
+        private readonly List<UpgradeDefinition>  _catalogue;
+        private readonly CurrencyLedger           _ledger;
 
         public UpgradeRegistry(List<UpgradeDefinition> catalogue, CurrencyLedger ledger)
         {
@@ -17,44 +19,67 @@ namespace IdlePowerGen.Economy
             _ledger    = ledger;
         }
 
-        public bool IsPurchased(string upgradeId) => _purchased.Contains(upgradeId);
+        public int  Level(string upgradeId)       => _levels.GetValueOrDefault(upgradeId, 0);
+        public bool IsPurchased(string upgradeId) => Level(upgradeId) > 0;
+        public bool IsMaxed(UpgradeDefinition def) => Level(def.upgradeId) >= Math.Max(1, def.maxLevel);
+
+        // Cost of the next level: base × growth^(levels owned).
+        public double NextCostJoules(UpgradeDefinition def) =>
+            def.costJoules * Math.Pow(Growth(def), Level(def.upgradeId));
+
+        public double NextCostPennies(UpgradeDefinition def) =>
+            def.costPennies * Math.Pow(Growth(def), Level(def.upgradeId));
+
+        // Assets made before levels existed deserialise growth as 0.
+        private static double Growth(UpgradeDefinition def) => def.costGrowth > 0 ? def.costGrowth : 1.0;
 
         public bool CanAfford(UpgradeDefinition def) =>
-            _ledger.Joules        >= def.costJoules
-            && _ledger.Pennies    >= (decimal)def.costPennies
+            _ledger.Joules        >= NextCostJoules(def)
+            && _ledger.Pennies    >= (decimal)NextCostPennies(def)
             && _ledger.Reputation >= def.requiredReputation;
 
         public bool PrerequisitesMet(UpgradeDefinition def)
         {
             foreach (var req in def.requiredUpgradeIds)
-                if (!_purchased.Contains(req)) return false;
+                if (!IsPurchased(req)) return false;
 
             return _ledger.Joules  >= def.requiredStoredJoules
                 && _ledger.Pennies >= (decimal)def.requiredPennies;
         }
 
         public bool IsAvailable(UpgradeDefinition def) =>
-            !IsPurchased(def.upgradeId) && CanAfford(def) && PrerequisitesMet(def);
+            !IsMaxed(def) && CanAfford(def) && PrerequisitesMet(def);
 
         public bool Purchase(UpgradeDefinition def)
         {
             if (!IsAvailable(def)) return false;
 
-            if (def.costJoules  > 0) _ledger.SpendJoules(def.costJoules);
-            if (def.costPennies > 0) _ledger.SpendPennies((decimal)def.costPennies);
+            double joules  = NextCostJoules(def);
+            double pennies = NextCostPennies(def);
+            if (joules  > 0) _ledger.SpendJoules(joules);
+            if (pennies > 0) _ledger.SpendPennies((decimal)pennies);
             // Reputation is a gate, not a cost — not deducted on purchase.
 
-            _purchased.Add(def.upgradeId);
-            EventBus.Publish(new UpgradePurchasedEvent(def));
+            int level = Level(def.upgradeId) + 1;
+            _levels[def.upgradeId] = level;
+            EventBus.Publish(new UpgradePurchasedEvent(def, level));
             return true;
         }
 
-        public IReadOnlyCollection<string> PurchasedIds => _purchased;
+        public IReadOnlyDictionary<string, int> Levels => _levels;
 
+        public void LoadFromSave(IReadOnlyDictionary<string, int> levels)
+        {
+            _levels.Clear();
+            foreach (var (id, level) in levels)
+                if (level > 0) _levels[id] = level;
+        }
+
+        // One level of each: what a one-time purchase list means.
         public void LoadFromSave(IEnumerable<string> ids)
         {
-            _purchased.Clear();
-            foreach (var id in ids) _purchased.Add(id);
+            _levels.Clear();
+            foreach (var id in ids) _levels[id] = 1;
         }
     }
 }
