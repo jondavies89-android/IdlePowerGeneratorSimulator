@@ -152,7 +152,7 @@ Canvas (Screen Space – Overlay)
 - [x] Large brass-style button image (source art or placeholder) — procedural placeholder, `Assets/Sprites/UI/Era1/Crank.png`
 - [x] `OnClick` → `Era1TapController.OnCrankTapped()`
 - [x] Attach `Era1TapController.cs` to a GameObject in scene; reference from button — on `_Controllers`
-- [ ] Play crank SFX on tap (wire up in step 8)
+- [x] Play crank SFX on tap (wire up in step 8)
 - [x] Brief scale-down animation on press (DOTween or Animator) — `UI/PressFeedback.cs`, also on every card
 - Extra: a "+1.00 J" pop rises from the crank on each tap (`Era1TapPopView`)
 
@@ -207,10 +207,14 @@ The code fires `EraAdvancedEvent` automatically when the first contract complete
 
 ## 8. Audio
 
-- [ ] **Crank SFX** — mechanical click/ratchet on each tap (1 AudioSource on CrankButton)
-- [ ] **Upgrade purchased** — brass bell or clockwork chime
-- [ ] **Ambient loop** — faint fire crackle + workshop ambience (low volume, loop)
-- [ ] **Milestone stinger** — warm orchestral hit
+- [x] **Crank SFX** — mechanical click/ratchet on each tap (1 AudioSource on CrankButton)
+- [x] **Upgrade purchased** — brass bell or clockwork chime (also plays, quieter, when a machine is built)
+- [x] **Ambient loop** — faint fire crackle + workshop ambience (low volume, loop)
+- [x] **Milestone stinger** — warm orchestral hit
+
+> All four are **synthesised placeholders** (`Assets/Editor/Era1AudioFactory.cs`), not recordings: replace any WAV
+> under `Assets/Audio/*/Era1/` with a real clip of the same name. Routed by `UI/Era1AudioPresenter.cs` from the
+> event bus. Browsers only start audio after the first tap, so the ambience begins on the first crank.
 
 ---
 

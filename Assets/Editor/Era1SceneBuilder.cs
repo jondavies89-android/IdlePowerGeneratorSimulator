@@ -29,6 +29,7 @@ public static class Era1SceneBuilder
     {
         Era1SpriteFactory.Build();
         Era1FontBuilder.Build();
+        Era1AudioFactory.Build();
         BuildPrefabs();
 
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
@@ -55,6 +56,7 @@ public static class Era1SceneBuilder
         cam.clearFlags = CameraClearFlags.SolidColor;
         cam.backgroundColor = Era1Theme.CameraBackground;
         cam.orthographic = true;
+        go.AddComponent<AudioListener>();
     }
 
     // One root object for every manager: DontDestroyOnLoad on any of them keeps them all.
@@ -228,6 +230,11 @@ public static class Era1SceneBuilder
         btn.colors = colors;
         button.gameObject.AddComponent<PressFeedback>();
         UnityEventTools.AddPersistentListener(btn.onClick, controllers.Tap.OnCrankTapped);
+        // Todo §8: the crank's own AudioSource.
+        var crankSource = button.gameObject.AddComponent<AudioSource>();
+        crankSource.playOnAwake = false;
+        crankSource.volume = 0.7f;
+        CreateAudio(crankSource);
 
         var hint = Text(area, "Hint", "Turn the crank", 15, Era1Theme.TextMuted, TextAlignmentOptions.Center, FontStyles.Italic);
         Anchor(hint.rectTransform, new Vector2(0, 0), new Vector2(1, 0), new Vector2(0, 4), 26, bottom: true);
@@ -241,6 +248,27 @@ public static class Era1SceneBuilder
         template.rectTransform.anchoredPosition = new Vector2(0, -60);
         var popView = pops.gameObject.AddComponent<Era1TapPopView>();
         Wire(popView, ("_template", template));
+    }
+
+    // Todo §8 — chimes and stingers on one source, the room's ambience on a quiet loop.
+    private static void CreateAudio(AudioSource crankSource)
+    {
+        var go = new GameObject("_Audio");
+        var sfx = go.AddComponent<AudioSource>();
+        sfx.playOnAwake = false;
+        sfx.volume = 0.6f;
+
+        var ambience = go.AddComponent<AudioSource>();
+        ambience.clip = Era1AudioFactory.Ambience;
+        ambience.loop = true;
+        ambience.playOnAwake = true;
+        // Background texture, felt more than heard.
+        ambience.volume = 0.15f;
+
+        var presenter = go.AddComponent<Era1AudioPresenter>();
+        Wire(presenter, ("_crankSource", crankSource), ("_sfxSource", sfx), ("_ambienceSource", ambience),
+                        ("_crankClip", Era1AudioFactory.Crank), ("_upgradeClip", Era1AudioFactory.Chime),
+                        ("_milestoneClip", Era1AudioFactory.Stinger));
     }
 
     private static void CreateLists(Transform parent, Controllers controllers)
