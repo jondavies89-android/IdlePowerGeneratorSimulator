@@ -119,7 +119,7 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!1 &83009454
+--- !u!1 &141948351
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -127,58 +127,118 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 83009457}
-  - component: {fileID: 83009456}
-  - component: {fileID: 83009455}
+  - component: {fileID: 141948358}
+  - component: {fileID: 141948357}
+  - component: {fileID: 141948356}
+  - component: {fileID: 141948355}
+  - component: {fileID: 141948354}
+  - component: {fileID: 141948353}
+  - component: {fileID: 141948352}
   m_Layer: 0
-  m_Name: EventSystem
+  m_Name: _Managers
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &83009455
+--- !u!114 &141948352
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 83009454}
+  m_GameObject: {fileID: 141948351}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4f231c4fb786f3946a6b90b886c48677, type: 3}
+  m_Script: {fileID: 11500000, guid: 3539f2bdb52c2614d8a23c619247cae5, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.EventSystems.StandaloneInputModule
-  m_SendPointerHoverToParent: 1
-  m_HorizontalAxis: Horizontal
-  m_VerticalAxis: Vertical
-  m_SubmitButton: Submit
-  m_CancelButton: Cancel
-  m_InputActionsPerSecond: 10
-  m_RepeatDelay: 0.5
-  m_ForceModuleActive: 0
---- !u!114 &83009456
+  m_EditorClassIdentifier: IdlePowerGen.Runtime::IdlePowerGen.Managers.UpgradeEffectApplier
+--- !u!114 &141948353
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 83009454}
+  m_GameObject: {fileID: 141948351}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 76c392e42b5098c458856cdf6ecaaaa1, type: 3}
+  m_Script: {fileID: 11500000, guid: e58409e61d4dc434ab617622683fa825, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.EventSystems.EventSystem
-  m_FirstSelected: {fileID: 0}
-  m_sendNavigationEvents: 1
-  m_DragThreshold: 10
---- !u!4 &83009457
+  m_EditorClassIdentifier: IdlePowerGen.Runtime::IdlePowerGen.Managers.EraManager
+--- !u!114 &141948354
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 141948351}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1883663425024af46b8405b1c99ab845, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: IdlePowerGen.Runtime::IdlePowerGen.Save.SaveManager
+--- !u!114 &141948355
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 141948351}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1873df17101ab314b857c0c6a4272d38, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: IdlePowerGen.Utils::IdlePowerGen.Utils.GameClock
+  _gameTimeScale: 60
+--- !u!114 &141948356
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 141948351}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b128462eca2ee64880076a7f66712c8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: IdlePowerGen.Runtime::IdlePowerGen.Simulation.SimulationTick
+--- !u!114 &141948357
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 141948351}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d00629461e3af04429db8ffd43b68f36, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: IdlePowerGen.Runtime::IdlePowerGen.Managers.GameManager
+  _eraConfigs:
+  - {fileID: 11400000, guid: 18a947cf195eff140826b064c13f8b25, type: 2}
+  _upgradeDefinitions:
+  - {fileID: 11400000, guid: 4b563c6d45b1f6347864e36cab4e0418, type: 2}
+  - {fileID: 11400000, guid: d67e89eac79aae44584fad0c1d561f70, type: 2}
+  - {fileID: 11400000, guid: e1544c051b669a1499b0b87d15b3d5c6, type: 2}
+  - {fileID: 11400000, guid: dd54ab05962423e42889a63ff250d521, type: 2}
+  - {fileID: 11400000, guid: 9c8b9671b34dc334ba3f6ed7a3f5ccf3, type: 2}
+  - {fileID: 11400000, guid: 059c5d7ce739b3b47bc7c90385631393, type: 2}
+  - {fileID: 11400000, guid: ce91789e947390544ac213e685fec1b9, type: 2}
+  - {fileID: 11400000, guid: 202a221011026a34f89d7d2c375d79b5, type: 2}
+  - {fileID: 11400000, guid: 07a696d5b159a02448131233ed9aa773, type: 2}
+  _generatorDefinitions:
+  - {fileID: 11400000, guid: c94ea32b75ca24544952a615ae1b2431, type: 2}
+  - {fileID: 11400000, guid: a6a4864471784d04e85c91280f15e1ce, type: 2}
+  - {fileID: 11400000, guid: d35ce540feb06a84cb2d8e03b3b8bf9d, type: 2}
+  _contractDefinitions: []
+  _autosaveIntervalSeconds: 10
+--- !u!4 &141948358
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 83009454}
+  m_GameObject: {fileID: 141948351}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -187,7 +247,7 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &302218169
+--- !u!1 &416154507
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -195,8 +255,8 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 302218171}
-  - component: {fileID: 302218170}
+  - component: {fileID: 416154509}
+  - component: {fileID: 416154508}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -204,13 +264,13 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!20 &302218170
+--- !u!20 &416154508
 Camera:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 302218169}
+  m_GameObject: {fileID: 416154507}
   m_Enabled: 1
   serializedVersion: 2
   m_ClearFlags: 2
@@ -255,13 +315,13 @@ Camera:
   m_OcclusionCulling: 1
   m_StereoConvergence: 10
   m_StereoSeparation: 0.022
---- !u!4 &302218171
+--- !u!4 &416154509
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 302218169}
+  m_GameObject: {fileID: 416154507}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -270,7 +330,7 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &950267502
+--- !u!1 &1696154737
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -278,105 +338,58 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 950267509}
-  - component: {fileID: 950267508}
-  - component: {fileID: 950267507}
-  - component: {fileID: 950267506}
-  - component: {fileID: 950267505}
-  - component: {fileID: 950267504}
-  - component: {fileID: 950267503}
+  - component: {fileID: 1696154740}
+  - component: {fileID: 1696154739}
+  - component: {fileID: 1696154738}
   m_Layer: 0
-  m_Name: _Managers
+  m_Name: EventSystem
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &950267503
+--- !u!114 &1696154738
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 950267502}
+  m_GameObject: {fileID: 1696154737}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3539f2bdb52c2614d8a23c619247cae5, type: 3}
+  m_Script: {fileID: 11500000, guid: 4f231c4fb786f3946a6b90b886c48677, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: IdlePowerGen.Runtime::IdlePowerGen.Managers.UpgradeEffectApplier
---- !u!114 &950267504
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.EventSystems.StandaloneInputModule
+  m_SendPointerHoverToParent: 1
+  m_HorizontalAxis: Horizontal
+  m_VerticalAxis: Vertical
+  m_SubmitButton: Submit
+  m_CancelButton: Cancel
+  m_InputActionsPerSecond: 10
+  m_RepeatDelay: 0.5
+  m_ForceModuleActive: 0
+--- !u!114 &1696154739
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 950267502}
+  m_GameObject: {fileID: 1696154737}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e58409e61d4dc434ab617622683fa825, type: 3}
+  m_Script: {fileID: 11500000, guid: 76c392e42b5098c458856cdf6ecaaaa1, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: IdlePowerGen.Runtime::IdlePowerGen.Managers.EraManager
---- !u!114 &950267505
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 950267502}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1883663425024af46b8405b1c99ab845, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: IdlePowerGen.Runtime::IdlePowerGen.Save.SaveManager
---- !u!114 &950267506
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 950267502}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1873df17101ab314b857c0c6a4272d38, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: IdlePowerGen.Utils::IdlePowerGen.Utils.GameClock
-  _gameTimeScale: 60
---- !u!114 &950267507
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 950267502}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5b128462eca2ee64880076a7f66712c8, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: IdlePowerGen.Runtime::IdlePowerGen.Simulation.SimulationTick
---- !u!114 &950267508
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 950267502}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d00629461e3af04429db8ffd43b68f36, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: IdlePowerGen.Runtime::IdlePowerGen.Managers.GameManager
-  _eraConfigs: []
-  _upgradeDefinitions: []
-  _generatorDefinitions: []
-  _contractDefinitions: []
-  _autosaveIntervalSeconds: 10
---- !u!4 &950267509
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.EventSystems.EventSystem
+  m_FirstSelected: {fileID: 0}
+  m_sendNavigationEvents: 1
+  m_DragThreshold: 10
+--- !u!4 &1696154740
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 950267502}
+  m_GameObject: {fileID: 1696154737}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -389,6 +402,6 @@ Transform:
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
-  - {fileID: 302218171}
-  - {fileID: 950267509}
-  - {fileID: 83009457}
+  - {fileID: 416154509}
+  - {fileID: 141948358}
+  - {fileID: 1696154740}

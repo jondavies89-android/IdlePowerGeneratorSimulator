@@ -36,7 +36,7 @@ public static class Era1SceneBuilder
     private static void CreateManagers()
     {
         var go = new GameObject("_Managers");
-        go.AddComponent<IdlePowerGen.Managers.GameManager>();
+        WireCatalogues(go.AddComponent<IdlePowerGen.Managers.GameManager>());
         go.AddComponent<IdlePowerGen.Simulation.SimulationTick>();
 
         var clock = go.AddComponent<IdlePowerGen.Utils.GameClock>();
@@ -48,6 +48,23 @@ public static class Era1SceneBuilder
         go.AddComponent<IdlePowerGen.Save.SaveManager>();
         go.AddComponent<IdlePowerGen.Managers.EraManager>();
         go.AddComponent<IdlePowerGen.Managers.UpgradeEffectApplier>();
+    }
+
+    // Todo §4.4 — the Inspector drag-and-drop, done from the asset folders.
+    private static void WireCatalogues(IdlePowerGen.Managers.GameManager gm)
+    {
+        var so = new SerializedObject(gm);
+        SetArray(so.FindProperty("_eraConfigs"),           Era1AssetBuilder.EraConfigs());
+        SetArray(so.FindProperty("_upgradeDefinitions"),   Era1AssetBuilder.Upgrades());
+        SetArray(so.FindProperty("_generatorDefinitions"), Era1AssetBuilder.Generators());
+        so.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    private static void SetArray(SerializedProperty prop, Object[] items)
+    {
+        prop.arraySize = items.Length;
+        for (int i = 0; i < items.Length; i++)
+            prop.GetArrayElementAtIndex(i).objectReferenceValue = items[i];
     }
 
     private static void CreateEventSystem()

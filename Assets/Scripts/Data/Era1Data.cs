@@ -34,15 +34,16 @@ namespace IdlePowerGen.Data
         // Final Era 1 upgrade — global x1.5 multiplier (UpgradeEffect.MultiplyAllOutput).
         // Hints at the upcoming Era 2 economy.
         public static readonly GlobalSpec ForemanUpgrade =
-            new("era1_foreman", "Hire a Foreman", 12_000, 1.5);
+            new("era1_foreman", "Hire a Foreman", 12_000, 1.5, "era1_cam_mechanism");
 
         // §5.1.2 — Stackable passive generators. cost(n) = baseJ × 1.15^n.
-        // Layout: (id, displayName, baseJoules, basePowerWatts, requiredUpgradeId)
+        // Each is gated by its GeneratorUnlocks entry above, not by the crank chain directly.
+        // Layout: (generatorTypeName, displayName, baseJoules, basePowerWatts, requiredUpgradeId)
         public static readonly GeneratorSpec[] PassiveGenerators =
         {
-            new("spinning_jenny", "Spinning Jenny", 50,      1.0,   "era1_better_crank"),
-            new("waterwheel",     "Waterwheel",     3_000,   20.0,  "era1_belt_drive"),
-            new("steam_boiler",   "Steam Boiler",   15_000,  100.0, "era1_cam_mechanism"),
+            new("SpinningJenny", "Spinning Jenny", 50,      1.0,   "era1_unlock_spinning_jenny"),
+            new("Waterwheel",    "Waterwheel",     3_000,   20.0,  "era1_unlock_waterwheel"),
+            new("SteamBoiler",   "Steam Boiler",   15_000,  100.0, "era1_unlock_steam_boiler"),
         };
 
         // §5.1.3 — Pacing milestones (stored joules → event)
@@ -105,10 +106,11 @@ namespace IdlePowerGen.Data
             public readonly string Name;
             public readonly double CostJoules;
             public readonly double Multiplier;
+            public readonly string PrerequisiteId;
 
-            public GlobalSpec(string id, string name, double cost, double mult)
+            public GlobalSpec(string id, string name, double cost, double mult, string prereq)
             {
-                Id = id; Name = name; CostJoules = cost; Multiplier = mult;
+                Id = id; Name = name; CostJoules = cost; Multiplier = mult; PrerequisiteId = prereq;
             }
         }
     }
