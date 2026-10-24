@@ -62,6 +62,13 @@ namespace IdlePowerGen.Tests
         }
 
         [Test]
+        public void AHeldContractTakesOnlyTheWattsItAskedFor()
+        {
+            Supply(1500, 0, 1);
+            Assert.That(_contracts.DeliveredWatts, Is.EqualTo(1000));
+        }
+
+        [Test]
         public void ContractsThatNeedNotHoldSurviveADip()
         {
             _def.mustHoldOutput = false;

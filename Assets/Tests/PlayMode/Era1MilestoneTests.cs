@@ -111,6 +111,17 @@ namespace IdlePowerGen.Tests
             Assert.That(Customer.Current, Is.EqualTo(Controllers.Era1FirstCustomerController.Stage.Offered));
         }
 
+        [UnityTest]
+        public IEnumerator SupplyingTheNeighbourBanksOnlyWhatIsLeftOver()
+        {
+            yield return KnockedWithGearing(5); // 1.6 kW
+            Customer.Accept();
+            yield return new WaitForSeconds(1.1f); // the first tick of the supply
+            double before = GM.Ledger.Joules;
+            yield return new WaitForSeconds(1f);
+            Assert.That(GM.Ledger.Joules - before, Is.EqualTo(600).Within(1));
+        }
+
         // The whole end of the era: knock, 1 kW, accept, an hour's supply, a shilling, Era 2.
         [UnityTest]
         public IEnumerator SupplyingTheNeighbourForAnHourAdvancesToEra2()

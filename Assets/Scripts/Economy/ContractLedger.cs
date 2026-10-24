@@ -92,31 +92,49 @@ namespace IdlePowerGen.Economy
             return true;
         }
 
+        // Watts sold to customers on the last tick. That power goes down their wires, so
+        // it isn't also banked as the workshop's own joules.
+        public double DeliveredWatts { get; private set; }
+
         // Called every sim tick (1 Hz). outputWatts = total grid output at this moment.
+        // Output is shared out oldest contract first, each taking at most what it asked
+        // for: two customers can't both be paid for the same watts.
         public void Tick(double outputWatts, double deltaTime,
                          double gameTime, CurrencyLedger ledger, double eraBaseRate)
         {
-            for (int i = _active.Count - 1; i >= 0; i--)
+            double remaining = Math.Max(0, outputWatts);
+            DeliveredWatts = 0;
+            var ended = new List<ContractInstance>();
+
+            foreach (var c in _active)
             {
-                var c = _active[i];
+                double share = Math.Min(c.Definition.requiredWatts, remaining);
+                remaining -= share;
+
                 // Without this a must-hold contract paid on average energy, so a moment at
                 // full output and a long dip below it could still pass the fail threshold.
-                if (c.Definition.mustHoldOutput && outputWatts < c.Definition.requiredWatts)
+                if (c.Definition.mustHoldOutput && share < c.Definition.requiredWatts)
                 {
+                    remaining += share;
                     c.Break();
-                    _history.Add(c);
-                    _active.RemoveAt(i);
+                    ended.Add(c);
                     continue;
                 }
 
-                c.RecordOutput(outputWatts, deltaTime);
+                DeliveredWatts += share;
+                c.RecordOutput(share, deltaTime);
 
                 if (gameTime >= c.EndGameTime)
                 {
                     c.Resolve(ledger, eraBaseRate);
-                    _history.Add(c);
-                    _active.RemoveAt(i);
+                    ended.Add(c);
                 }
+            }
+
+            foreach (var c in ended)
+            {
+                _active.Remove(c);
+                _history.Add(c);
             }
         }
 
