@@ -15,7 +15,8 @@ namespace IdlePowerGen
     public readonly struct UpgradePurchasedEvent
     {
         public readonly Models.UpgradeDefinition Definition;
-        public UpgradePurchasedEvent(Models.UpgradeDefinition def) { Definition = def; }
+        public readonly int NewLevel;
+        public UpgradePurchasedEvent(Models.UpgradeDefinition def, int newLevel) { Definition = def; NewLevel = newLevel; }
     }
 
     public readonly struct ContractAcceptedEvent

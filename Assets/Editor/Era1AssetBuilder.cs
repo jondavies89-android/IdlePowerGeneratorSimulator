@@ -20,35 +20,26 @@ public static class Era1AssetBuilder
 
     public const string EraConfigPath = EraFolder + "/Era1Config.asset";
 
-    // Asset file names from the todo tables, keyed by upgrade id.
+    // Asset file names, keyed by upgrade id.
     private static readonly Dictionary<string, string> UpgradeAssetNames = new()
     {
-        ["era1_better_crank"]          = "Upgrade_BetterCrank",
-        ["era1_iron_flywheel"]         = "Upgrade_IronFlywheel",
-        ["era1_gear_train"]            = "Upgrade_GearTrain",
-        ["era1_belt_drive"]            = "Upgrade_LeatherBeltDrive",
-        ["era1_cam_mechanism"]         = "Upgrade_CamMechanism",
-        ["era1_unlock_spinning_jenny"] = "Upgrade_UnlockSpinningJenny",
-        ["era1_unlock_waterwheel"]     = "Upgrade_UnlockWaterwheel",
-        ["era1_unlock_steam_boiler"]   = "Upgrade_UnlockSteamBoiler",
-        ["era1_foreman"]               = "Upgrade_HireForeman",
+        [Era1Data.BetterCrankId]  = "Upgrade_BetterCrank",
+        [Era1Data.IronFlywheelId] = "Upgrade_IronFlywheel",
+        [Era1Data.BearingsId]     = "Upgrade_BrassBearings",
+        [Era1Data.MagnetsId]      = "Upgrade_LodestoneMagnets",
+        [Era1Data.WaterWheelId]   = "Upgrade_WaterWheel",
+        [Era1Data.BeltsGearingId] = "Upgrade_BeltsAndGearing",
     };
 
     // Player-facing copy. Plain English, period voice; the number is on the card already.
     private static readonly Dictionary<string, string> Descriptions = new()
     {
-        ["era1_better_crank"]          = "A longer handle and a surer grip.",
-        ["era1_iron_flywheel"]         = "A heavy iron wheel carries each turn further.",
-        ["era1_gear_train"]            = "Brass gears spin the magnet faster than any wrist.",
-        ["era1_belt_drive"]            = "A leather belt from a foot treadle joins in.",
-        ["era1_cam_mechanism"]         = "A cam smooths every push into a steady spin.",
-        ["era1_unlock_spinning_jenny"] = "An old spinning jenny could turn the magnet for you.",
-        ["era1_unlock_waterwheel"]     = "There is a river behind the workshop. A wheel would turn all day.",
-        ["era1_unlock_steam_boiler"]   = "The parish will allow a boiler, if you pay for the licence.",
-        ["era1_foreman"]               = "Someone to keep every machine oiled and running.",
-        ["SpinningJenny"]              = "Turns the magnet while you rest.",
-        ["Waterwheel"]                 = "The river never tires.",
-        ["SteamBoiler"]                = "Coal, fire and pressure.",
+        [Era1Data.BetterCrankId]  = "A longer handle and a surer grip.",
+        [Era1Data.IronFlywheelId] = "A heavy iron wheel keeps turning after your hand stops.",
+        [Era1Data.BearingsId]     = "Oiled brass where there was dry wood. The wheel runs longer.",
+        [Era1Data.MagnetsId]      = "Stronger lodestones double the current, and drag on the wheel.",
+        [Era1Data.WaterWheelId]   = "There is a river behind the workshop. A wheel would turn all day.",
+        [Era1Data.BeltsGearingId] = "Better belts and gearing pass more of the river to the dynamo.",
     };
 
     [MenuItem("IdlePowerGen/Build/Era 1 Assets")]
@@ -56,12 +47,13 @@ public static class Era1AssetBuilder
     {
         EnsureFolder(EraFolder);
         EnsureFolder(UpgradeFolder);
-        EnsureFolder(GeneratorFolder);
 
         BuildEraConfig();
         BuildUpgrades();
-        BuildGenerators();
         BuildContracts();
+
+        // Era 1 no longer has stackable machines; the water wheel is an upgrade.
+        if (AssetDatabase.IsValidFolder(GeneratorFolder)) AssetDatabase.DeleteAsset(GeneratorFolder);
 
         AssetDatabase.SaveAssets();
         Debug.Log("[Era1AssetBuilder] Era 1 assets written");
@@ -87,53 +79,34 @@ public static class Era1AssetBuilder
 
     private static void BuildUpgrades()
     {
-        foreach (var s in Era1Data.CrankUpgrades)
-            WriteUpgrade(s.Id, s.Name, s.CostJoules, UpgradeEffect.MultiplyCrankTapValue,
-                         s.CtvMultiplier, null, s.PrerequisiteId);
-
-        foreach (var s in Era1Data.GeneratorUnlocks)
-            WriteUpgrade(s.Id, s.Name, s.CostJoules, UpgradeEffect.UnlockGenerator,
-                         0, s.UnlocksGeneratorType, s.PrerequisiteId);
-
-        var f = Era1Data.ForemanUpgrade;
-        WriteUpgrade(f.Id, f.Name, f.CostJoules, UpgradeEffect.MultiplyAllOutput,
-                     f.Multiplier, null, f.PrerequisiteId);
-    }
-
-    private static void WriteUpgrade(string id, string name, double cost, UpgradeEffect effect,
-                                     double value, string unlocksId, string prereq)
-    {
-        var def = LoadOrCreate<UpgradeDefinition>($"{UpgradeFolder}/{UpgradeAssetNames[id]}.asset");
-        def.upgradeId          = id;
-        def.displayName        = name;
-        def.description        = Descriptions[id];
-        def.minEra             = 1;
-        def.costJoules         = cost;
-        def.costPennies        = 0;
-        def.effect             = effect;
-        def.effectValue        = value;
-        def.unlocksId          = unlocksId;
-        def.requiredUpgradeIds = string.IsNullOrEmpty(prereq) ? Array.Empty<string>() : new[] { prereq };
-        EditorUtility.SetDirty(def);
-    }
-
-    private static void BuildGenerators()
-    {
-        foreach (var s in Era1Data.PassiveGenerators)
+        var keep = new HashSet<string>();
+        foreach (var s in Era1Data.Upgrades)
         {
-            var type = (GeneratorType)Enum.Parse(typeof(GeneratorType), s.Id);
-            var def  = LoadOrCreate<GeneratorDefinition>($"{GeneratorFolder}/Generator_{s.Id}.asset");
-            def.generatorType            = type;
-            def.displayName              = s.Name;
-            def.description              = Descriptions[s.Id];
-            def.minEra                   = 1;
-            def.basePowerWatts           = s.BasePowerWatts;
-            def.fuelConsumptionPerSecond = 0; // no fuel mechanic in Era 1
-            def.baseCostJoules           = s.BaseJoules;
-            def.baseCostPennies          = 0;
-            def.requiredUpgradeId        = s.RequiredUpgradeId;
+            string path = $"{UpgradeFolder}/{UpgradeAssetNames[s.Id]}.asset";
+            keep.Add(path);
+
+            var def = LoadOrCreate<UpgradeDefinition>(path);
+            def.upgradeId          = s.Id;
+            def.displayName        = s.Name;
+            def.description        = Descriptions[s.Id];
+            def.minEra             = 1;
+            def.costJoules         = s.CostJoules;
+            def.costPennies        = 0;
+            def.costGrowth         = s.CostGrowth;
+            def.maxLevel           = s.MaxLevel;
+            def.effect             = s.Effect;
+            def.effectValue        = s.Value;
+            def.secondaryValue     = s.SecondaryValue;
+            def.unlocksId          = null;
+            def.requiredUpgradeIds = string.IsNullOrEmpty(s.PrerequisiteId)
+                                     ? Array.Empty<string>() : new[] { s.PrerequisiteId };
             EditorUtility.SetDirty(def);
         }
+
+        // An upgrade dropped from Era1Data must not linger in the catalogue.
+        foreach (var stale in LoadAll<UpgradeDefinition>(UpgradeFolder)
+                     .Select(AssetDatabase.GetAssetPath).Where(p => !keep.Contains(p)).ToList())
+            AssetDatabase.DeleteAsset(stale);
     }
 
     private static void BuildContracts()
@@ -147,6 +120,7 @@ public static class Era1AssetBuilder
         def.minEra              = 1;
         def.requiredWatts       = Era1Data.MaxWatts;
         def.durationHours       = Era1Data.FirstCustomerHours;
+        def.mustHoldOutput      = true; // "1 kW sustained" (bible §5.1.3), not 1 kW on average
         def.availableStartHour  = 0f;
         def.availableEndHour    = 24f;
         def.payRateMultiplier   = Era1Data.FirstCustomerPayMult;
@@ -168,7 +142,9 @@ public static class Era1AssetBuilder
         LoadAll<UpgradeDefinition>(UpgradeFolder).OrderBy(u => u.costJoules).ToArray();
 
     public static GeneratorDefinition[] Generators() =>
-        LoadAll<GeneratorDefinition>(GeneratorFolder).OrderBy(g => g.baseCostJoules).ToArray();
+        AssetDatabase.IsValidFolder(GeneratorFolder)
+            ? LoadAll<GeneratorDefinition>(GeneratorFolder).OrderBy(g => g.baseCostJoules).ToArray()
+            : Array.Empty<GeneratorDefinition>();
 
     public static EraConfig[] EraConfigs() => LoadAll<EraConfig>(EraFolder);
 

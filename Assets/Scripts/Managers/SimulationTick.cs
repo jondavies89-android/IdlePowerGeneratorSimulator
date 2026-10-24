@@ -10,11 +10,16 @@ namespace IdlePowerGen.Simulation
     {
         public static SimulationTick Instance { get; private set; }
 
-        public PowerGrid   Grid   { get; private set; }
-        public DemandModel Demand { get; private set; }
+        public PowerGrid    Grid     { get; private set; }
+        public DemandModel  Demand   { get; private set; }
+        public Era1Flywheel   Flywheel   { get; private set; }
+        public Era1WaterWheel WaterWheel { get; private set; }
 
         private float _accumulator;
         private const float TickInterval = 1.0f;
+
+        // Lets the 60 Hz UI interpolate between 1 Hz ticks.
+        public float SecondsSinceTick => _accumulator;
 
         private void Awake()
         {
@@ -24,6 +29,12 @@ namespace IdlePowerGen.Simulation
 
             Grid   = new PowerGrid();
             Demand = new DemandModel(0, new SeededRandom(seed: 1001));
+
+            // Both idle (no capacity, no watts) until Era 1 upgrades set them up.
+            Flywheel   = new Era1Flywheel(Data.Era1Data.FlywheelBaseDecayPerSecond);
+            WaterWheel = new Era1WaterWheel();
+            Grid.AddSource(Flywheel);
+            Grid.AddSource(WaterWheel);
         }
 
         private void Update()

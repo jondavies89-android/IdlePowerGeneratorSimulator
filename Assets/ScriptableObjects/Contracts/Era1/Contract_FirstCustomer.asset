@@ -19,6 +19,7 @@ MonoBehaviour:
   minEra: 1
   requiredWatts: 1000
   durationHours: 1
+  mustHoldOutput: 1
   availableStartHour: 0
   availableEndHour: 24
   payRateMultiplier: 12

@@ -10,20 +10,23 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1c6c43ca333bc2c4993a73e352ede6b8, type: 3}
-  m_Name: Upgrade_UnlockWaterwheel
+  m_Name: Upgrade_LodestoneMagnets
   m_EditorClassIdentifier: IdlePowerGen.Models::IdlePowerGen.Models.UpgradeDefinition
-  upgradeId: era1_unlock_waterwheel
-  displayName: Walk Outside
-  description: There is a river behind the workshop. A wheel would turn all day.
+  upgradeId: era1_magnets
+  displayName: Lodestone Magnets
+  description: Stronger lodestones double the current, and drag on the wheel.
   minEra: 1
-  costJoules: 1500
+  costJoules: 1000
   costPennies: 0
+  costGrowth: 8
+  maxLevel: 4
   requiredReputation: 0
-  effect: 2
-  effectValue: 0
-  unlocksId: Waterwheel
+  effect: 8
+  effectValue: 2
+  secondaryValue: 1.25
+  unlocksId: 
   requiredUpgradeIds:
-  - era1_belt_drive
+  - era1_iron_flywheel
   requiredStoredJoules: 0
   requiredPennies: 0
   icon: {fileID: 0}

@@ -7,8 +7,8 @@ using IdlePowerGen.Utils;
 namespace IdlePowerGen.UI
 {
     // Spawns one card per upgrade in the catalogue and decides which are on screen.
-    // Purchased upgrades disappear. Unpurchased ones show once they are at most one step
-    // away (their prerequisites' prerequisites are bought), so a locked "Walk Outside"
+    // Fully levelled upgrades disappear. The rest show once they are at most one step
+    // away (their prerequisites' prerequisites are bought), so a locked "Water Wheel"
     // can hint at the river without the whole tree appearing at minute one.
     public class UpgradeListView : MonoBehaviour
     {
@@ -56,7 +56,7 @@ namespace IdlePowerGen.UI
             bool any = false;
             foreach (var card in _cards)
             {
-                bool show = !gm.Upgrades.IsPurchased(card.Definition.upgradeId) && IsNear(card.Definition, gm);
+                bool show = !gm.Upgrades.IsMaxed(card.Definition) && IsNear(card.Definition, gm);
                 card.gameObject.SetActive(show);
                 any |= show;
             }

@@ -29,18 +29,42 @@ namespace IdlePowerGen.Tests
         [UnityTest]
         public IEnumerator BetterCrankCardPurchasesTheUpgrade()
         {
-            GM.Ledger.AddJoules(5);
+            GM.Ledger.AddJoules(15);
             yield return null;
             FindButton("Upgrade_era1_better_crank").onClick.Invoke();
             Assert.That(GM.Upgrades.IsPurchased("era1_better_crank"), Is.True);
         }
 
         [UnityTest]
-        public IEnumerator PurchasedCardIsHidden()
+        public IEnumerator LevelledCardStaysAfterPurchase()
         {
-            GM.Ledger.AddJoules(5);
+            GM.Ledger.AddJoules(15);
             yield return null;
             var card = FindButton("Upgrade_era1_better_crank");
+            card.onClick.Invoke();
+            yield return null;
+            Assert.That(card.gameObject.activeSelf, Is.True);
+        }
+
+        [UnityTest]
+        public IEnumerator LevelledCardShowsTheNextLevelsCost()
+        {
+            GM.Ledger.AddJoules(10);
+            yield return null;
+            var card = FindButton("Upgrade_era1_better_crank");
+            card.onClick.Invoke();
+            yield return null;
+            Assert.That(card.GetComponent<UI.UpgradeCardView>().CostText,
+                        Is.EqualTo(Utils.NumberFormatter.FormatJoules(22.0)));
+        }
+
+        [UnityTest]
+        public IEnumerator OneTimeCardIsHiddenOncePurchased()
+        {
+            SetLevels(("era1_better_crank", 1), ("era1_iron_flywheel", 1));
+            GM.Ledger.AddJoules(5_000);
+            yield return null;
+            var card = FindButton("Upgrade_era1_water_wheel");
             card.onClick.Invoke();
             yield return null;
             Assert.That(card.gameObject.activeSelf, Is.False);
@@ -54,29 +78,64 @@ namespace IdlePowerGen.Tests
         }
 
         [UnityTest]
-        public IEnumerator SpinningJennyRowAppearsOnlyAfterItsPatent()
+        public IEnumerator BearingsCardAppearsOnceTheFlywheelIsBought()
         {
-            var row = GameObject.Find("Generator_SpinningJenny");
-            Assert.That(row, Is.Null, "Row should be hidden before the patent");
-
-            GM.Ledger.AddJoules(5 + 30);
-            FindButton("Upgrade_era1_better_crank").onClick.Invoke();
+            SetLevels(("era1_better_crank", 1), ("era1_iron_flywheel", 1));
             yield return null;
-            FindButton("Upgrade_era1_unlock_spinning_jenny").onClick.Invoke();
-            yield return null;
-            Assert.That(GameObject.Find("Generator_SpinningJenny"), Is.Not.Null);
+            Assert.That(GameObject.Find("Upgrade_era1_bearings"), Is.Not.Null);
         }
 
         [UnityTest]
-        public IEnumerator BuyingASpinningJennyFromItsRowCostsFiftyJoules()
+        public IEnumerator BearingsCardIsHiddenBeforeTheFlywheel()
         {
-            GM.Ledger.AddJoules(5 + 30 + 50);
-            FindButton("Upgrade_era1_better_crank").onClick.Invoke();
             yield return null;
-            FindButton("Upgrade_era1_unlock_spinning_jenny").onClick.Invoke();
+            Assert.That(GameObject.Find("Upgrade_era1_bearings"), Is.Null);
+        }
+
+        [UnityTest]
+        public IEnumerator TappingTurnsTheCrank()
+        {
+            var spin = Object.FindAnyObjectByType<UI.Era1CrankSpinView>();
+            float before = spin.CurrentAngle;
+            FindButton("CrankButton").onClick.Invoke();
+            yield return new WaitForSeconds(0.1f);
+            Assert.That(spin.CurrentAngle, Is.Not.EqualTo(before));
+        }
+
+        [UnityTest]
+        public IEnumerator UntendedCrankWithoutAFlywheelComesToRest()
+        {
+            var spin = Object.FindAnyObjectByType<UI.Era1CrankSpinView>();
+            FindButton("CrankButton").onClick.Invoke();
+            yield return new WaitForSeconds(3f);
+            float settled = spin.CurrentAngle;
+            yield return new WaitForSeconds(0.2f);
+            Assert.That(spin.CurrentAngle, Is.EqualTo(settled).Within(0.5f));
+        }
+
+        // The reading refreshes at 10 Hz, so charge from the water wheel shows between
+        // the 1 Hz ticks that credit it.
+        [UnityTest]
+        public IEnumerator StoredChargeClimbsBetweenTicks()
+        {
+            SetLevels(("era1_better_crank", 1), ("era1_iron_flywheel", 1), ("era1_water_wheel", 1));
+            var label = GameObject.Find("Charge").GetComponent<TMPro.TMP_Text>();
+            yield return new WaitForSeconds(1.05f);
+            int changes = 0;
+            string last = label.text;
+            for (int i = 0; i < 8; i++)
+            {
+                yield return new WaitForSeconds(0.11f);
+                if (label.text != last) { changes++; last = label.text; }
+            }
+            Assert.That(changes, Is.GreaterThanOrEqualTo(4));
+        }
+
+        [UnityTest]
+        public IEnumerator Era1ShowsNoMachinesSection()
+        {
             yield return null;
-            FindButton("Generator_SpinningJenny").onClick.Invoke();
-            Assert.That(GM.Ledger.Joules, Is.EqualTo(0.0));
+            Assert.That(GameObject.Find("MachinesHeader"), Is.Null);
         }
     }
 }

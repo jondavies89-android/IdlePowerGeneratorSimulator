@@ -27,18 +27,49 @@ namespace IdlePowerGen.Simulation
         // positive part to the player's spendable joules.
         public double LastTickSurplusJoules { get; private set; }
 
+        // Non-generator sources (Era 1's flywheel and water wheel). Not cleared with the generators: they
+        // belong to the scene, not to the save.
+        private readonly List<IPowerSource> _sources = new();
+
         public void AddGenerator(GeneratorInstance gen)    => _generators.Add(gen);
         public bool RemoveGenerator(GeneratorInstance gen) => _generators.Remove(gen);
         public void ClearGenerators()                      => _generators.Clear();
+        public void AddSource(IPowerSource source)         => _sources.Add(source);
 
-        // Output the online fleet would deliver right now, without advancing time.
-        // Offline catch-up needs this straight after a load, before the first tick has run.
+        // Output the grid is delivering right now, without advancing time.
         public double ComputeOutputWatts()
+        {
+            double sum = FleetWatts();
+            foreach (var s in _sources) sum += s.CurrentOutputWatts;
+            return sum * GlobalOutputMultiplier + VirtualPassiveWatts;
+        }
+
+        // Output the grid would keep delivering untended. Offline progress pays on this,
+        // straight after a load and before the first tick has run.
+        public double ComputeSustainedOutputWatts()
+        {
+            double sum = FleetWatts();
+            foreach (var s in _sources) sum += s.SustainedOutputWatts;
+            return sum * GlobalOutputMultiplier + VirtualPassiveWatts;
+        }
+
+        // Surplus energy produced since the last tick that the next tick will credit.
+        // The UI adds it to the stored charge so the reading climbs between 1 Hz ticks.
+        public double ComputePendingJoules(double secondsIntoTick)
+        {
+            double sources = 0;
+            foreach (var s in _sources) sources += s.PendingJoules(secondsIntoTick);
+            double produced = (FleetWatts() * secondsIntoTick + sources) * GlobalOutputMultiplier
+                              + VirtualPassiveWatts * secondsIntoTick;
+            return Math.Max(0, produced - TotalDemandWatts * secondsIntoTick);
+        }
+
+        private double FleetWatts()
         {
             double sum = 0;
             foreach (var gen in _generators)
                 if (gen.IsOnline) sum += gen.Definition.basePowerWatts;
-            return sum * GlobalOutputMultiplier + VirtualPassiveWatts;
+            return sum;
         }
 
         public void Tick(double deltaTime, double demandWatts)
@@ -51,6 +82,8 @@ namespace IdlePowerGen.Simulation
                 gen.Tick(deltaTime);
                 TotalOutputWatts += gen.CurrentOutputWatts;
             }
+            foreach (var s in _sources)
+                TotalOutputWatts += s.Tick(deltaTime);
 
             TotalOutputWatts = TotalOutputWatts * GlobalOutputMultiplier + VirtualPassiveWatts;
 

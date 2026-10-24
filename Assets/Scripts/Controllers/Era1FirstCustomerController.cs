@@ -32,11 +32,30 @@ namespace IdlePowerGen.Controllers
             Managers.GameManager.Instance?.Contracts.ActiveContracts
                 .FirstOrDefault(c => c.Definition.contractId == Data.Era1Data.FirstCustomerContractId);
 
+        // The last tick's average, the same figure the contract is held to. The live reading
+        // peaks just after each turn, so accepting on it could break the contract a second later.
         public double OutputWatts =>
             Simulation.SimulationTick.Instance != null
-                ? Simulation.SimulationTick.Instance.Grid.ComputeOutputWatts() : 0;
+                ? Simulation.SimulationTick.Instance.Grid.TotalOutputWatts : 0;
 
         public bool CanAccept => Current == Stage.Offered && OutputWatts >= Contract.requiredWatts;
+
+        // How close the workshop is to the wattage he needs, while it builds towards it.
+        public float BuildProgress =>
+            Contract == null || Contract.requiredWatts <= 0 ? 0f
+                : Mathf.Clamp01((float)(OutputWatts / Contract.requiredWatts));
+
+        // Set when output dipped and the contract broke off; cleared on the next handshake.
+        public bool WasBroken { get; private set; }
+
+        private void Awake()    => Utils.EventBus.Subscribe<ContractFailedEvent>(OnContractFailed);
+        private void OnDestroy() => Utils.EventBus.Unsubscribe<ContractFailedEvent>(OnContractFailed);
+
+        private void OnContractFailed(ContractFailedEvent evt)
+        {
+            if (evt.Contract.Definition.contractId == Data.Era1Data.FirstCustomerContractId)
+                WasBroken = true;
+        }
 
         // Fraction of the contract hour that has passed.
         public float Progress
@@ -55,7 +74,9 @@ namespace IdlePowerGen.Controllers
         {
             if (!CanAccept) return false;
             double now = Utils.GameClock.Instance != null ? Utils.GameClock.Instance.GameTimeSeconds : 0;
-            return Managers.GameManager.Instance.Contracts.TryAccept(Contract, now, maxConcurrent: 1);
+            if (!Managers.GameManager.Instance.Contracts.TryAccept(Contract, now, maxConcurrent: 1)) return false;
+            WasBroken = false;
+            return true;
         }
     }
 }

@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
@@ -28,5 +29,24 @@ namespace IdlePowerGen.Tests
             Save.SaveManager.Instance?.ResetProgress();
             Save.SaveManager.SaveFileName = "save.json";
         }
+
+        // Owns these upgrade levels, as a loaded save would, with their effects applied.
+        protected static void SetLevels(params (string id, int level)[] levels)
+        {
+            var dict = new Dictionary<string, int>();
+            foreach (var (id, level) in levels) dict[id] = level;
+            Managers.GameManager.Instance.Upgrades.LoadFromSave(dict);
+            Utils.EventBus.Publish(new GameLoadedEvent());
+        }
+
+        protected static Models.UpgradeDefinition Upgrade(string id)
+        {
+            foreach (var u in Managers.GameManager.Instance.UpgradeCatalogue)
+                if (u.upgradeId == id) return u;
+            throw new System.ArgumentException(id);
+        }
+
+        protected static Simulation.Era1Flywheel   Flywheel   => Simulation.SimulationTick.Instance.Flywheel;
+        protected static Simulation.Era1WaterWheel WaterWheel => Simulation.SimulationTick.Instance.WaterWheel;
     }
 }

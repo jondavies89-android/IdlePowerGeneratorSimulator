@@ -58,6 +58,14 @@ namespace IdlePowerGen.Economy
             }
         }
 
+        // A must-hold contract whose output dipped: it ends there, unpaid.
+        public void Break()
+        {
+            if (IsResolved) return;
+            IsResolved = true;
+            EventBus.Publish(new ContractFailedEvent(this));
+        }
+
         // Save support
         public double AccumulatedWattSeconds => _accumulatedWattSeconds;
         public void   SetAccumulatedFromSave(double v) => _accumulatedWattSeconds = v;
@@ -91,6 +99,16 @@ namespace IdlePowerGen.Economy
             for (int i = _active.Count - 1; i >= 0; i--)
             {
                 var c = _active[i];
+                // Without this a must-hold contract paid on average energy, so a moment at
+                // full output and a long dip below it could still pass the fail threshold.
+                if (c.Definition.mustHoldOutput && outputWatts < c.Definition.requiredWatts)
+                {
+                    c.Break();
+                    _history.Add(c);
+                    _active.RemoveAt(i);
+                    continue;
+                }
+
                 c.RecordOutput(outputWatts, deltaTime);
 
                 if (gameTime >= c.EndGameTime)

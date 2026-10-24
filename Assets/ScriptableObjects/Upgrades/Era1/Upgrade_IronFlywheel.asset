@@ -14,13 +14,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: IdlePowerGen.Models::IdlePowerGen.Models.UpgradeDefinition
   upgradeId: era1_iron_flywheel
   displayName: Iron Flywheel
-  description: A heavy iron wheel carries each turn further.
+  description: A heavy iron wheel keeps turning after your hand stops.
   minEra: 1
-  costJoules: 25
+  costJoules: 50
   costPennies: 0
+  costGrowth: 1.5
+  maxLevel: 20
   requiredReputation: 0
-  effect: 0
-  effectValue: 2
+  effect: 6
+  effectValue: 5
+  secondaryValue: 0
   unlocksId: 
   requiredUpgradeIds:
   - era1_better_crank

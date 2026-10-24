@@ -76,43 +76,33 @@ either is fine; just be consistent.
 Create one `UpgradeDefinition.asset` per row.  
 All values are in `Assets/Scripts/Data/Era1Data.cs` — use that as your reference.
 
-**Crank upgrades** (`CrankUpgrades` array, effect `MultiplyCrankTapValue`):
+**Levelled upgrade tree** (`Upgrades` array; `Era1AssetBuilder` writes the assets). Level n costs
+base × growth^n, and each level applies the effect once more:
 
-| Asset name                 | ID                      | Cost (J) | Effect               | Effect Value | Prereq                  |
-|----------------------------|-------------------------|----------|----------------------|--------------|-------------------------|
-| `Upgrade_BetterCrank`      | `era1_better_crank`     | 5        | MultiplyCrankTapValue | 2.0          | —                       |
-| `Upgrade_IronFlywheel`     | `era1_iron_flywheel`    | 25       | MultiplyCrankTapValue | 2.0          | `era1_better_crank`     |
-| `Upgrade_GearTrain`        | `era1_gear_train`       | 125      | MultiplyCrankTapValue | 2.0          | `era1_iron_flywheel`    |
-| `Upgrade_LeatherBeltDrive` | `era1_belt_drive`       | 600      | MultiplyCrankTapValue | 2.0          | `era1_gear_train`       |
-| `Upgrade_CamMechanism`     | `era1_cam_mechanism`    | 3000     | MultiplyCrankTapValue | 2.0          | `era1_belt_drive`       |
+| Asset name                 | ID                   | Base cost (J) | Growth | Max | Effect (per level)                         | Prereq               |
+|----------------------------|----------------------|---------------|--------|-----|--------------------------------------------|----------------------|
+| `Upgrade_BetterCrank`      | `era1_better_crank`  | 10            | ×2.2   | 15  | AddCrankJoules +n J a turn at level n      | —                    |
+| `Upgrade_IronFlywheel`     | `era1_iron_flywheel` | 50            | ×1.5   | 20  | AddFlywheelCapacity +5 W                   | `era1_better_crank`  |
+| `Upgrade_BrassBearings`    | `era1_bearings`      | 200           | ×5     | 4   | MultiplyFlywheelDecay ×0.8                 | `era1_iron_flywheel` |
+| `Upgrade_LodestoneMagnets` | `era1_magnets`       | 1000          | ×8     | 4   | MultiplyCrankOutput ×2, decay ×1.25        | `era1_iron_flywheel` |
+| `Upgrade_WaterWheel`       | `era1_water_wheel`   | 3000          | —      | 1   | AddWaterWheelWatts 50 W                    | `era1_iron_flywheel` |
+| `Upgrade_BeltsAndGearing`  | `era1_belts_gearing` | 5000          | ×3     | 5   | MultiplyWaterWheelOutput ×2                | `era1_water_wheel`   |
 
-**Generator unlocks** (`GeneratorUnlocks` array, effect `UnlockGenerator`, `unlocksId` = enum name):
-
-| Asset name                       | ID                            | Cost (J) | Effect          | Unlocks ID       | Prereq                  |
-|----------------------------------|-------------------------------|----------|-----------------|------------------|-------------------------|
-| `Upgrade_UnlockSpinningJenny`    | `era1_unlock_spinning_jenny`  | 30       | UnlockGenerator | `SpinningJenny`  | `era1_better_crank`     |
-| `Upgrade_UnlockWaterwheel`       | `era1_unlock_waterwheel`      | 1500     | UnlockGenerator | `Waterwheel`     | `era1_belt_drive`       |
-| `Upgrade_UnlockSteamBoiler`      | `era1_unlock_steam_boiler`    | 8000     | UnlockGenerator | `SteamBoiler`    | `era1_cam_mechanism`    |
-
-**Capstone** (`ForemanUpgrade`, effect `MultiplyAllOutput`):
-
-| Asset name             | ID            | Cost (J) | Effect             | Effect Value | Prereq                  |
-|------------------------|---------------|----------|--------------------|--------------|-------------------------|
-| `Upgrade_HireForeman`  | `era1_foreman`| 12000    | MultiplyAllOutput  | 1.5          | `era1_cam_mechanism`    |
+Each turn pays its joules at once and adds the same watts of spin to the flywheel (up to its
+capacity). Better Crank's bonus grows with its level: +1, +2, +3 … J, so three levels make a
+turn 7 J. Spin decays 25 %/s to rest. The water wheel generates separately and the two
+outputs add on the grid. Magnets multiply only the turn and the flywheel; belts and gearing
+double the water wheel.
+The water wheel is Era 1's only untended income, and the only part offline progress pays on.
+The crank wheel turns once per tap and keeps turning at a speed that follows the flywheel's
+spin; the stored-charge and output readings refresh 10 times a second.
 
 ### 4.3 Generator Definitions
 
-| Asset name                 | Type            | Base Power | Base Cost (J) | Required Upgrade ID            |
-|----------------------------|-----------------|------------|---------------|--------------------------------|
-| `Generator_SpinningJenny`  | SpinningJenny   | 1 W        | 50            | `era1_unlock_spinning_jenny`   |
-| `Generator_Waterwheel`     | Waterwheel      | 20 W       | 3000          | `era1_unlock_waterwheel`       |
-| `Generator_SteamBoiler`    | SteamBoiler     | 100 W      | 15000         | `era1_unlock_steam_boiler`     |
+None in Era 1 since the levelled tree replaced the Spinning Jenny, Waterwheel and Steam
+Boiler machines; the water wheel is an upgrade.
 
-> Fuel Consumption Per Second = 0 for all Era 1 generators (no fuel mechanic yet).
-> Set the **Required Upgrade Id** field on each generator asset — `Era2GeneratorController.TryBuy` enforces it.
-
-- [x] All 9 upgrade assets (§4.2) and 3 generator assets (§4.3) created with the values above.
-  `Era1Data.PassiveGenerators` previously gated generators on the crank upgrades; it now matches this table.
+- [x] All 6 upgrade assets (§4.2) created with the values above.
 
 ### 4.4 Wire catalogues into GameManager
 
@@ -188,6 +178,9 @@ The code fires `EraAdvancedEvent` automatically when the first contract complete
 > end around minute 2 and the rest of the upgrade tree (up to 15 kJ) would never be used. The contract
 > (`Contract_FirstCustomer`) asks for 1 kW for one in-game hour (one real minute), pays 12d (a shilling),
 > and its completion fires `EraAdvancedEvent` → an end-of-era screen with "Keep tinkering" / "Start again".
+> It is a must-hold contract (`mustHoldOutput`): if any second's output drops below 1 kW, he calls it
+> off unpaid and the card offers it again. Until it's accepted, the card's amber bar fills with the
+> output towards 1 kW; while supplying, a green bar shows the hour passing.
 > Welcome-back toasts (`OfflineProgressEvent`) use the same toast with the Era 1 flavour text.
 
 ---
@@ -222,16 +215,16 @@ The code fires `EraAdvancedEvent` automatically when the first contract complete
 
 Work through these in Play Mode before moving to Era 2:
 
-Automated as PlayMode tests in `Assets/Tests/PlayMode/` (33 passing; run with Unity `-runTests -testPlatform PlayMode`).
+Automated as PlayMode tests in `Assets/Tests/PlayMode/` (75 passing; run with Unity `-runTests -testPlatform PlayMode`).
 
-- [x] Tap crank → stored charge increases by 1 J (with default CTV = 1 W) — `Era1UiTests.CrankButtonAddsOneJoule`
-- [x] Buy `Better Crank` (costs 5 J) → CTV becomes 2 W; next tap adds 2 J
-- [x] All 5 crank upgrades chain correctly (prerequisites lock/unlock in order) — and all five give 32 J a turn
-- [x] Spinning Jenny passive generator adds 1 W/s to `TotalOutputWatts`; joules tick up each second without tapping
+- [x] Tap crank → stored charge increases by 1 J — `Era1UiTests.CrankButtonAddsOneJoule`
+- [x] Buy `Better Crank` (costs 10 J) → next tap adds 2 J; level n adds n J more and costs ×2.2
+- [x] Prerequisites lock/unlock in order: flywheel unlocks bearings, magnets and the water wheel; the water wheel unlocks gearing
+- [x] Flywheel fills to its capacity from turns and winds down untended; the water wheel adds steady output without tapping
 - [x] At 500 J stored, milestone toast fires — `Era1MilestoneTests`
-- [x] Save → kill Play Mode → Play Mode again → joules, upgrades, generator counts restored — in-memory state is wiped and reloaded from the save file (also crank value); real browser reload checked on the Web build
-- [x] Set device time forward in OS → offline guard awards zero joules (§7.5) — the guard is for time set **back** (device clock earlier than the last save), per bible §7.5; tested both ways: clock set back → zero, 10 min genuinely away → paid, at most 70 % of online output
-- [ ] Low-end simulation test: profile the 1 Hz tick; must run on a £150 Android device (§8.5) — **not done**: needs a real device. Proxy only: an hour of ticks (3600) for a full Era 1 fleet runs in well under a second on desktop
+- [x] Save → kill Play Mode → Play Mode again → joules, upgrade levels, crank value and water-wheel floor restored; real browser reload checked on the Web build
+- [x] Set device time forward in OS → offline guard awards zero joules (§7.5) — the guard is for time set **back** (device clock earlier than the last save), per bible §7.5; tested both ways: clock set back → zero, 10 min genuinely away → paid, at most 70 % of the water wheel's output
+- [ ] Low-end simulation test: profile the 1 Hz tick; must run on a £150 Android device (§8.5) — **not done**: needs a real device. Proxy only: an hour of ticks (3600) with every Era 1 upgrade maxed runs in well under a second on desktop
 
 ---
 
