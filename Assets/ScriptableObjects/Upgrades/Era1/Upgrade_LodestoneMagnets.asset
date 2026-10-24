@@ -16,9 +16,9 @@ MonoBehaviour:
   displayName: Lodestone Magnets
   description: Stronger lodestones double the current, and drag on the wheel.
   minEra: 1
-  costJoules: 750
+  costJoules: 1000
   costPennies: 0
-  costGrowth: 5
+  costGrowth: 8
   maxLevel: 4
   requiredReputation: 0
   effect: 8

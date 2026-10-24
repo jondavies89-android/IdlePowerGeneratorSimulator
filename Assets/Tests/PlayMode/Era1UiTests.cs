@@ -49,13 +49,13 @@ namespace IdlePowerGen.Tests
         [UnityTest]
         public IEnumerator LevelledCardShowsTheNextLevelsCost()
         {
-            GM.Ledger.AddJoules(15);
+            GM.Ledger.AddJoules(10);
             yield return null;
             var card = FindButton("Upgrade_era1_better_crank");
             card.onClick.Invoke();
             yield return null;
             Assert.That(card.GetComponent<UI.UpgradeCardView>().CostText,
-                        Is.EqualTo(Utils.NumberFormatter.FormatJoules(22.5)));
+                        Is.EqualTo(Utils.NumberFormatter.FormatJoules(22.0)));
         }
 
         [UnityTest]

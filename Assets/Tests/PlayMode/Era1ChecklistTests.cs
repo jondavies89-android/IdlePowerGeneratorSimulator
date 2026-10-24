@@ -27,7 +27,7 @@ namespace IdlePowerGen.Tests
         [UnityTest]
         public IEnumerator AfterBetterCrankEachTapAddsTwoJoules()
         {
-            GM.Ledger.AddJoules(15);
+            GM.Ledger.AddJoules(Upgrade(BetterCrankId).costJoules);
             GM.Upgrades.Purchase(Upgrade(BetterCrankId));
             yield return null;
             Crank();
@@ -35,17 +35,27 @@ namespace IdlePowerGen.Tests
         }
 
         [Test]
-        public void BetterCrankLevelsAddOneJouleEach()
+        public void EachBetterCrankLevelAddsOneJouleMoreThanTheLast()
         {
             SetLevels((BetterCrankId, 3));
-            Assert.That(Tap.CrankTapValue, Is.EqualTo(4.0));
+            Assert.That(Tap.CrankTapValue, Is.EqualTo(1.0 + 1 + 2 + 3));
+        }
+
+        [UnityTest]
+        public IEnumerator BuyingABetterCrankLevelMatchesItsLoadedValue()
+        {
+            SetLevels((BetterCrankId, 2));
+            GM.Ledger.AddJoules(GM.Upgrades.NextCostJoules(Upgrade(BetterCrankId)));
+            GM.Upgrades.Purchase(Upgrade(BetterCrankId));
+            yield return null;
+            Assert.That(Tap.CrankTapValue, Is.EqualTo(1.0 + 1 + 2 + 3));
         }
 
         [Test]
-        public void BetterCrankCostsHalfAgainEachLevel()
+        public void BetterCrankCostGrowsTwoAndAFifthTimesEachLevel()
         {
             SetLevels((BetterCrankId, 1));
-            Assert.That(GM.Upgrades.NextCostJoules(Upgrade(BetterCrankId)), Is.EqualTo(22.5));
+            Assert.That(GM.Upgrades.NextCostJoules(Upgrade(BetterCrankId)), Is.EqualTo(22.0).Within(1e-9));
         }
 
         [Test]
@@ -153,7 +163,7 @@ namespace IdlePowerGen.Tests
         {
             SetLevels((BetterCrankId, 1), (IronFlywheelId, 1), (WaterWheelId, 1));
             yield return new WaitForSeconds(2.1f);
-            Assert.That(Simulation.SimulationTick.Instance.Grid.TotalOutputWatts, Is.EqualTo(25.0).Within(1e-9));
+            Assert.That(Simulation.SimulationTick.Instance.Grid.TotalOutputWatts, Is.EqualTo(50.0).Within(1e-9));
         }
 
         [Test]
@@ -164,16 +174,23 @@ namespace IdlePowerGen.Tests
         }
 
         [Test]
-        public void EachGearingLevelAddsTenWattsToTheWaterWheel()
+        public void EachGearingLevelDoublesTheWaterWheel()
         {
             SetLevels((BetterCrankId, 1), (IronFlywheelId, 1), (WaterWheelId, 1), (BeltsGearingId, 2));
-            Assert.That(WaterWheel.BaseWatts, Is.EqualTo(45.0));
+            Assert.That(WaterWheel.CurrentOutputWatts, Is.EqualTo(200.0));
         }
 
         [Test]
-        public void MagnetsMultiplyTheWaterWheelToo()
+        public void MagnetsLeaveTheWaterWheelAlone()
         {
             SetLevels((BetterCrankId, 1), (IronFlywheelId, 1), (MagnetsId, 2), (WaterWheelId, 1));
+            Assert.That(WaterWheel.CurrentOutputWatts, Is.EqualTo(50.0));
+        }
+
+        [Test]
+        public void MagnetsLeaveTheGearingAlone()
+        {
+            SetLevels((BetterCrankId, 1), (IronFlywheelId, 1), (MagnetsId, 2), (WaterWheelId, 1), (BeltsGearingId, 1));
             Assert.That(WaterWheel.CurrentOutputWatts, Is.EqualTo(100.0));
         }
 
@@ -182,7 +199,7 @@ namespace IdlePowerGen.Tests
         {
             SetLevels((BetterCrankId, 1), (IronFlywheelId, 1), (WaterWheelId, 1));
             for (int i = 0; i < 10; i++) Crank();
-            Assert.That(Simulation.SimulationTick.Instance.Grid.ComputeOutputWatts(), Is.EqualTo(30.0).Within(1e-9));
+            Assert.That(Simulation.SimulationTick.Instance.Grid.ComputeOutputWatts(), Is.EqualTo(55.0).Within(1e-9));
         }
 
         [Test]
@@ -221,7 +238,7 @@ namespace IdlePowerGen.Tests
         public IEnumerator SaveAndLoadRestoresJoules()
         {
             yield return SaveThenWipeThenLoad();
-            Assert.That(GM.Ledger.Joules, Is.EqualTo(1234.0).Within(60.0)); // ≤1 s of 25 W catch-up on top
+            Assert.That(GM.Ledger.Joules, Is.EqualTo(1234.0).Within(60.0)); // ≤1 s of 50 W catch-up on top
         }
 
         [UnityTest]
@@ -235,14 +252,14 @@ namespace IdlePowerGen.Tests
         public IEnumerator SaveAndLoadRestoresCrankValue()
         {
             yield return SaveThenWipeThenLoad();
-            Assert.That(Tap.CrankTapValue, Is.EqualTo(4.0));
+            Assert.That(Tap.CrankTapValue, Is.EqualTo(7.0));
         }
 
         [UnityTest]
         public IEnumerator SaveAndLoadRestoresTheWaterWheel()
         {
             yield return SaveThenWipeThenLoad();
-            Assert.That(WaterWheel.BaseWatts, Is.EqualTo(25.0));
+            Assert.That(WaterWheel.BaseWatts, Is.EqualTo(50.0));
         }
 
         // --- v2 → v3 migration ---
@@ -310,8 +327,8 @@ namespace IdlePowerGen.Tests
             WriteSaveWithWaterWheel(DateTimeOffset.UtcNow.ToUnixTimeSeconds() - 600, 100);
             Save.SaveManager.Instance.Load();
             yield return null;
-            // 25 W for 600 s = 15 kJ untended; offline pays at most 70 % of that (bible §7.2).
-            Assert.That(GM.Ledger.Joules - 100, Is.InRange(1.0, 0.7 * 25 * 600 + 30));
+            // 50 W for 600 s = 30 kJ untended; offline pays at most 70 % of that (bible §7.2).
+            Assert.That(GM.Ledger.Joules - 100, Is.InRange(1.0, 0.7 * 50 * 600 + 60));
         }
 
         // --- Performance proxy (not a device profile) ---
@@ -319,8 +336,8 @@ namespace IdlePowerGen.Tests
         [Test]
         public void AnHourOfFullEra1TicksRunsWellUnderASecond()
         {
-            SetLevels((BetterCrankId, 20), (IronFlywheelId, 20), (BearingsId, 4), (MagnetsId, 4),
-                      (WaterWheelId, 1), (BeltsGearingId, 20));
+            SetLevels((BetterCrankId, 15), (IronFlywheelId, 20), (BearingsId, 4), (MagnetsId, 4),
+                      (WaterWheelId, 1), (BeltsGearingId, 5));
             for (int i = 0; i < 50; i++) Crank();
 
             var sw = Stopwatch.StartNew();

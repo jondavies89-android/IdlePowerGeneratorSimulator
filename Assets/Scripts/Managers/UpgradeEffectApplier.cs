@@ -78,15 +78,19 @@ namespace IdlePowerGen.Managers
                     flywheel?.MultiplyDecay(def.effectValue);
                     break;
 
-                // Magnets sit in the dynamo that the flywheel and water wheel both drive.
+                // Magnets sit in the crank's dynamo; the water wheel has its own drive.
+                // (Era1TapController applies the same multiplier to each turn.)
                 case UpgradeEffect.MultiplyCrankOutput:
                     flywheel?.MultiplyOutput(def.effectValue);
                     flywheel?.MultiplyDecay(def.secondaryValue);
-                    waterWheel?.MultiplyOutput(def.effectValue);
                     break;
 
                 case UpgradeEffect.AddWaterWheelWatts:
                     waterWheel?.AddWatts(def.effectValue);
+                    break;
+
+                case UpgradeEffect.MultiplyWaterWheelOutput:
+                    waterWheel?.MultiplyOutput(def.effectValue);
                     break;
 
                 case UpgradeEffect.MultiplyCrankTapValue:

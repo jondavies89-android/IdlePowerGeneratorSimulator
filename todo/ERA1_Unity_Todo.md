@@ -81,16 +81,18 @@ base × growth^n, and each level applies the effect once more:
 
 | Asset name                 | ID                   | Base cost (J) | Growth | Max | Effect (per level)                         | Prereq               |
 |----------------------------|----------------------|---------------|--------|-----|--------------------------------------------|----------------------|
-| `Upgrade_BetterCrank`      | `era1_better_crank`  | 15            | ×1.5   | 20  | AddCrankJoules +1 J a turn                 | —                    |
+| `Upgrade_BetterCrank`      | `era1_better_crank`  | 10            | ×2.2   | 15  | AddCrankJoules +n J a turn at level n      | —                    |
 | `Upgrade_IronFlywheel`     | `era1_iron_flywheel` | 50            | ×1.5   | 20  | AddFlywheelCapacity +5 W                   | `era1_better_crank`  |
 | `Upgrade_BrassBearings`    | `era1_bearings`      | 200           | ×5     | 4   | MultiplyFlywheelDecay ×0.8                 | `era1_iron_flywheel` |
-| `Upgrade_LodestoneMagnets` | `era1_magnets`       | 750           | ×5     | 4   | MultiplyCrankOutput ×2, decay ×1.25        | `era1_iron_flywheel` |
-| `Upgrade_WaterWheel`       | `era1_water_wheel`   | 5000          | —      | 1   | AddWaterWheelWatts 25 W                    | `era1_iron_flywheel` |
-| `Upgrade_BeltsAndGearing`  | `era1_belts_gearing` | 6000          | ×1.5   | 20  | AddWaterWheelWatts +10 W                   | `era1_water_wheel`   |
+| `Upgrade_LodestoneMagnets` | `era1_magnets`       | 1000          | ×8     | 4   | MultiplyCrankOutput ×2, decay ×1.25        | `era1_iron_flywheel` |
+| `Upgrade_WaterWheel`       | `era1_water_wheel`   | 3000          | —      | 1   | AddWaterWheelWatts 50 W                    | `era1_iron_flywheel` |
+| `Upgrade_BeltsAndGearing`  | `era1_belts_gearing` | 5000          | ×3     | 5   | MultiplyWaterWheelOutput ×2                | `era1_water_wheel`   |
 
 Each turn pays its joules at once and adds the same watts of spin to the flywheel (up to its
-capacity). Spin decays 25 %/s to rest. The water wheel generates separately and the two
-outputs add at the dynamo, so magnets multiply the turn, the flywheel and the water wheel.
+capacity). Better Crank's bonus grows with its level: +1, +2, +3 … J, so three levels make a
+turn 7 J. Spin decays 25 %/s to rest. The water wheel generates separately and the two
+outputs add on the grid. Magnets multiply only the turn and the flywheel; belts and gearing
+double the water wheel.
 The water wheel is Era 1's only untended income, and the only part offline progress pays on.
 The crank wheel turns once per tap and keeps turning at a speed that follows the flywheel's
 spin; the stored-charge and output readings refresh 10 times a second.
@@ -176,6 +178,9 @@ The code fires `EraAdvancedEvent` automatically when the first contract complete
 > end around minute 2 and the rest of the upgrade tree (up to 15 kJ) would never be used. The contract
 > (`Contract_FirstCustomer`) asks for 1 kW for one in-game hour (one real minute), pays 12d (a shilling),
 > and its completion fires `EraAdvancedEvent` → an end-of-era screen with "Keep tinkering" / "Start again".
+> It is a must-hold contract (`mustHoldOutput`): if any second's output drops below 1 kW, he calls it
+> off unpaid and the card offers it again. Until it's accepted, the card's amber bar fills with the
+> output towards 1 kW; while supplying, a green bar shows the hour passing.
 > Welcome-back toasts (`OfflineProgressEvent`) use the same toast with the Era 1 flavour text.
 
 ---
@@ -210,10 +215,10 @@ The code fires `EraAdvancedEvent` automatically when the first contract complete
 
 Work through these in Play Mode before moving to Era 2:
 
-Automated as PlayMode tests in `Assets/Tests/PlayMode/` (67 passing; run with Unity `-runTests -testPlatform PlayMode`).
+Automated as PlayMode tests in `Assets/Tests/PlayMode/` (75 passing; run with Unity `-runTests -testPlatform PlayMode`).
 
 - [x] Tap crank → stored charge increases by 1 J — `Era1UiTests.CrankButtonAddsOneJoule`
-- [x] Buy `Better Crank` (costs 15 J) → next tap adds 2 J; each further level adds 1 J and costs ×1.5
+- [x] Buy `Better Crank` (costs 10 J) → next tap adds 2 J; level n adds n J more and costs ×2.2
 - [x] Prerequisites lock/unlock in order: flywheel unlocks bearings, magnets and the water wheel; the water wheel unlocks gearing
 - [x] Flywheel fills to its capacity from turns and winds down untended; the water wheel adds steady output without tapping
 - [x] At 500 J stored, milestone toast fires — `Era1MilestoneTests`

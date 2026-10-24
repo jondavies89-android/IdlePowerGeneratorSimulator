@@ -21,6 +21,7 @@ public static class Era1Theme
     // Colour grammar (CLAUDE.md): green healthy, amber caution, red alarm, gold achievement —
     // in Era 1's warm register.
     public static readonly Color Healthy          = Hex("#9BBF5A");
+    public static readonly Color Caution          = Hex("#E0A040"); // lamp-oil amber
     public static readonly Color Achievement      = Accent;
 
     public static TMP_FontAsset BodyFont    => Era1FontBuilder.Body;

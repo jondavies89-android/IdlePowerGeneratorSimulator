@@ -16,13 +16,13 @@ MonoBehaviour:
   displayName: Water Wheel
   description: There is a river behind the workshop. A wheel would turn all day.
   minEra: 1
-  costJoules: 5000
+  costJoules: 3000
   costPennies: 0
   costGrowth: 1
   maxLevel: 1
   requiredReputation: 0
   effect: 9
-  effectValue: 25
+  effectValue: 50
   secondaryValue: 0
   unlocksId: 
   requiredUpgradeIds:

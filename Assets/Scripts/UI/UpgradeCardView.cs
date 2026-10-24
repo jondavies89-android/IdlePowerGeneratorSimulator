@@ -84,15 +84,17 @@ namespace IdlePowerGen.UI
             switch (def.effect)
             {
                 case UpgradeEffect.MultiplyCrankTapValue: return $"Each turn gives ×{def.effectValue:0.##}";
-                case UpgradeEffect.AddCrankJoules:        return $"Each turn gives +{NumberFormatter.FormatJoules(def.effectValue)}";
+                case UpgradeEffect.AddCrankJoules:
+                    return $"Each turn gives +{NumberFormatter.FormatJoules(def.effectValue * (level + 1))}";
                 case UpgradeEffect.AddFlywheelCapacity:
                     return level == 0 ? $"Turns keep a flywheel spinning, up to {watts}"
                                       : $"Flywheel holds +{watts}";
                 case UpgradeEffect.MultiplyFlywheelDecay: return $"Flywheel slows {1 - def.effectValue:0%} less";
-                case UpgradeEffect.MultiplyCrankOutput:   return $"Everything ×{def.effectValue:0.##}, but the flywheel slows faster";
+                case UpgradeEffect.MultiplyCrankOutput:   return $"Crank and flywheel ×{def.effectValue:0.##}, but the flywheel slows faster";
                 case UpgradeEffect.AddWaterWheelWatts:
                     return level == 0 && def.maxLevel == 1 ? $"{watts} from the river, even untended"
                                                            : $"Water wheel +{watts}";
+                case UpgradeEffect.MultiplyWaterWheelOutput: return $"Water wheel ×{def.effectValue:0.##}";
                 case UpgradeEffect.MultiplyAllOutput:     return $"Every machine ×{def.effectValue:0.##}";
                 case UpgradeEffect.AddPassiveWatts:       return $"+{watts} without cranking";
                 case UpgradeEffect.UnlockGenerator:       return $"New machine: {GeneratorName(def.unlocksId)}";

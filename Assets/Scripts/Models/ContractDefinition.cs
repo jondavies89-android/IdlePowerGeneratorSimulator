@@ -17,6 +17,8 @@ namespace IdlePowerGen.Models
         [Header("Supply Requirements")]
         public double requiredWatts;
         public float  durationHours;
+        [Tooltip("Output must stay at requiredWatts every tick; one dip breaks the contract off unpaid.")]
+        public bool   mustHoldOutput;
 
         [Header("Scheduling  §3.4")]
         public float availableStartHour; // in-game hour of day contract becomes available

@@ -16,13 +16,13 @@ MonoBehaviour:
   displayName: Belts & Gearing
   description: Better belts and gearing pass more of the river to the dynamo.
   minEra: 1
-  costJoules: 6000
+  costJoules: 5000
   costPennies: 0
-  costGrowth: 1.5
-  maxLevel: 20
+  costGrowth: 3
+  maxLevel: 5
   requiredReputation: 0
-  effect: 9
-  effectValue: 10
+  effect: 10
+  effectValue: 2
   secondaryValue: 0
   unlocksId: 
   requiredUpgradeIds:

@@ -27,24 +27,29 @@ namespace IdlePowerGen.Data
 
         // The whole Era 1 tree: crank → flywheel → bearings, magnets, water wheel → gearing.
         // The water wheel is the era's only passive income. It generates separately from
-        // the flywheel; both feed the one dynamo, so the magnets multiply both.
+        // the flywheel, and the magnets don't act on it: they belong to the crank's dynamo.
         //
-        // Levelled upgrades grow ×1.5 a level rather than the generators' ×1.15: their
-        // effects compound through crank → flywheel → magnets, and at ×1.15 a greedy player
-        // cleared the era in about a minute. Bearings and magnets are tiers, so they use the
-        // one-time g = 5. A pacing sim (always buying the cheapest) reaches a tapped 1 kW and
-        // 500 W untended at ~6 min tapping 4 times a second, ~9 min at 2 a second.
+        // Better Crank's bonus grows with its level (+1, +2, +3 … J), so each level still
+        // adds 15–45 % to the turn; a flat +1 J fell to a 2–7 % gain within a few levels and
+        // felt like nothing. Its cost grows ×2.2 to match. The other levelled upgrades grow
+        // ×1.5 rather than the generators' ×1.15: their effects compound through crank →
+        // flywheel → magnets, and at ×1.15 a greedy player cleared the era in about a minute.
+        // Bearings, magnets and gearing are tiers with big multipliers, so they grow steeply.
+        // A pacing sim (buying the best output per joule) holds 1 kW at ~7 min tapping twice
+        // a second, ~6 min at 4 a second, with the water wheel making 400–800 W of it.
         public static readonly UpgradeSpec[] Upgrades =
         {
-            //  id              name                 effect                              value secondary cost   growth max prerequisite
-            new(BetterCrankId,  "Better Crank",      UpgradeEffect.AddCrankJoules,        1,    0,        15,    1.5,  20, null),
-            new(IronFlywheelId, "Iron Flywheel",     UpgradeEffect.AddFlywheelCapacity,   5,    0,        50,    1.5,  20, BetterCrankId),
-            new(BearingsId,     "Brass Bearings",    UpgradeEffect.MultiplyFlywheelDecay, 0.8,  0,        200,   5,    4,  IronFlywheelId),
+            //  id              name                 effect                                 value secondary cost   growth max prerequisite
+            new(BetterCrankId,  "Better Crank",      UpgradeEffect.AddCrankJoules,           1,    0,        10,    2.2,  15, null),
+            new(IronFlywheelId, "Iron Flywheel",     UpgradeEffect.AddFlywheelCapacity,      5,    0,        50,    1.5,  20, BetterCrankId),
+            new(BearingsId,     "Brass Bearings",    UpgradeEffect.MultiplyFlywheelDecay,    0.8,  0,        200,   5,    4,  IronFlywheelId),
             // Each magnet doubles what the crank and flywheel deliver, but the stronger
             // field drags on the wheel: 25 % faster decay, which bearings can buy back.
-            new(MagnetsId,      "Lodestone Magnets", UpgradeEffect.MultiplyCrankOutput,   2,    1.25,     750,   5,    4,  IronFlywheelId),
-            new(WaterWheelId,   "Water Wheel",       UpgradeEffect.AddWaterWheelWatts,    25,   0,        5_000, 1,    1,  IronFlywheelId),
-            new(BeltsGearingId, "Belts & Gearing",   UpgradeEffect.AddWaterWheelWatts,    10,   0,        6_000, 1.5,  20, WaterWheelId),
+            new(MagnetsId,      "Lodestone Magnets", UpgradeEffect.MultiplyCrankOutput,      2,    1.25,     1_000, 8,    4,  IronFlywheelId),
+            new(WaterWheelId,   "Water Wheel",       UpgradeEffect.AddWaterWheelWatts,       50,   0,        3_000, 1,    1,  IronFlywheelId),
+            // Five doublings take the wheel from 50 W to 1.6 kW, so the neighbour's 1 kW
+            // can be held untended as well as by cranking.
+            new(BeltsGearingId, "Belts & Gearing",   UpgradeEffect.MultiplyWaterWheelOutput, 2,    0,        5_000, 3,    5,  WaterWheelId),
         };
 
         // §5.1.3 — Pacing milestones (stored joules → event)

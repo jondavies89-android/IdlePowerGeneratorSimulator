@@ -12,11 +12,12 @@ namespace IdlePowerGen.Models
         MultiplyAllOutput,       // effectValue = multiplier applied to all generators
 
         // Era 1 crank and flywheel. Each applies once per level bought.
-        AddCrankJoules,          // effectValue = joules added to every turn of the crank
+        AddCrankJoules,          // level n adds effectValue × n joules to every turn (+1, +2, +3 …)
         AddFlywheelCapacity,     // effectValue = watts of spin the flywheel can hold
         MultiplyFlywheelDecay,   // effectValue = multiplier on how fast the flywheel slows
-        MultiplyCrankOutput,     // effectValue = output multiplier; secondaryValue = flywheel decay multiplier
+        MultiplyCrankOutput,     // effectValue = crank and flywheel multiplier; secondaryValue = flywheel decay multiplier
         AddWaterWheelWatts,      // effectValue = steady watts from the water wheel
+        MultiplyWaterWheelOutput, // effectValue = multiplier on the water wheel's output
     }
 
     [CreateAssetMenu(fileName = "UpgradeDef", menuName = "IdlePowerGen/Upgrade Definition")]

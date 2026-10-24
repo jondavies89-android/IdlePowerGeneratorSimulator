@@ -393,6 +393,10 @@ public static class Era1SceneBuilder
         Wire(view, ("_controller", controllers.FirstCustomer), ("_card", card.gameObject),
                    ("_titleLabel", title), ("_bodyLabel", body), ("_statusLabel", status),
                    ("_button", button), ("_group", group), ("_progressFill", fill));
+        var colours = new SerializedObject(view);
+        colours.FindProperty("_buildingColour").colorValue  = Era1Theme.Caution;
+        colours.FindProperty("_supplyingColour").colorValue = Era1Theme.Healthy;
+        colours.ApplyModifiedPropertiesWithoutUndo();
         card.gameObject.SetActive(false);
     }
 

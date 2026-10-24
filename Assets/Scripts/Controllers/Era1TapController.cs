@@ -40,14 +40,15 @@ namespace IdlePowerGen.Controllers
             EventBus.Publish(new TapEvent(joules, joules));
         }
 
-        private void OnUpgradePurchased(UpgradePurchasedEvent evt) => ApplyLevel(evt.Definition);
+        private void OnUpgradePurchased(UpgradePurchasedEvent evt) => ApplyLevel(evt.Definition, evt.NewLevel);
 
         private void OnGameLoaded(GameLoadedEvent _) => RecomputeFromPurchased();
 
-        private void ApplyLevel(Models.UpgradeDefinition def)
+        // level: the level just reached. The crank's bonus grows with it (+1, +2, +3 …).
+        private void ApplyLevel(Models.UpgradeDefinition def, int level)
         {
             if (def.effect == Models.UpgradeEffect.AddCrankJoules)
-                _turnJoules += def.effectValue;
+                _turnJoules += def.effectValue * level;
             else if (def.effect == Models.UpgradeEffect.MultiplyCrankTapValue)
                 _turnJoules *= def.effectValue;
         }
@@ -62,7 +63,7 @@ namespace IdlePowerGen.Controllers
             foreach (var def in gm.UpgradeCatalogue)
             {
                 int level = gm.Upgrades.Level(def.upgradeId);
-                for (int i = 0; i < level; i++) ApplyLevel(def);
+                for (int i = 1; i <= level; i++) ApplyLevel(def, i);
             }
         }
 

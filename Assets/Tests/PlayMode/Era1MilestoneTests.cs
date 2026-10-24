@@ -77,18 +77,47 @@ namespace IdlePowerGen.Tests
             Assert.That(customer.Accept(), Is.False);
         }
 
+        private static Controllers.Era1FirstCustomerController Customer =>
+            Object.FindAnyObjectByType<Controllers.Era1FirstCustomerController>();
+
+        // The neighbour has knocked and the water wheel turns with this many gearing levels.
+        // Waits out a tick, since the contract goes by each tick's output.
+        private static IEnumerator KnockedWithGearing(int gearing)
+        {
+            GM.Ledger.AddJoules(500);
+            SetLevels((Data.Era1Data.BetterCrankId, 1), (Data.Era1Data.IronFlywheelId, 1),
+                      (Data.Era1Data.WaterWheelId, 1), (Data.Era1Data.BeltsGearingId, gearing));
+            yield return new WaitForSeconds(1.1f);
+        }
+
+        [UnityTest]
+        public IEnumerator NeighbourCardFillsTowardsTheWattageHeNeeds()
+        {
+            yield return KnockedWithGearing(2); // 200 W of his 1 kW
+            yield return new WaitForSeconds(0.3f); // the bar eases
+            var fill = GameObject.Find("FirstCustomerCard").transform.Find("Progress/Fill")
+                                 .GetComponent<UnityEngine.UI.Image>();
+            Assert.That(fill.fillAmount, Is.EqualTo(0.2f).Within(0.01f));
+        }
+
+        [UnityTest]
+        public IEnumerator DippingBelowOneKilowattCallsTheContractOff()
+        {
+            yield return KnockedWithGearing(5); // 1.6 kW
+            Customer.Accept();
+            SetLevels((Data.Era1Data.BetterCrankId, 1), (Data.Era1Data.IronFlywheelId, 1),
+                      (Data.Era1Data.WaterWheelId, 1)); // back to 50 W
+            yield return new WaitForSeconds(1.1f);
+            Assert.That(Customer.Current, Is.EqualTo(Controllers.Era1FirstCustomerController.Stage.Offered));
+        }
+
         // The whole end of the era: knock, 1 kW, accept, an hour's supply, a shilling, Era 2.
         [UnityTest]
         public IEnumerator SupplyingTheNeighbourForAnHourAdvancesToEra2()
         {
-            GM.Ledger.AddJoules(500);
-            // Water wheel and gearing make 65 W; four magnets make it 1040 W.
-            SetLevels((Data.Era1Data.BetterCrankId, 1), (Data.Era1Data.IronFlywheelId, 1),
-                      (Data.Era1Data.MagnetsId, 4), (Data.Era1Data.WaterWheelId, 1),
-                      (Data.Era1Data.BeltsGearingId, 4));
-            yield return null;
+            yield return KnockedWithGearing(5); // five doublings of 50 W: 1.6 kW, untended
 
-            var customer = Object.FindAnyObjectByType<Controllers.Era1FirstCustomerController>();
+            var customer = Customer;
             Assert.That(customer.Accept(), Is.True, "Accept failed at 1 kW");
 
             // One game hour is 60 real seconds; run time 20× faster.
