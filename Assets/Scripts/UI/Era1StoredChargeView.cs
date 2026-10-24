@@ -39,14 +39,20 @@ namespace IdlePowerGen.UI
 
             // The ledger is credited once a second; add what has been made since, so the
             // reading climbs smoothly instead of in one-second jumps.
-            double pending = sim != null ? sim.Grid.ComputePendingJoules(sim.SecondsSinceTick) : 0;
+            // What the neighbour takes isn't banked, so it doesn't climb the reading either.
+            double sold = gm.Contracts.DeliveredWatts;
+            double pending = sim != null
+                ? System.Math.Max(0, sim.Grid.ComputePendingJoules(sim.SecondsSinceTick) - sold * sim.SecondsSinceTick)
+                : 0;
             string charge = NumberFormatter.FormatJoules(gm.Ledger.Joules + pending);
             _chargeLabel.text = charge;
             PunchOnPrefixChange(charge);
 
             if (_rateLabel == null) return;
             string turn = $"Each turn of the crank: {NumberFormatter.FormatJoules(_tapController.CrankTapValue)}";
-            _rateLabel.text = sim != null ? $"{SourcesLine(sim)}{turn}" : turn;
+            string sales = sold > 0 && gm.Contracts.ActiveContracts.Count > 0
+                ? $"To the neighbour: –{NumberFormatter.FormatWatts(sold)}\n" : string.Empty;
+            _rateLabel.text = sim != null ? $"{SourcesLine(sim)}{sales}{turn}" : turn;
         }
 
         // "Flywheel 4.63 W · Water wheel 25.0 W", showing only what has been built.
