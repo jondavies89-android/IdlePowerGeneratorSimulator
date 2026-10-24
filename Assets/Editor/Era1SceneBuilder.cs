@@ -1,3 +1,4 @@
+using System.Linq;
 using IdlePowerGen.Controllers;
 using IdlePowerGen.UI;
 using TMPro;
@@ -15,14 +16,13 @@ public static class Era1SceneBuilder
 {
     public const string ScenePath = "Assets/Scenes/Era1_Workshop.unity";
 
-    private const string PrefabFolder         = "Assets/Prefabs/UI";
-    private const string UpgradeCardPrefab    = PrefabFolder + "/UpgradeCard.prefab";
-    private const string GeneratorRowPrefab   = PrefabFolder + "/GeneratorRow.prefab";
+    internal const string PrefabFolder        = "Assets/Prefabs/UI";
+    internal const string UpgradeCardPrefab   = PrefabFolder + "/UpgradeCard.prefab";
 
     // Portrait phone reference (CLAUDE.md: test at 412×915). 1 canvas unit ≈ 1 dp.
     private static readonly Vector2 ReferenceResolution = new(412, 915);
 
-    private const float Gutter = 16f;
+    internal const float Gutter = 16f;
 
     [MenuItem("IdlePowerGen/Build/Era 1 Scene")]
     public static void Build()
@@ -31,6 +31,7 @@ public static class Era1SceneBuilder
         Era1FontBuilder.Build();
         Era1AudioFactory.Build();
         BuildPrefabs();
+        Era2ScreenBuilder.BuildPrefabs();
 
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
@@ -83,29 +84,36 @@ public static class Era1SceneBuilder
     {
         var so = new SerializedObject(gm);
         SetArray(so.FindProperty("_eraConfigs"),           Era1AssetBuilder.EraConfigs());
-        SetArray(so.FindProperty("_upgradeDefinitions"),   Era1AssetBuilder.Upgrades());
-        SetArray(so.FindProperty("_generatorDefinitions"), Era1AssetBuilder.Generators());
-        SetArray(so.FindProperty("_contractDefinitions"),  Era1AssetBuilder.Contracts());
+        SetArray(so.FindProperty("_upgradeDefinitions"),
+                 Era1AssetBuilder.Upgrades().Concat(Era2AssetBuilder.Upgrades()).ToArray());
+        SetArray(so.FindProperty("_generatorDefinitions"),
+                 Era1AssetBuilder.Generators().Concat(Era2AssetBuilder.Generators()).ToArray());
+        SetArray(so.FindProperty("_contractDefinitions"),
+                 Era1AssetBuilder.Contracts().Concat(Era2AssetBuilder.Contracts()).ToArray());
         so.ApplyModifiedPropertiesWithoutUndo();
     }
 
-    private struct Controllers
+    internal struct Controllers
     {
         public Era1TapController Tap;
         public Era2GeneratorController Generators;
         public Era1FirstCustomerController FirstCustomer;
+        public Era2WorksController Works;
     }
 
-    // Scene-scoped (not DontDestroyOnLoad): they belong to the Era 1 screen.
+    // Scene-scoped (not DontDestroyOnLoad): they belong to the era screens.
     private static Controllers CreateControllers()
     {
         var go = new GameObject("_Controllers");
-        return new Controllers
+        var controllers = new Controllers
         {
             Tap           = go.AddComponent<Era1TapController>(),
             Generators    = go.AddComponent<Era2GeneratorController>(),
             FirstCustomer = go.AddComponent<Era1FirstCustomerController>(),
+            Works         = go.AddComponent<Era2WorksController>(),
         };
+        Wire(controllers.Works, ("_generators", controllers.Generators));
+        return controllers;
     }
 
     private static void CreateEventSystem()
@@ -151,7 +159,7 @@ public static class Era1SceneBuilder
         Stretch(safe);
         safe.gameObject.AddComponent<SafeAreaFitter>();
 
-        var column = Rect("Column", safe);
+        var column = Rect("Era1Screen", safe);
         Stretch(column);
         var vlg = column.gameObject.AddComponent<VerticalLayoutGroup>();
         vlg.padding = new RectOffset((int)Gutter, (int)Gutter, 12, 0);
@@ -165,8 +173,16 @@ public static class Era1SceneBuilder
         CreateCrank(column, controllers);
         CreateLists(column, controllers);
 
-        CreateToast(canvasGo.transform);
+        // The Era 2 screen draws its own gas-lit background over the workshop's.
+        var toast = CreateToast(canvasGo.transform);
+        var era2 = Era2ScreenBuilder.Create(canvasGo.transform, controllers, toast);
+        // Toasts and era cards sit above both screens.
+        toast.transform.SetAsLastSibling();
         CreateEndOfEra(canvasGo.transform);
+        Era2ScreenBuilder.CreateEndOfEra(canvasGo.transform);
+
+        var switcher = canvasGo.AddComponent<EraScreenSwitcher>();
+        Wire(switcher, ("_era1Screen", column.gameObject), ("_era2Screen", era2.gameObject));
     }
 
     private static void CreateHeader(Transform parent)
@@ -315,24 +331,14 @@ public static class Era1SceneBuilder
         var empty = Text(content, "NothingToImprove", "Nothing more to improve for now.", 14, Era1Theme.TextMuted,
                          TextAlignmentOptions.Left, FontStyles.Italic);
 
-        var machinesHeader = Text(content, "MachinesHeader", "Machines", 18, Era1Theme.Text, TextAlignmentOptions.Left);
-        var generatorPanel = Stack("GeneratorPanel", content);
-
         var upgrades = upgradePanel.gameObject.AddComponent<UpgradeListView>();
         Wire(upgrades,
              ("_cardPrefab", AssetDatabase.LoadAssetAtPath<UpgradeCardView>(UpgradeCardPrefab)),
              ("_content", upgradePanel),
              ("_emptyHint", empty.gameObject));
-
-        var generators = generatorPanel.gameObject.AddComponent<GeneratorListView>();
-        Wire(generators,
-             ("_rowPrefab", AssetDatabase.LoadAssetAtPath<GeneratorRowView>(GeneratorRowPrefab)),
-             ("_content", generatorPanel),
-             ("_sectionHeader", machinesHeader.gameObject),
-             ("_controller", controllers.Generators));
     }
 
-    private static void CreateToast(Transform canvas)
+    private static ToastView CreateToast(Transform canvas)
     {
         var toast = Rect("MilestoneToast", canvas);
         toast.anchorMin = new Vector2(0, 1);
@@ -353,6 +359,9 @@ public static class Era1SceneBuilder
 
         var presenter = toast.gameObject.AddComponent<Era1MilestoneToastPresenter>();
         Wire(presenter, ("_toast", view));
+        var era2Presenter = toast.gameObject.AddComponent<Era2ToastPresenter>();
+        Wire(era2Presenter, ("_toast", view));
+        return view;
     }
 
     // Todo §6 — the neighbour's contract card, first in the list once he has knocked.
@@ -400,7 +409,7 @@ public static class Era1SceneBuilder
         card.gameObject.SetActive(false);
     }
 
-    // Shown once the first shilling arrives; the end of the playable Era 1 slice.
+    // Shown once the first shilling arrives: the title card into Era 2 (todo Era 2 §8).
     private static void CreateEndOfEra(Transform canvas)
     {
         var holder = Rect("EndOfEra", canvas);
@@ -423,24 +432,23 @@ public static class Era1SceneBuilder
         box.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
         AddImage(box, Era1Theme.PanelSprite, Era1Theme.PanelRaised).type = Image.Type.Sliced;
 
-        Text(box, "Kicker", "End of Era 1", 14, Era1Theme.TextMuted, TextAlignmentOptions.Center, FontStyles.Italic);
-        Text(box, "Title", "The first shilling", 28, Era1Theme.Achievement, TextAlignmentOptions.Center);
+        Text(box, "Kicker", "End of Era 1  ·  Mr Hale paid you a shilling", 14, Era1Theme.TextMuted,
+             TextAlignmentOptions.Center, FontStyles.Italic);
+        Text(box, "Title", "The Demonstration", 28, Era1Theme.Achievement, TextAlignmentOptions.Center);
+        Text(box, "Date", "9th October 1851", 18, Era1Theme.Text, TextAlignmentOptions.Center, FontStyles.Italic);
         Text(box, "Body",
-             "Mr Hale's workshop stayed lit all evening, and he paid you a shilling for it. " +
-             "You are no longer tinkering — you are selling power.\n\n" +
-             "Era 2, The Demonstration (1851), is still being built.",
+             "Your first customer has arrived. Thirty years on, the workshop is a demonstration " +
+             "office, and all London wants electric light, each at its own hour of the day.",
              16, Era1Theme.Text, TextAlignmentOptions.Center);
 
-        var keep = MakeButton(box, "KeepTinkering", "Keep tinkering");
-        var restart = MakeButton(box, "StartAgain", "Start again from 1 W");
+        var open = MakeButton(box, "OpenTheDoors", "Open the doors");
 
         var view = holder.gameObject.AddComponent<Era1EndOfEraView>();
-        Wire(view, ("_panel", panel.gameObject), ("_group", group),
-                   ("_continueButton", keep), ("_restartButton", restart));
+        Wire(view, ("_panel", panel.gameObject), ("_group", group), ("_continueButton", open));
         panel.gameObject.SetActive(false);
     }
 
-    private static Button MakeButton(Transform parent, string name, string label)
+    internal static Button MakeButton(Transform parent, string name, string label)
     {
         var rt = Rect(name, parent);
         Fixed(rt, 52);
@@ -462,7 +470,6 @@ public static class Era1SceneBuilder
     {
         Era1AssetBuilder.EnsureFolder(PrefabFolder);
         SaveAsPrefab(BuildUpgradeCard(), UpgradeCardPrefab);
-        SaveAsPrefab(BuildGeneratorRow(), GeneratorRowPrefab);
     }
 
     private static GameObject BuildUpgradeCard()
@@ -484,33 +491,8 @@ public static class Era1SceneBuilder
         return root.gameObject;
     }
 
-    private static GameObject BuildGeneratorRow()
-    {
-        var root = Card("GeneratorRow", out var button, out var group);
-
-        var icon = Rect("Icon", root);
-        var iconImage = AddImage(icon, Era1SpriteFactory.Disc, Era1Theme.Accent);
-        iconImage.raycastTarget = false;
-        iconImage.preserveAspect = true;
-        var iconLe = icon.gameObject.AddComponent<LayoutElement>();
-        iconLe.preferredWidth = iconLe.preferredHeight = 36;
-
-        var texts = Stack("Texts", root, spacing: 2);
-        texts.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1;
-        var name = Text(texts, "Name", "Machine", 18, Era1Theme.Text, TextAlignmentOptions.Left);
-        var owned = Text(texts, "Owned", "Owned: 0", 14, Era1Theme.TextMuted, TextAlignmentOptions.Left);
-
-        var cost = Text(root, "Cost", "Build\n0 J", 16, Era1Theme.Accent, TextAlignmentOptions.Right, numerals: true);
-        cost.gameObject.AddComponent<LayoutElement>().preferredWidth = 84;
-
-        var view = root.gameObject.AddComponent<GeneratorRowView>();
-        Wire(view, ("_nameLabel", name), ("_ownedLabel", owned), ("_costLabel", cost),
-                   ("_icon", iconImage), ("_button", button), ("_group", group));
-        return root.gameObject;
-    }
-
     // A tappable panel laid out as a row. Min height 64 keeps it well over the 44dp target.
-    private static RectTransform Card(string name, out Button button, out CanvasGroup group)
+    internal static RectTransform Card(string name, out Button button, out CanvasGroup group)
     {
         var root = new GameObject(name, typeof(RectTransform)).GetComponent<RectTransform>();
         var image = AddImage(root, Era1Theme.PanelSprite, Era1Theme.Panel);
@@ -536,7 +518,7 @@ public static class Era1SceneBuilder
         return root;
     }
 
-    private static void SaveAsPrefab(GameObject go, string path)
+    internal static void SaveAsPrefab(GameObject go, string path)
     {
         PrefabUtility.SaveAsPrefabAsset(go, path);
         Object.DestroyImmediate(go);
@@ -546,14 +528,14 @@ public static class Era1SceneBuilder
     // Small helpers
     // =====================================================================
 
-    private static RectTransform Rect(string name, Transform parent)
+    internal static RectTransform Rect(string name, Transform parent)
     {
         var go = new GameObject(name, typeof(RectTransform));
         go.transform.SetParent(parent, false);
         return (RectTransform)go.transform;
     }
 
-    private static void Stretch(RectTransform rt)
+    internal static void Stretch(RectTransform rt)
     {
         rt.anchorMin = Vector2.zero;
         rt.anchorMax = Vector2.one;
@@ -561,7 +543,7 @@ public static class Era1SceneBuilder
     }
 
     // Full-width strip of fixed height, measured from the top (or bottom) edge.
-    private static void Anchor(RectTransform rt, Vector2 min, Vector2 max, Vector2 offset, float height, bool bottom = false)
+    internal static void Anchor(RectTransform rt, Vector2 min, Vector2 max, Vector2 offset, float height, bool bottom = false)
     {
         rt.anchorMin = min;
         rt.anchorMax = max;
@@ -570,13 +552,16 @@ public static class Era1SceneBuilder
         rt.anchoredPosition = offset;
     }
 
-    private static void Fixed(RectTransform rt, float height)
+    internal static void Fixed(RectTransform rt, float height)
     {
         var le = rt.gameObject.AddComponent<LayoutElement>();
         le.minHeight = le.preferredHeight = height;
+        // A layout group that force-expands its children reports itself as flexible;
+        // without this a fixed row with such a group soaks up the column's spare height.
+        le.flexibleHeight = 0;
     }
 
-    private static RectTransform Stack(string name, Transform parent, float spacing = 8)
+    internal static RectTransform Stack(string name, Transform parent, float spacing = 8)
     {
         var rt = Rect(name, parent);
         var vlg = rt.gameObject.AddComponent<VerticalLayoutGroup>();
@@ -587,7 +572,7 @@ public static class Era1SceneBuilder
         return rt;
     }
 
-    private static Image AddImage(RectTransform rt, Sprite sprite, Color color)
+    internal static Image AddImage(RectTransform rt, Sprite sprite, Color color)
     {
         var image = rt.gameObject.AddComponent<Image>();
         image.sprite = sprite;
@@ -595,7 +580,7 @@ public static class Era1SceneBuilder
         return image;
     }
 
-    private static TextMeshProUGUI Text(Transform parent, string name, string text, float size, Color color,
+    internal static TextMeshProUGUI Text(Transform parent, string name, string text, float size, Color color,
                                         TextAlignmentOptions align, FontStyles style = FontStyles.Normal,
                                         bool numerals = false)
     {
@@ -614,7 +599,7 @@ public static class Era1SceneBuilder
         return tmp;
     }
 
-    private static void Wire(Object target, params (string field, Object value)[] refs)
+    internal static void Wire(Object target, params (string field, Object value)[] refs)
     {
         var so = new SerializedObject(target);
         foreach (var (field, value) in refs)
@@ -626,7 +611,7 @@ public static class Era1SceneBuilder
         so.ApplyModifiedPropertiesWithoutUndo();
     }
 
-    private static void SetArray(SerializedProperty prop, Object[] items)
+    internal static void SetArray(SerializedProperty prop, Object[] items)
     {
         prop.arraySize = items.Length;
         for (int i = 0; i < items.Length; i++)

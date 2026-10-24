@@ -56,6 +56,10 @@ namespace IdlePowerGen.Simulation
             while (remaining > 0)
             {
                 double step = Math.Min(stepSize, remaining);
+                // The clock moves with the ticks, so contracts end on time rather than
+                // soaking up minutes of output past their last hour.
+                var clock = GameClock.Instance;
+                clock?.SetGameTime(clock.GameTimeSeconds + step * clock.GameTimeScale);
                 DoTick(step);
                 remaining -= step;
             }
@@ -76,13 +80,11 @@ namespace IdlePowerGen.Simulation
             double delivered = 0;
             if (ledger != null)
             {
-                var cfg = eco.GetEraConfig((int)era);
-                double baseRate = cfg != null ? cfg.contractBaseRate : 0.001;
                 // Contract durations are in game time, so their delivered energy must be too:
                 // one real-second tick covers GameTimeScale game seconds. Using the real delta
                 // left every contract at 1/60 of its target, i.e. always failed.
                 double gameDelta = delta * (GameClock.Instance != null ? GameClock.Instance.GameTimeScale : 1f);
-                ledger.Tick(Grid.TotalOutputWatts, gameDelta, gameTime, eco.Ledger, baseRate);
+                ledger.Tick(Grid.TotalOutputWatts, gameDelta, gameTime, eco.Ledger, eco.ContractBaseRate);
                 delivered = ledger.DeliveredWatts;
             }
 

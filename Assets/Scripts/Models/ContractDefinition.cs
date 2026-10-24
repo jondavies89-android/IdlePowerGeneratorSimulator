@@ -24,6 +24,9 @@ namespace IdlePowerGen.Models
         public float availableStartHour; // in-game hour of day contract becomes available
         public float availableEndHour;   // expires if not accepted before this hour
 
+        [Header("Reputation Gate (required, not consumed)")]
+        public float requiredReputation;
+
         [Header("Reward  §5.1.6")]
         public float payRateMultiplier  = 1f;   // multiplied against era base rate
         public float reputationOnSuccess = 1f;

@@ -17,6 +17,7 @@ public static class Era1SpriteFactory
     public static Sprite White  => Load("White");
     public static Sprite PanelEdged => Load("PanelEdged");
     public static Sprite Glow   => Load("Glow");
+    public static Sprite Star   => Load("Star");
 
     public static void Build()
     {
@@ -29,6 +30,7 @@ public static class Era1SpriteFactory
         Write("Disc", 128, DiscPixel);
         Write("Crank", 512, CrankPixel);
         Write("Bolt", 128, BoltPixel);
+        Write("Star", 128, StarPixel);
     }
 
     private static Sprite Load(string name) => AssetDatabase.LoadAssetAtPath<Sprite>($"{Folder}/{name}.png");
@@ -138,6 +140,34 @@ public static class Era1SpriteFactory
         {
             var q = new Vector2((x - 0.5f + (sx + 0.5f) / 4f) / size, (y - 0.5f + (sy + 0.5f) / 4f) / size);
             if (InPolygon(q, BoltShape)) inside++;
+        }
+        return new Color(1, 1, 1, inside / 16f);
+    }
+
+    // Five-pointed star for Era 2's repute (the fonts have no ★ either). Filled images
+    // show part-earned stars, so it is drawn edge to edge.
+    private static readonly Vector2[] StarShape = BuildStar();
+
+    private static Vector2[] BuildStar()
+    {
+        var pts = new Vector2[10];
+        for (int i = 0; i < 10; i++)
+        {
+            float a = Mathf.PI / 2f + i * Mathf.PI / 5f;
+            float r = i % 2 == 0 ? 0.5f : 0.2f;
+            pts[i] = new Vector2(0.5f + r * Mathf.Cos(a), 0.47f + r * Mathf.Sin(a));
+        }
+        return pts;
+    }
+
+    private static Color StarPixel(float x, float y, int size)
+    {
+        int inside = 0;
+        for (int sx = 0; sx < 4; sx++)
+        for (int sy = 0; sy < 4; sy++)
+        {
+            var q = new Vector2((x - 0.5f + (sx + 0.5f) / 4f) / size, (y - 0.5f + (sy + 0.5f) / 4f) / size);
+            if (InPolygon(q, StarShape)) inside++;
         }
         return new Color(1, 1, 1, inside / 16f);
     }

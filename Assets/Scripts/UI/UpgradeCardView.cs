@@ -49,10 +49,8 @@ namespace IdlePowerGen.UI
 
         private void OnClicked() => Managers.GameManager.Instance?.Upgrades.Purchase(Definition);
 
-        private void OnCurrencyChanged(CurrencyChangedEvent e)
-        {
-            if (e.Currency == CurrencyType.Joules) Refresh();
-        }
+        // Era 1 cards cost joules; Era 2 cards cost pennies and may wait on reputation.
+        private void OnCurrencyChanged(CurrencyChangedEvent _) => Refresh();
 
         private void OnUpgradePurchased(UpgradePurchasedEvent _) => Refresh();
         private void OnGameLoaded(GameLoadedEvent _)             => Refresh();
@@ -66,9 +64,15 @@ namespace IdlePowerGen.UI
             bool affordable = registry.CanAfford(Definition);
             int  level      = registry.Level(Definition.upgradeId);
 
+            bool reputable = Managers.GameManager.Instance.Ledger.Reputation >= Definition.requiredReputation;
+
             _nameLabel.text   = NameText(Definition, level);
-            _costLabel.text   = NumberFormatter.FormatJoules(registry.NextCostJoules(Definition));
-            _effectLabel.text = prereqsMet ? EffectText(Definition, level) : NeedsText(Definition);
+            _costLabel.text   = Definition.costPennies > 0
+                ? NumberFormatter.FormatPennies((decimal)registry.NextCostPennies(Definition))
+                : NumberFormatter.FormatJoules(registry.NextCostJoules(Definition));
+            _effectLabel.text = !prereqsMet ? NeedsText(Definition)
+                              : !reputable  ? $"Needs {Definition.requiredReputation:0.#} repute"
+                              : EffectText(Definition, level);
             _button.interactable = prereqsMet && affordable && !registry.IsMaxed(Definition);
             _group.alpha = _button.interactable ? 1f : DimmedAlpha;
         }
@@ -98,6 +102,14 @@ namespace IdlePowerGen.UI
                 case UpgradeEffect.MultiplyAllOutput:     return $"Every machine ×{def.effectValue:0.##}";
                 case UpgradeEffect.AddPassiveWatts:       return $"+{watts} without cranking";
                 case UpgradeEffect.UnlockGenerator:       return $"New machine: {GeneratorName(def.unlocksId)}";
+                case UpgradeEffect.MultiplyGeneratorOutput:
+                    return $"Every {GeneratorName(def.unlocksId).ToLowerInvariant()} ×{def.effectValue:0.##}";
+                case UpgradeEffect.AddContractSlot:
+                    return $"One more engagement at a time ({Data.Era2Data.BaseContractSlots + level + 1} in all)";
+                case UpgradeEffect.UnlockFeature:
+                    return def.unlocksId == Data.Era2Data.ClerkFeatureId ? "Engagements booked for you"
+                         : def.unlocksId == Data.Era2Data.CoalMerchantFeatureId ? "Coal ordered for you"
+                         : string.Empty;
                 default:                                  return string.Empty;
             }
         }

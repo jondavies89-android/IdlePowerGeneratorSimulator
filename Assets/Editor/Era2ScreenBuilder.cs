@@ -1,0 +1,575 @@
+using IdlePowerGen.UI;
+using TMPro;
+using UnityEditor;
+using UnityEditor.Events;
+using UnityEngine;
+using UnityEngine.UI;
+using static Era1SceneBuilder;
+
+// Builds the Era 2 screen into the Era 1 scene (todo Era 2 §2.2, option B: one scene, one
+// screen per era). Layout follows the bible's Appendix A mockup: the office header, the
+// Capacity · Purse · Repute panel, the engagements with their progress bars, the machines
+// with their running costs in coral, and the coal hopper warning with its order button.
+public static class Era2ScreenBuilder
+{
+    private const string EngagementCardPrefab = PrefabFolder + "/Era2EngagementCard.prefab";
+    private const string OfferCardPrefab      = PrefabFolder + "/Era2OfferCard.prefab";
+    private const string GeneratorRowPrefab   = PrefabFolder + "/Era2GeneratorRow.prefab";
+    private const string UpgradeCardPrefab    = PrefabFolder + "/Era2UpgradeCard.prefab";
+
+    public static void BuildPrefabs()
+    {
+        Era1AssetBuilder.EnsureFolder(PrefabFolder);
+        SaveAsPrefab(BuildEngagementCard(), EngagementCardPrefab);
+        SaveAsPrefab(BuildOfferCard(), OfferCardPrefab);
+        SaveAsPrefab(BuildGeneratorRow(), GeneratorRowPrefab);
+        SaveAsPrefab(BuildUpgradeCard(), UpgradeCardPrefab);
+    }
+
+    // Returns the screen root, inactive until EraScreenSwitcher shows it.
+    internal static RectTransform Create(Transform canvas, Controllers controllers, ToastView toast)
+    {
+        var root = Rect("Era2Screen", canvas);
+        Stretch(root);
+        var bg = Rect("Background", root);
+        Stretch(bg);
+        AddImage(bg, null, Era2Theme.Background).raycastTarget = false;
+
+        var safe = Rect("SafeArea", root);
+        Stretch(safe);
+        safe.gameObject.AddComponent<SafeAreaFitter>();
+
+        var column = Rect("Column", safe);
+        Stretch(column);
+        var vlg = column.gameObject.AddComponent<VerticalLayoutGroup>();
+        vlg.padding = new RectOffset((int)Gutter, (int)Gutter, 12, 0);
+        vlg.spacing = 6;
+        vlg.childControlWidth = vlg.childControlHeight = true;
+        vlg.childForceExpandWidth = true;
+        vlg.childForceExpandHeight = false;
+
+        CreateHeader(column, controllers);
+        CreateStats(column, controllers);
+        CreateDayBar(column);
+        CreateLists(column, controllers, toast);
+
+        root.gameObject.SetActive(false);
+        return root;
+    }
+
+    // ---- Header, stats, day bar ----
+
+    private static void CreateHeader(Transform parent, Controllers controllers)
+    {
+        var header = Rect("Header", parent);
+        Fixed(header, 50);
+        var vlg = header.gameObject.AddComponent<VerticalLayoutGroup>();
+        vlg.childAlignment = TextAnchor.MiddleCenter;
+        vlg.childControlWidth = vlg.childControlHeight = true;
+        vlg.childForceExpandWidth = true;
+        vlg.childForceExpandHeight = false;
+
+        var title = Text(header, "Title", "— THE DEMONSTRATION OFFICE —", 15, Era2Theme.TextMuted, TextAlignmentOptions.Center);
+        title.characterSpacing = 12;
+        var date = Text(header, "Date", "", 17, Era2Theme.Text, TextAlignmentOptions.Center, FontStyles.Italic);
+
+        var view = header.gameObject.AddComponent<Era2HeaderView>();
+        Wire(view, ("_works", controllers.Works), ("_dateLabel", date));
+    }
+
+    private static void CreateStats(Transform parent, Controllers controllers)
+    {
+        var panel = Rect("Stats", parent);
+        Fixed(panel, 86);
+        Panel(panel);
+        var hlg = panel.gameObject.AddComponent<HorizontalLayoutGroup>();
+        hlg.padding = new RectOffset(8, 8, 10, 10);
+        hlg.childControlWidth = hlg.childControlHeight = true;
+        hlg.childForceExpandWidth = true;
+        hlg.childForceExpandHeight = true;
+
+        var capacity = StatCell(panel, "Capacity", "CAPACITY", "0 W", Era2Theme.Text);
+        var purse    = StatCell(panel, "Purse", "PURSE", "0 d", Era2Theme.Purse);
+
+        var repute = Stack("Repute", panel, spacing: 2);
+        repute.GetComponent<VerticalLayoutGroup>().childAlignment = TextAnchor.MiddleCenter;
+        Caption(repute, "REPUTE");
+        var starsRow = Rect("Stars", repute);
+        Fixed(starsRow, 26);
+        var srow = starsRow.gameObject.AddComponent<HorizontalLayoutGroup>();
+        srow.childAlignment = TextAnchor.MiddleCenter;
+        srow.spacing = 2;
+        srow.childControlWidth = srow.childControlHeight = true;
+        srow.childForceExpandWidth = srow.childForceExpandHeight = false;
+        var stars = new Image[5];
+        for (int i = 0; i < stars.Length; i++)
+        {
+            // An empty star behind a filled one: part-earned stars fill from the left.
+            var slot = Rect($"Star{i}", starsRow);
+            var le = slot.gameObject.AddComponent<LayoutElement>();
+            le.preferredWidth = le.preferredHeight = 22;
+            AddImage(slot, Era1SpriteFactory.Star, Era2Theme.StarsEmpty).raycastTarget = false;
+            var fillRt = Rect("Fill", slot);
+            Stretch(fillRt);
+            var fill = AddImage(fillRt, Era1SpriteFactory.Star, Era2Theme.Stars);
+            fill.raycastTarget = false;
+            fill.type = Image.Type.Filled;
+            fill.fillMethod = Image.FillMethod.Horizontal;
+            fill.fillAmount = 0f;
+            stars[i] = fill;
+        }
+        var reputeLabel = Text(repute, "Value", "0 repute", 12, Era2Theme.TextMuted, TextAlignmentOptions.Center);
+
+        var supply = Text(parent, "Supply", "", 14, Era2Theme.TextMuted, TextAlignmentOptions.Center, FontStyles.Italic);
+        Fixed(supply.rectTransform, 20);
+
+        var view = panel.gameObject.AddComponent<Era2StatsView>();
+        Wire(view, ("_works", controllers.Works), ("_capacityLabel", capacity), ("_purseLabel", purse),
+                   ("_reputeLabel", reputeLabel), ("_supplyLabel", supply));
+        var so = new SerializedObject(view);
+        var starsProp = so.FindProperty("_stars");
+        starsProp.arraySize = stars.Length;
+        for (int i = 0; i < stars.Length; i++) starsProp.GetArrayElementAtIndex(i).objectReferenceValue = stars[i];
+        so.FindProperty("_healthy").colorValue = Era2Theme.Healthy;
+        so.FindProperty("_caution").colorValue = Era2Theme.Caution;
+        so.FindProperty("_alarm").colorValue   = Era2Theme.Alarm;
+        so.FindProperty("_muted").colorValue   = Era2Theme.TextMuted;
+        so.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    private static TextMeshProUGUI StatCell(Transform parent, string name, string caption, string value, Color colour)
+    {
+        var cell = Stack(name, parent, spacing: 2);
+        cell.GetComponent<VerticalLayoutGroup>().childAlignment = TextAnchor.MiddleCenter;
+        Caption(cell, caption);
+        return Text(cell, "Value", value, 28, colour, TextAlignmentOptions.Center, numerals: true);
+    }
+
+    private static void Caption(Transform parent, string caption)
+    {
+        var t = Text(parent, "Caption", caption, 12, Era2Theme.TextMuted, TextAlignmentOptions.Center);
+        t.characterSpacing = 8;
+    }
+
+    private static void CreateDayBar(Transform parent)
+    {
+        var row = Rect("DayBar", parent);
+        Fixed(row, 22);
+        var hlg = row.gameObject.AddComponent<HorizontalLayoutGroup>();
+        hlg.spacing = 10;
+        hlg.childAlignment = TextAnchor.MiddleLeft;
+        hlg.childControlWidth = hlg.childControlHeight = true;
+        hlg.childForceExpandWidth = false;
+        hlg.childForceExpandHeight = true;
+
+        var clock = Text(row, "Clock", "18:00", 16, Era2Theme.Text, TextAlignmentOptions.Left, numerals: true);
+        clock.gameObject.AddComponent<LayoutElement>().preferredWidth = 48;
+
+        var bar = Rect("Day", row);
+        bar.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1;
+        var track = Rect("Track", bar);
+        track.anchorMin = new Vector2(0, 0.5f);
+        track.anchorMax = new Vector2(1, 0.5f);
+        track.sizeDelta = new Vector2(0, 8);
+        AddImage(track, Era1SpriteFactory.White, Era2Theme.Track).raycastTarget = false;
+
+        // Daylight, 06:00 to 20:00, a shade lighter than the night either side.
+        var day = Rect("Daylight", track);
+        day.anchorMin = new Vector2(6f / 24f, 0);
+        day.anchorMax = new Vector2(20f / 24f, 1);
+        day.offsetMin = day.offsetMax = Vector2.zero;
+        AddImage(day, Era1SpriteFactory.White, Era2Theme.Brass * new Color(1, 1, 1, 0.5f)).raycastTarget = false;
+
+        var marker = Rect("Now", bar);
+        marker.anchorMin = new Vector2(0.75f, 0);
+        marker.anchorMax = new Vector2(0.75f, 1);
+        marker.sizeDelta = new Vector2(3, 0);
+        AddImage(marker, Era1SpriteFactory.White, Era2Theme.Purse).raycastTarget = false;
+
+        var view = row.gameObject.AddComponent<Era2DayBarView>();
+        Wire(view, ("_marker", marker), ("_clockLabel", clock));
+    }
+
+    // ---- The scrolling list ----
+
+    private static void CreateLists(Transform parent, Controllers controllers, ToastView toast)
+    {
+        var content = Scroll(parent);
+
+        // Engagements running now.
+        var engagementsHeader = SectionHeader(content, "EngagementsHeader", "Engagements");
+        var engagements = Stack("EngagementPanel", content);
+        var noEngagements = Text(content, "NoEngagements", "None running. Book a client from the board below.",
+                                 14, Era2Theme.TextMuted, TextAlignmentOptions.Left, FontStyles.Italic);
+        var engagementList = engagements.gameObject.AddComponent<Era2EngagementListView>();
+        Wire(engagementList, ("_works", controllers.Works),
+             ("_cardPrefab", AssetDatabase.LoadAssetAtPath<Era2EngagementCardView>(EngagementCardPrefab)),
+             ("_content", engagements), ("_headerLabel", engagementsHeader), ("_emptyHint", noEngagements.gameObject));
+
+        // The contract board.
+        SectionHeader(content, "BoardHeader", "On the board");
+        var offers = Stack("OfferPanel", content);
+        var offerList = offers.gameObject.AddComponent<Era2OfferListView>();
+        Wire(offerList, ("_works", controllers.Works),
+             ("_cardPrefab", AssetDatabase.LoadAssetAtPath<Era2OfferCardView>(OfferCardPrefab)), ("_content", offers));
+
+        CreateCoalHopper(content, controllers);
+
+        // Machines.
+        SectionHeader(content, "GeneratorsHeader", "Generators");
+        var costs = Text(content, "RunningCosts", "", 14, Era2Theme.Running, TextAlignmentOptions.Left, FontStyles.Italic);
+        var workshopOutput = CreateWorkshopRow(content, controllers);
+        var generators = Stack("GeneratorPanel", content);
+        var generatorList = generators.gameObject.AddComponent<Era2GeneratorListView>();
+        Wire(generatorList, ("_generators", controllers.Generators), ("_works", controllers.Works),
+             ("_rowPrefab", AssetDatabase.LoadAssetAtPath<Era2GeneratorRowView>(GeneratorRowPrefab)),
+             ("_content", generators), ("_workshopOutputLabel", workshopOutput), ("_runningCostsLabel", costs));
+
+        // Improvements.
+        SectionHeader(content, "ImprovementsHeader", "Improvements");
+        var upgrades = Stack("UpgradePanel", content);
+        var noUpgrades = Text(content, "NothingToImprove", "Nothing more to improve for now.", 14, Era2Theme.TextMuted,
+                              TextAlignmentOptions.Left, FontStyles.Italic);
+        var upgradeList = upgrades.gameObject.AddComponent<UpgradeListView>();
+        Wire(upgradeList, ("_cardPrefab", AssetDatabase.LoadAssetAtPath<UpgradeCardView>(UpgradeCardPrefab)),
+             ("_content", upgrades), ("_emptyHint", noUpgrades.gameObject));
+        var so = new SerializedObject(upgradeList);
+        so.FindProperty("_era").intValue = IdlePowerGen.Data.Era2Data.EraNumber;
+        so.ApplyModifiedPropertiesWithoutUndo();
+
+        // The weather glass on the wall (a hint at Era 3's forecasting), and the gas-lamps.
+        var glass = MakeButton(content, "WeatherGlass", "The weather glass reads Change");
+        Recolour(glass, Era2Theme.Panel);
+        var glassLabel = glass.GetComponentInChildren<TextMeshProUGUI>();
+        glassLabel.color = Era2Theme.TextMuted;
+        glassLabel.fontStyle = FontStyles.Italic;
+        glassLabel.fontSize = 15;
+        var glassView = glass.gameObject.AddComponent<Era2WeatherGlassView>();
+        Wire(glassView, ("_button", glass), ("_toast", toast));
+
+        Text(content, "Footer", "~ gas-lamps hiss along the wall ~", 14, Era2Theme.TextMuted * new Color(1, 1, 1, 0.7f),
+             TextAlignmentOptions.Center, FontStyles.Italic);
+    }
+
+    private static RectTransform Scroll(Transform parent)
+    {
+        var scrollRt = Rect("Lists", parent);
+        var le = scrollRt.gameObject.AddComponent<LayoutElement>();
+        le.flexibleHeight = 1;
+        le.minHeight = 200;
+
+        var scroll = scrollRt.gameObject.AddComponent<ScrollRect>();
+        scroll.horizontal = false;
+        scroll.movementType = ScrollRect.MovementType.Elastic;
+        scroll.scrollSensitivity = 30;
+
+        var viewport = Rect("Viewport", scrollRt);
+        Stretch(viewport);
+        viewport.gameObject.AddComponent<RectMask2D>();
+        AddImage(viewport, null, new Color(0, 0, 0, 0));
+
+        var content = Rect("Content", viewport);
+        content.anchorMin = new Vector2(0, 1);
+        content.anchorMax = new Vector2(1, 1);
+        content.pivot = new Vector2(0.5f, 1);
+        content.sizeDelta = Vector2.zero;
+        var vlg = content.gameObject.AddComponent<VerticalLayoutGroup>();
+        vlg.spacing = 8;
+        vlg.padding = new RectOffset(0, 0, 4, 24);
+        vlg.childControlWidth = vlg.childControlHeight = true;
+        vlg.childForceExpandWidth = true;
+        vlg.childForceExpandHeight = false;
+        content.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        scroll.viewport = viewport;
+        scroll.content = content;
+        return content;
+    }
+
+    private static TextMeshProUGUI SectionHeader(Transform parent, string name, string text)
+    {
+        var t = Text(parent, name, text, 15, Era2Theme.TextMuted, TextAlignmentOptions.Left);
+        t.characterSpacing = 8;
+        t.margin = new Vector4(0, 8, 0, 0);
+        return t;
+    }
+
+    private static void CreateCoalHopper(Transform parent, Controllers controllers)
+    {
+        var holder = Stack("CoalHopper", parent, spacing: 0);
+
+        var panel = Rect("HopperPanel", holder);
+        var image = Panel(panel);
+        var hlg = panel.gameObject.AddComponent<HorizontalLayoutGroup>();
+        hlg.padding = new RectOffset(14, 14, 10, 10);
+        hlg.spacing = 10;
+        hlg.childAlignment = TextAnchor.MiddleLeft;
+        hlg.childControlWidth = hlg.childControlHeight = true;
+        hlg.childForceExpandWidth = hlg.childForceExpandHeight = false;
+        panel.gameObject.AddComponent<LayoutElement>().minHeight = 72;
+
+        var texts = Stack("Texts", panel, spacing: 3);
+        texts.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1;
+        var title = Text(texts, "Title", "Coal hopper", 18, Era2Theme.Text, TextAlignmentOptions.Left);
+        var detail = Text(texts, "Detail", "", 13, Era2Theme.TextMuted, TextAlignmentOptions.Left, FontStyles.Italic);
+        var bar = Rect("Level", texts);
+        Fixed(bar, 6);
+        AddImage(bar, Era1SpriteFactory.White, Era2Theme.Track).raycastTarget = false;
+        var fillRt = Rect("Fill", bar);
+        Stretch(fillRt);
+        var fill = AddImage(fillRt, Era1SpriteFactory.White, Era2Theme.Healthy);
+        fill.raycastTarget = false;
+        fill.type = Image.Type.Filled;
+        fill.fillMethod = Image.FillMethod.Horizontal;
+
+        // Its own button, 44 tall: the one-tap remedy.
+        var orderRt = Rect("Order", panel);
+        var orderLe = orderRt.gameObject.AddComponent<LayoutElement>();
+        orderLe.preferredWidth = 108;
+        orderLe.preferredHeight = orderLe.minHeight = 44;
+        var orderImage = AddImage(orderRt, Era1Theme.PanelSprite, Era2Theme.AlarmPanel);
+        orderImage.type = Image.Type.Sliced;
+        var order = orderRt.gameObject.AddComponent<Button>();
+        order.targetGraphic = orderImage;
+        orderRt.gameObject.AddComponent<PressFeedback>();
+        var orderGroup = orderRt.gameObject.AddComponent<CanvasGroup>();
+        var orderLabel = Text(orderRt, "Label", "order 0 d", 16, Era2Theme.Text, TextAlignmentOptions.Center, numerals: true);
+        Stretch(orderLabel.rectTransform);
+
+        var view = holder.gameObject.AddComponent<Era2CoalHopperView>();
+        Wire(view, ("_works", controllers.Works), ("_panel", panel.gameObject), ("_background", image),
+                   ("_titleLabel", title), ("_detailLabel", detail), ("_fill", fill),
+                   ("_orderButton", order), ("_orderLabel", orderLabel), ("_orderGroup", orderGroup));
+        var so = new SerializedObject(view);
+        so.FindProperty("_normalPanel").colorValue = Era2Theme.Panel;
+        so.FindProperty("_alarmPanel").colorValue  = Era2Theme.AlarmPanel;
+        so.FindProperty("_healthy").colorValue = Era2Theme.Healthy;
+        so.FindProperty("_caution").colorValue = Era2Theme.Caution;
+        so.FindProperty("_alarm").colorValue   = Era2Theme.Alarm;
+        so.ApplyModifiedPropertiesWithoutUndo();
+        panel.gameObject.SetActive(false);
+    }
+
+    // The Era 1 workshop, still turning: its output, and a tap turns the crank.
+    private static TextMeshProUGUI CreateWorkshopRow(Transform parent, Controllers controllers)
+    {
+        var row = Card("Workshop", out var button, out _);
+        row.SetParent(parent, false);
+        Recolour(button, Era2Theme.Panel);
+
+        var texts = Stack("Texts", row, spacing: 2);
+        texts.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1;
+        Text(texts, "Name", "The old workshop", 18, Era2Theme.Text, TextAlignmentOptions.Left);
+        Text(texts, "Running", "crank, flywheel and water wheel · tap to turn the crank", 13, Era2Theme.TextMuted,
+             TextAlignmentOptions.Left, FontStyles.Italic);
+        var output = Text(row, "Output", "0 W", 18, Era2Theme.Text, TextAlignmentOptions.Right, numerals: true);
+        output.gameObject.AddComponent<LayoutElement>().preferredWidth = 84;
+
+        UnityEventTools.AddPersistentListener(button.onClick, controllers.Tap.OnCrankTapped);
+        return output;
+    }
+
+    // ---- Prefabs ----
+
+    private static GameObject BuildEngagementCard()
+    {
+        var root = new GameObject("Era2EngagementCard", typeof(RectTransform)).GetComponent<RectTransform>();
+        Panel(root);
+        var vlg = root.gameObject.AddComponent<VerticalLayoutGroup>();
+        vlg.padding = new RectOffset(14, 14, 12, 12);
+        vlg.spacing = 4;
+        vlg.childControlWidth = vlg.childControlHeight = true;
+        vlg.childForceExpandWidth = true;
+        vlg.childForceExpandHeight = false;
+
+        var title = Text(root, "Title", "", 20, Era2Theme.Text, TextAlignmentOptions.Left);
+        var body = Text(root, "Body", "", 14, Era2Theme.TextMuted, TextAlignmentOptions.Left, FontStyles.Italic);
+
+        // The inset box of the mockup: times and need, the bar, then time left and state.
+        var box = Stack("Box", root, spacing: 4);
+        var boxVlg = box.GetComponent<VerticalLayoutGroup>();
+        boxVlg.padding = new RectOffset(12, 12, 8, 8);
+        var boxImage = AddImage(box, Era1Theme.PanelSprite, Era2Theme.PanelRaised);
+        boxImage.type = Image.Type.Sliced;
+        boxImage.raycastTarget = false;
+
+        var top = Row(box, "Top");
+        var window = Text(top, "Window", "", 15, Era2Theme.TextMuted, TextAlignmentOptions.Left, numerals: true);
+        window.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1;
+        var need = Text(top, "Need", "", 15, Era2Theme.Text, TextAlignmentOptions.Right, numerals: true);
+
+        var bar = Rect("Progress", box);
+        Fixed(bar, 8);
+        AddImage(bar, Era1SpriteFactory.White, Era2Theme.Track).raycastTarget = false;
+        var fillRt = Rect("Fill", bar);
+        Stretch(fillRt);
+        var fill = AddImage(fillRt, Era1SpriteFactory.White, Era2Theme.Healthy);
+        fill.raycastTarget = false;
+        fill.type = Image.Type.Filled;
+        fill.fillMethod = Image.FillMethod.Horizontal;
+
+        var bottom = Row(box, "Bottom");
+        var time = Text(bottom, "Time", "", 13, Era2Theme.TextMuted, TextAlignmentOptions.Left, FontStyles.Italic);
+        time.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1;
+        var state = Text(bottom, "State", "", 14, Era2Theme.Text, TextAlignmentOptions.Right);
+
+        var pay = Text(root, "Pay", "", 15, Era2Theme.Purse, TextAlignmentOptions.Left, FontStyles.Italic);
+
+        var view = root.gameObject.AddComponent<Era2EngagementCardView>();
+        Wire(view, ("_titleLabel", title), ("_bodyLabel", body), ("_windowLabel", window), ("_needLabel", need),
+                   ("_progressFill", fill), ("_timeLabel", time), ("_stateLabel", state), ("_payLabel", pay));
+        SetColours(view, ("_healthy", Era2Theme.Healthy), ("_caution", Era2Theme.Caution), ("_alarm", Era2Theme.Alarm));
+        return root.gameObject;
+    }
+
+    private static GameObject BuildOfferCard()
+    {
+        var root = Card("Era2OfferCard", out var button, out var group);
+        Recolour(button, Era2Theme.Panel);
+        Object.DestroyImmediate(root.GetComponent<HorizontalLayoutGroup>());
+        var vlg = root.gameObject.AddComponent<VerticalLayoutGroup>();
+        vlg.padding = new RectOffset(14, 14, 10, 10);
+        vlg.spacing = 3;
+        vlg.childControlWidth = vlg.childControlHeight = true;
+        vlg.childForceExpandWidth = true;
+        vlg.childForceExpandHeight = false;
+
+        var top = Row(root, "Top");
+        var title = Text(top, "Title", "", 18, Era2Theme.Text, TextAlignmentOptions.Left);
+        title.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1;
+        // Reputation-tier clients carry a gold star (todo Era 2 §5.1).
+        var badge = Rect("Badge", top);
+        var badgeLe = badge.gameObject.AddComponent<LayoutElement>();
+        badgeLe.preferredWidth = badgeLe.preferredHeight = 18;
+        AddImage(badge, Era1SpriteFactory.Star, Era2Theme.Stars).raycastTarget = false;
+
+        var body = Text(root, "Body", "", 13, Era2Theme.TextMuted, TextAlignmentOptions.Left, FontStyles.Italic);
+        var detail = Text(root, "Detail", "", 14, Era2Theme.Purse, TextAlignmentOptions.Left);
+        var status = Text(root, "Status", "", 15, Era2Theme.Text, TextAlignmentOptions.Left);
+
+        var view = root.gameObject.AddComponent<Era2OfferCardView>();
+        Wire(view, ("_titleLabel", title), ("_bodyLabel", body), ("_detailLabel", detail), ("_statusLabel", status),
+                   ("_badge", badge.gameObject), ("_button", button), ("_group", group));
+        SetColours(view, ("_statusColour", Era2Theme.Text), ("_cautionColour", Era2Theme.Caution));
+        return root.gameObject;
+    }
+
+    private static GameObject BuildGeneratorRow()
+    {
+        var root = Card("Era2GeneratorRow", out var button, out var group);
+        Recolour(button, Era2Theme.Panel);
+
+        var texts = Stack("Texts", root, spacing: 2);
+        texts.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1;
+        var name = Text(texts, "Name", "Machine", 18, Era2Theme.Text, TextAlignmentOptions.Left);
+        var running = Text(texts, "Running", "", 13, Era2Theme.Running, TextAlignmentOptions.Left, FontStyles.Italic);
+        var output = Text(texts, "Output", "0 W", 15, Era2Theme.TextMuted, TextAlignmentOptions.Left, numerals: true);
+
+        var cost = Text(root, "Cost", "Build\n0 d", 16, Era2Theme.Purse, TextAlignmentOptions.Right, numerals: true);
+        cost.gameObject.AddComponent<LayoutElement>().preferredWidth = 84;
+
+        var view = root.gameObject.AddComponent<Era2GeneratorRowView>();
+        Wire(view, ("_nameLabel", name), ("_runningLabel", running), ("_outputLabel", output), ("_costLabel", cost),
+                   ("_button", button), ("_group", group));
+        SetColours(view, ("_runningColour", Era2Theme.Running), ("_alarmColour", Era2Theme.Alarm));
+        return root.gameObject;
+    }
+
+    // The Era 1 upgrade card in Era 2's colours.
+    private static GameObject BuildUpgradeCard()
+    {
+        var root = Card("Era2UpgradeCard", out var button, out var group);
+        Recolour(button, Era2Theme.Panel);
+
+        var texts = Stack("Texts", root, spacing: 2);
+        texts.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1;
+        var name = Text(texts, "Name", "Upgrade", 18, Era2Theme.Text, TextAlignmentOptions.Left);
+        var desc = Text(texts, "Description", "", 13, Era2Theme.TextMuted, TextAlignmentOptions.Left, FontStyles.Italic);
+        var effect = Text(texts, "Effect", "", 14, Era2Theme.Purse, TextAlignmentOptions.Left);
+
+        var cost = Text(root, "Cost", "0 d", 17, Era2Theme.Purse, TextAlignmentOptions.Right, numerals: true);
+        cost.gameObject.AddComponent<LayoutElement>().preferredWidth = 84;
+
+        var view = root.gameObject.AddComponent<UpgradeCardView>();
+        Wire(view, ("_nameLabel", name), ("_descriptionLabel", desc), ("_effectLabel", effect),
+                   ("_costLabel", cost), ("_button", button), ("_group", group));
+        return root.gameObject;
+    }
+
+    // ---- End of Era 2 ----
+
+    // Shown once the Great Exhibition is lit; the end of the playable Era 2 slice.
+    public static void CreateEndOfEra(Transform canvas)
+    {
+        var holder = Rect("Era2EndOfEra", canvas);
+        Stretch(holder);
+
+        var panel = Rect("Panel", holder);
+        Stretch(panel);
+        AddImage(panel, Era1SpriteFactory.White, Era2Theme.Overlay);
+        var group = panel.gameObject.AddComponent<CanvasGroup>();
+
+        var box = Stack("Box", panel, spacing: 12);
+        box.anchorMin = new Vector2(0, 0.5f);
+        box.anchorMax = new Vector2(1, 0.5f);
+        box.pivot = new Vector2(0.5f, 0.5f);
+        box.offsetMin = new Vector2(Gutter, 0);
+        box.offsetMax = new Vector2(-Gutter, 0);
+        box.GetComponent<VerticalLayoutGroup>().padding = new RectOffset(20, 20, 24, 20);
+        box.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        AddImage(box, Era1Theme.PanelSprite, Era2Theme.PanelRaised).type = Image.Type.Sliced;
+
+        Text(box, "Kicker", "End of Era 2", 14, Era2Theme.TextMuted, TextAlignmentOptions.Center, FontStyles.Italic);
+        Text(box, "Title", "The Crystal Palace, lit", 28, Era2Theme.Achievement, TextAlignmentOptions.Center);
+        Text(box, "Body",
+             "For a week the Great Exhibition shone with your power, and all London came to see it. " +
+             "You are no longer a workshop: you are a power company.\n\n" +
+             "Era 3, The War of Currents (1893), is still being built.",
+             16, Era2Theme.Text, TextAlignmentOptions.Center);
+
+        var keep = MakeButton(box, "KeepRunning", "Keep running the works");
+        Recolour(keep, Era2Theme.Panel);
+        var restart = MakeButton(box, "StartAgain", "Start again from 1 W");
+        Recolour(restart, Era2Theme.Panel);
+
+        var view = holder.gameObject.AddComponent<Era2EndOfEraView>();
+        Wire(view, ("_panel", panel.gameObject), ("_group", group),
+                   ("_continueButton", keep), ("_restartButton", restart));
+        panel.gameObject.SetActive(false);
+    }
+
+    // ---- Helpers ----
+
+    private static Image Panel(RectTransform rt)
+    {
+        var image = AddImage(rt, Era1Theme.PanelSprite, Era2Theme.Panel);
+        image.type = Image.Type.Sliced;
+        return image;
+    }
+
+    private static void Recolour(Button button, Color colour)
+    {
+        var image = (Image)button.targetGraphic;
+        image.color = colour;
+        var label = button.GetComponentInChildren<TextMeshProUGUI>();
+        if (label != null && label.color == Era1Theme.Text) label.color = Era2Theme.Text;
+    }
+
+    private static RectTransform Row(Transform parent, string name)
+    {
+        var rt = Rect(name, parent);
+        var hlg = rt.gameObject.AddComponent<HorizontalLayoutGroup>();
+        hlg.spacing = 8;
+        hlg.childAlignment = TextAnchor.MiddleLeft;
+        hlg.childControlWidth = hlg.childControlHeight = true;
+        hlg.childForceExpandWidth = hlg.childForceExpandHeight = false;
+        return rt;
+    }
+
+    private static void SetColours(Object target, params (string field, Color colour)[] colours)
+    {
+        var so = new SerializedObject(target);
+        foreach (var (field, colour) in colours) so.FindProperty(field).colorValue = colour;
+        so.ApplyModifiedPropertiesWithoutUndo();
+    }
+}

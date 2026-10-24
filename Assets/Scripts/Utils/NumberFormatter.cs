@@ -13,6 +13,18 @@ namespace IdlePowerGen.Utils
         public static string FormatJoules(double joules) => Format(joules, "J");
         public static string FormatMoney(decimal amount) => $"£{amount:N2}";
 
+        // Era 2's purse, in old pennies: "412 d", "8.5 d", then SI-style past ten thousand
+        // ("12.5 kd" would read oddly, so the prefix sits on the number: "12.5k d").
+        public static string FormatPennies(decimal amount)
+        {
+            if (amount < 0) return "-" + FormatPennies(-amount);
+            if (amount < 10m) return $"{Math.Floor(amount * 10m) / 10m:0.#} d";
+            if (amount < 10_000m) return $"{Math.Floor(amount):N0} d";
+            string si = Format((double)amount, "");
+            // Format gives "12.5 k"; close it up to "12.5k d".
+            return si.Replace(" ", "") + " d";
+        }
+
         private static string Format(double value, string unit)
         {
             if (value < 0) return "-" + Format(-value, unit);

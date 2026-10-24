@@ -7,9 +7,13 @@ using IdlePowerGen.Utils;
 namespace IdlePowerGen.Controllers
 {
     // Manages generator purchasing and the stackable cost curve for Era 2 (§9.3.1).
-    // cost(n) = base × 1.15^n  where n = units already owned.
+    // cost(n) = base × 1.15^n  where n = units already owned. Machines are paid for in
+    // pennies (bible §9.2: infrastructure costs cash); a definition with no penny price
+    // falls back to joules.
     public class Era2GeneratorController : MonoBehaviour
     {
+        public const double CostGrowth = 1.15;
+
         private readonly Dictionary<GeneratorType, int> _owned = new();
 
         // Looked up on use rather than cached in Start: the save loads during
@@ -17,11 +21,24 @@ namespace IdlePowerGen.Controllers
         private Economy.CurrencyLedger Ledger => Managers.GameManager.Instance?.Ledger;
         private Simulation.PowerGrid   Grid   => Simulation.SimulationTick.Instance?.Grid;
 
-        // Cost of the next unit of this generator type.
+        private static bool PaidInPennies(GeneratorDefinition def) => def.baseCostPennies > 0;
+
+        // Cost of the next unit of this generator type, in its own currency.
         public double NextCost(GeneratorDefinition def)
         {
             int n = _owned.GetValueOrDefault(def.generatorType, 0);
-            return def.baseCostJoules * Math.Pow(1.15, n);
+            double baseCost = PaidInPennies(def) ? def.baseCostPennies : def.baseCostJoules;
+            return baseCost * Math.Pow(CostGrowth, n);
+        }
+
+        // Pennies are whole coins at the till.
+        public decimal NextCostPennies(GeneratorDefinition def) => (decimal)Math.Ceiling(NextCost(def));
+
+        public bool CanAfford(GeneratorDefinition def)
+        {
+            var ledger = Ledger;
+            if (ledger == null) return false;
+            return PaidInPennies(def) ? ledger.Pennies >= NextCostPennies(def) : ledger.Joules >= NextCost(def);
         }
 
         // Returns true if this generator type is available right now
@@ -36,12 +53,12 @@ namespace IdlePowerGen.Controllers
         // Returns false if the player cannot afford the purchase or it is locked.
         public bool TryBuy(GeneratorDefinition def)
         {
-            if (!IsUnlocked(def)) return false;
-            double cost = NextCost(def);
-            if (Ledger == null || !Ledger.SpendJoules(cost)) return false;
+            if (!IsUnlocked(def) || Ledger == null) return false;
+            bool paid = PaidInPennies(def) ? Ledger.SpendPennies(NextCostPennies(def))
+                                           : Ledger.SpendJoules(NextCost(def));
+            if (!paid) return false;
 
-            var instance = new Simulation.GeneratorInstance(def);
-            Grid?.AddGenerator(instance);
+            Grid?.AddGenerator(new Simulation.GeneratorInstance(def));
 
             _owned[def.generatorType] = _owned.GetValueOrDefault(def.generatorType, 0) + 1;
             EventBus.Publish(new GeneratorPurchasedEvent(def, _owned[def.generatorType]));
@@ -49,6 +66,24 @@ namespace IdlePowerGen.Controllers
         }
 
         public int GetOwned(GeneratorType type) => _owned.GetValueOrDefault(type, 0);
+
+        // Units of this type working right now (not stopped for coal or wages).
+        public int CountOnline(GeneratorType type)
+        {
+            int n = 0;
+            var grid = Grid;
+            if (grid == null) return 0;
+            foreach (var g in grid.Generators)
+                if (g.Definition.generatorType == type && g.IsOnline) n++;
+            return n;
+        }
+
+        // Watts all units of this type are delivering now.
+        public double OutputWatts(GeneratorDefinition def)
+        {
+            var grid = Grid;
+            return grid == null ? 0 : CountOnline(def.generatorType) * grid.UnitOutputWatts(def);
+        }
 
         // Rebuilds runtime generator instances from a saved count dictionary.
         public void LoadFromSave(Dictionary<GeneratorType, int> counts,

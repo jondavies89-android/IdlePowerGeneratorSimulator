@@ -26,6 +26,8 @@ namespace IdlePowerGen.UI
 
         private void OnTap(TapEvent evt)
         {
+            // From Era 2 the crank is turned from the old-workshop row and this view is hidden.
+            if (!isActiveAndEnabled) return;
             var label = _pool.Count > 0 ? _pool.Dequeue() : Instantiate(_template, _template.transform.parent);
             label.text = "+" + NumberFormatter.FormatJoules(evt.JoulesProduced);
             label.gameObject.SetActive(true);

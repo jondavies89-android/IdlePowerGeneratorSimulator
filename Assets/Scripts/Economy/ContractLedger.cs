@@ -33,13 +33,23 @@ namespace IdlePowerGen.Economy
             return required <= 0 ? 1f : (float)(_accumulatedWattSeconds / required);
         }
 
+        // How well it has been supplied so far: 1 = every watt asked for, so far.
+        // FulfillmentRatio only reaches 1 at the end, so it can't say "holding" mid-way.
+        public float RatioSoFar(double gameTime)
+        {
+            double elapsed = Math.Min(gameTime, EndGameTime) - StartGameTime;
+            double required = Definition.requiredWatts * elapsed;
+            return required <= 0 ? 1f : (float)Math.Min(1.0, _accumulatedWattSeconds / required);
+        }
+
         // §5.1.6 — resolve pay and reputation, publish outcome event.
         public void Resolve(CurrencyLedger ledger, double eraBaseRate)
         {
             if (IsResolved) return;
             IsResolved = true;
 
-            float  ratio   = FulfillmentRatio();
+            // Over-supply is the works' loss, not the client's: pay tops out at what was asked.
+            float  ratio   = Math.Min(1f, FulfillmentRatio());
             double basePay = Definition.durationHours * Definition.requiredWatts * eraBaseRate;
 
             if (ratio >= Definition.failThreshold)
@@ -100,7 +110,13 @@ namespace IdlePowerGen.Economy
         // Output is shared out oldest contract first, each taking at most what it asked
         // for: two customers can't both be paid for the same watts.
         public void Tick(double outputWatts, double deltaTime,
-                         double gameTime, CurrencyLedger ledger, double eraBaseRate)
+                         double gameTime, CurrencyLedger ledger, double eraBaseRate) =>
+            Tick(outputWatts, deltaTime, gameTime, ledger, _ => eraBaseRate);
+
+        // baseRateFor: the pay rate of the era a contract belongs to, so a contract still
+        // running when the era changes is paid at the rate it was offered at.
+        public void Tick(double outputWatts, double deltaTime, double gameTime,
+                         CurrencyLedger ledger, Func<ContractDefinition, double> baseRateFor)
         {
             double remaining = Math.Max(0, outputWatts);
             DeliveredWatts = 0;
@@ -126,7 +142,7 @@ namespace IdlePowerGen.Economy
 
                 if (gameTime >= c.EndGameTime)
                 {
-                    c.Resolve(ledger, eraBaseRate);
+                    c.Resolve(ledger, baseRateFor(c.Definition));
                     ended.Add(c);
                 }
             }

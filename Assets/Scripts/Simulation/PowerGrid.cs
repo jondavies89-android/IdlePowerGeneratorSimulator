@@ -68,9 +68,25 @@ namespace IdlePowerGen.Simulation
         {
             double sum = 0;
             foreach (var gen in _generators)
-                if (gen.IsOnline) sum += gen.Definition.basePowerWatts;
+                if (gen.IsOnline) sum += gen.Definition.basePowerWatts * TypeMultiplier(gen.Definition.generatorType);
             return sum;
         }
+
+        // Upgrades that improve one kind of machine (all apprentices, all steam engines),
+        // including the ones bought after the upgrade.
+        private readonly Dictionary<Models.GeneratorType, double> _typeMultipliers = new();
+
+        public double TypeMultiplier(Models.GeneratorType type) =>
+            _typeMultipliers.TryGetValue(type, out var m) ? m : 1.0;
+
+        public void MultiplyType(Models.GeneratorType type, double factor) =>
+            _typeMultipliers[type] = TypeMultiplier(type) * factor;
+
+        public void ClearTypeMultipliers() => _typeMultipliers.Clear();
+
+        // What one running unit of a generator delivers, every multiplier included.
+        public double UnitOutputWatts(Models.GeneratorDefinition def) =>
+            def.basePowerWatts * TypeMultiplier(def.generatorType) * GlobalOutputMultiplier;
 
         public void Tick(double deltaTime, double demandWatts)
         {
@@ -79,6 +95,7 @@ namespace IdlePowerGen.Simulation
 
             foreach (var gen in _generators)
             {
+                gen.SetOutputMultiplier(TypeMultiplier(gen.Definition.generatorType));
                 gen.Tick(deltaTime);
                 TotalOutputWatts += gen.CurrentOutputWatts;
             }

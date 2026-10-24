@@ -20,13 +20,24 @@ namespace IdlePowerGen
 
     public readonly struct OfflineProgressEvent
     {
-        public readonly double SecondsAway;
-        public readonly double JoulesEarned;
-        public readonly string FlavorText;
-        public OfflineProgressEvent(double seconds, double joules, string flavor)
+        public readonly double  SecondsAway;
+        public readonly double  JoulesEarned;
+        public readonly decimal PenniesEarned;
+        public readonly string  FlavorText;
+        public OfflineProgressEvent(double seconds, double joules, string flavor, decimal pennies = 0m)
         {
-            SecondsAway = seconds; JoulesEarned = joules; FlavorText = flavor;
+            SecondsAway = seconds; JoulesEarned = joules; FlavorText = flavor; PenniesEarned = pennies;
         }
+    }
+
+    // --- Era 2 works ---
+
+    // Something at the works the player should hear about: coal ran out, the apprentices
+    // downed tools. Plain English, ready for a toast.
+    public readonly struct WorksNoticeEvent
+    {
+        public readonly string Message;
+        public WorksNoticeEvent(string message) { Message = message; }
     }
 
     // --- Milestones ---

@@ -28,6 +28,9 @@ namespace IdlePowerGen.UI
         private void OnOffline(OfflineProgressEvent e)
         {
             if (e.SecondsAway < MinSecondsAwayWorthMentioning || e.JoulesEarned <= 0) return;
+            // From Era 2 the purse is what matters; Era2ToastPresenter reports that instead.
+            var era = Managers.EraManager.Instance;
+            if (era != null && era.CurrentEra >= 2f) return;
             string flavor = string.IsNullOrEmpty(e.FlavorText) ? "While you were away" : e.FlavorText;
             _toast.Show($"{flavor}\n+{NumberFormatter.FormatJoules(e.JoulesEarned)}");
         }

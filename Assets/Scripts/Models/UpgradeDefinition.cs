@@ -18,6 +18,10 @@ namespace IdlePowerGen.Models
         MultiplyCrankOutput,     // effectValue = crank and flywheel multiplier; secondaryValue = flywheel decay multiplier
         AddWaterWheelWatts,      // effectValue = steady watts from the water wheel
         MultiplyWaterWheelOutput, // effectValue = multiplier on the water wheel's output
+
+        // Era 2
+        MultiplyGeneratorOutput, // effectValue = multiplier; unlocksId = GeneratorType name
+        AddContractSlot,         // effectValue = engagements that can run at once, per level
     }
 
     [CreateAssetMenu(fileName = "UpgradeDef", menuName = "IdlePowerGen/Upgrade Definition")]

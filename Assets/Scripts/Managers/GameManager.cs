@@ -73,6 +73,14 @@ namespace IdlePowerGen.Managers
             return null;
         }
 
+        // Pay rate for a contract: its own era's, so the neighbour's Era 1 shilling and an
+        // Era 2 engagement each pay what they were offered at.
+        public double ContractBaseRate(Models.ContractDefinition def)
+        {
+            var cfg = GetEraConfig(Mathf.Max(1, def.minEra));
+            return cfg != null ? cfg.contractBaseRate : 0.001;
+        }
+
         public Models.ContractDefinition FindContract(string contractId)
         {
             if (_contractDefinitions == null) return null;

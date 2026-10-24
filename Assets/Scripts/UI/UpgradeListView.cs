@@ -15,6 +15,8 @@ namespace IdlePowerGen.UI
         [SerializeField] private UpgradeCardView _cardPrefab;
         [SerializeField] private Transform _content;
         [SerializeField] private GameObject _emptyHint;
+        // Each era's screen lists only its own upgrades.
+        [SerializeField] private int _era = 1;
 
         private readonly List<UpgradeCardView> _cards = new();
 
@@ -29,7 +31,8 @@ namespace IdlePowerGen.UI
             var gm = Managers.GameManager.Instance;
             if (gm == null) return;
 
-            foreach (var def in gm.UpgradeCatalogue.OrderBy(u => u.costJoules))
+            foreach (var def in gm.UpgradeCatalogue.Where(u => Mathf.Max(1, u.minEra) == _era)
+                                                   .OrderBy(u => u.costJoules).ThenBy(u => u.costPennies))
             {
                 var card = Instantiate(_cardPrefab, _content);
                 card.name = "Upgrade_" + def.upgradeId;

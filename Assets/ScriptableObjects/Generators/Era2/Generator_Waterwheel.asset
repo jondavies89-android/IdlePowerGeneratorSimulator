@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b1ef69a6463a757468aee85a57370b63, type: 3}
+  m_Name: Generator_Waterwheel
+  m_EditorClassIdentifier: IdlePowerGen.Models::IdlePowerGen.Models.GeneratorDefinition
+  generatorType: 2
+  displayName: Water wheel
+  description: Another wheel on the mill-race. No fuel, no wages.
+  minEra: 2
+  basePowerWatts: 200
+  fuelConsumptionPerSecond: 0
+  wagePenniesPerHour: 0
+  coalPenniesPerHour: 0
+  baseCostJoules: 0
+  baseCostPennies: 500
+  maintenanceBaseRate: 0.03
+  maintenanceAgeRate: 0.005
+  serviceIntervalHours: 720
+  requiredUpgradeId: 
+  icon: {fileID: 0}

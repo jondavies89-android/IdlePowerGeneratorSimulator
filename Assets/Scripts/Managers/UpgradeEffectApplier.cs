@@ -93,9 +93,18 @@ namespace IdlePowerGen.Managers
                     waterWheel?.MultiplyOutput(def.effectValue);
                     break;
 
+                case UpgradeEffect.MultiplyGeneratorOutput:
+                    if (grid != null && System.Enum.TryParse<GeneratorType>(def.unlocksId, out var type))
+                        grid.MultiplyType(type, def.effectValue);
+                    break;
+
                 case UpgradeEffect.MultiplyCrankTapValue:
                 case UpgradeEffect.AddCrankJoules:
                     // Era1TapController handles these directly.
+                    break;
+
+                case UpgradeEffect.AddContractSlot:
+                    // Era2WorksController counts slots from the levels owned.
                     break;
             }
         }
@@ -113,6 +122,7 @@ namespace IdlePowerGen.Managers
             {
                 grid.GlobalOutputMultiplier = 1.0;
                 grid.VirtualPassiveWatts    = 0.0;
+                grid.ClearTypeMultipliers();
             }
             sim?.Flywheel.ResetUpgrades();
             sim?.WaterWheel.ResetUpgrades();

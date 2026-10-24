@@ -31,6 +31,8 @@ namespace IdlePowerGen.Managers
         private void OnCurrencyChanged(CurrencyChangedEvent e)
         {
             if (e.Currency != CurrencyType.Joules) return;
+            // Era 2's machines bank joules too; the workshop's milestones are behind it by then.
+            if (EraManager.Instance != null && EraManager.Instance.CurrentEra >= 2f) return;
 
             foreach (var m in Data.Era1Data.Milestones)
             {

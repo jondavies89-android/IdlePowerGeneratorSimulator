@@ -15,7 +15,8 @@ namespace IdlePowerGen.Save
 
         // v1 → v2: reachedMilestones added.
         // v2 → v3: upgrades have levels; the Era 1 tree and its machines were replaced.
-        public const int CurrentVersion = 3;
+        // v3 → v4: the Era 2 works (start day, coal hopper, contracts booked per day).
+        public const int CurrentVersion = 4;
 
         // Tests point this at a scratch file so they never touch a real player's save.
         public static string SaveFileName = "save.json";
@@ -64,6 +65,15 @@ namespace IdlePowerGen.Save
                         data.generators.Add(new SaveData.GeneratorEntry
                             { generatorType = type.ToString(), count = count });
                 }
+            }
+
+            var works = FindAnyObjectByType<Controllers.Era2WorksController>();
+            if (works != null)
+            {
+                data.era2StartDay = works.StartDay;
+                data.coalLevel    = works.Hopper.Level;
+                foreach (var (id, day) in works.Board.BookedDays)
+                    data.contractBookedDays.Add(new SaveData.BookedDayEntry { contractId = id, day = day });
             }
 
             // Active contracts
@@ -116,6 +126,14 @@ namespace IdlePowerGen.Save
         {
             if (data.version < 2) MigrateV1ToV2(data);
             if (data.version < 3) MigrateV2ToV3(data);
+            if (data.version < 4) MigrateV3ToV4(data);
+        }
+
+        // Nobody reached Era 2 before v4, so its state starts empty.
+        private static void MigrateV3ToV4(SaveData data)
+        {
+            data.contractBookedDays ??= new List<SaveData.BookedDayEntry>();
+            data.version = 4;
         }
 
         // v2 upgrade ids that survive into the levelled tree, and what they became.
@@ -194,6 +212,15 @@ namespace IdlePowerGen.Save
                     new List<GeneratorDefinition>(gm.GeneratorCatalogue));
             }
 
+            var works = FindAnyObjectByType<Controllers.Era2WorksController>();
+            if (works != null)
+            {
+                var booked = new List<(string, long)>();
+                foreach (var e in data.contractBookedDays ?? new List<SaveData.BookedDayEntry>())
+                    booked.Add((e.contractId, e.day));
+                works.LoadFromSave(data.era2StartDay, data.coalLevel, booked);
+            }
+
             // Restore contracts
             gm.Contracts.ClearActive();
             foreach (var entry in data.activeContracts)
@@ -229,7 +256,8 @@ namespace IdlePowerGen.Save
             float tauHours  = cfg != null ? cfg.offlineTauHours  : 4f;
 
             var sim = Simulation.SimulationTick.Instance;
-            double before = gm?.Ledger.Joules ?? 0;
+            double  before        = gm?.Ledger.Joules ?? 0;
+            decimal penniesBefore = gm?.Ledger.Pennies ?? 0m;
 
             var tier = Managers.OfflineProgressionManager.ClassifyAbsence(realSeconds);
             if (tier == Managers.OfflineProgressionManager.OfflineTier.Short)
@@ -244,11 +272,41 @@ namespace IdlePowerGen.Save
                 double offlineJoules = Managers.OfflineProgressionManager.ComputeOfflineJoules(
                     onlineWatts, realSeconds, eraFactor, tauHours);
                 gm?.Ledger.AddJoules(offlineJoules);
+                if (data.currentEra >= 2f && gm != null) PayOfflineCustomers(gm, data, realSeconds, eraFactor, tauHours);
             }
 
             double earned = (gm?.Ledger.Joules ?? 0) - before;
+            decimal earnedPennies = (gm?.Ledger.Pennies ?? 0m) - penniesBefore;
             EventBus.Publish(new OfflineProgressEvent(realSeconds, earned,
-                                                      cfg != null ? cfg.offlineFlavorText : null));
+                                                      cfg != null ? cfg.offlineFlavorText : null, earnedPennies));
+        }
+
+        // Era 2, a medium or long absence: the game clock waits for the player, so booked
+        // engagements resume where they were. Meanwhile the customers who were drawing
+        // power at save time keep paying for it, on the same decaying curve as Era 1's joules.
+        // No wages or coal are charged: nothing goes wrong while the player is away (bible §10.5).
+        private static void PayOfflineCustomers(Managers.GameManager gm, SaveData data, double realSeconds,
+                                                float eraFactor, float tauHours)
+        {
+            double committed = 0, payRate = 0;
+            foreach (var entry in data.activeContracts)
+            {
+                var def = gm.FindContract(entry.contractId);
+                if (def == null) continue;
+                committed += def.requiredWatts;
+                payRate   += def.requiredWatts * gm.ContractBaseRate(def) * def.payRateMultiplier;
+            }
+            double sustained = Simulation.SimulationTick.Instance?.Grid.ComputeSustainedOutputWatts() ?? 0;
+            double sold = Math.Min(committed, sustained);
+            if (sold <= 0) return;
+
+            // Watt-seconds of offline effort; pay is per watt per game hour, and a real
+            // second is GameTimeScale game seconds.
+            double wattSeconds = Managers.OfflineProgressionManager.ComputeOfflineJoules(
+                sold, realSeconds, eraFactor, tauHours);
+            double scale = Utils.GameClock.Instance != null ? Utils.GameClock.Instance.GameTimeScale : 60f;
+            double penniesPerWattGameHour = payRate / committed;
+            gm.Ledger.AddPennies((decimal)(wattSeconds * scale / 3600.0 * penniesPerWattGameHour));
         }
     }
 }

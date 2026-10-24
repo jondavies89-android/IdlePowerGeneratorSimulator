@@ -30,6 +30,10 @@ namespace IdlePowerGen.Models
         public double basePowerWatts;
         public double fuelConsumptionPerSecond; // 0 = no fuel (manual / water / steam boiler)
 
+        [Header("Running Costs (pennies per game hour)")]
+        public double wagePenniesPerHour; // paid from the purse; unpaid hands stop work
+        public double coalPenniesPerHour; // burned from the coal hopper; an empty hopper stops it
+
         [Header("Cost — Stackable  cost(n) = base × 1.15^n  §9.3.1")]
         public double baseCostJoules;
         public double baseCostPennies;

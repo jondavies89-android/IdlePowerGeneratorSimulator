@@ -7,11 +7,26 @@ namespace IdlePowerGen.Tests
     {
         [Test]
         public void GameManagerHasAllSixEra1Upgrades() =>
-            Assert.That(Managers.GameManager.Instance.UpgradeCatalogue.Count, Is.EqualTo(6));
+            Assert.That(Managers.GameManager.Instance.UpgradeCatalogue.Count(u => u.minEra == 1), Is.EqualTo(6));
 
         [Test]
         public void Era1HasNoStackableMachines() =>
-            Assert.That(Managers.GameManager.Instance.GeneratorCatalogue.Count, Is.EqualTo(0));
+            Assert.That(Managers.GameManager.Instance.GeneratorCatalogue.Count(g => g.minEra <= 1), Is.EqualTo(0));
+
+        [Test]
+        public void GameManagerHasEveryEra2Upgrade() =>
+            Assert.That(Managers.GameManager.Instance.UpgradeCatalogue.Count(u => u.minEra == 2),
+                        Is.EqualTo(Data.Era2Data.Upgrades.Length));
+
+        [Test]
+        public void GameManagerHasEveryEra2Contract() =>
+            Assert.That(Managers.GameManager.Instance.ContractCatalogue.Count(c => c.minEra == 2),
+                        Is.EqualTo(Data.Era2Data.Contracts.Length));
+
+        [Test]
+        public void Era2ConfigIsWired() =>
+            Assert.That(Managers.GameManager.Instance.GetEraConfig(2)?.contractBaseRate,
+                        Is.EqualTo(Data.Era2Data.ContractBaseRate));
 
         [Test]
         public void Era1ConfigIsWired() =>

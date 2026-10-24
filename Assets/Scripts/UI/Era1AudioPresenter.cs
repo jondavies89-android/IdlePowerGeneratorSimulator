@@ -40,6 +40,13 @@ namespace IdlePowerGen.UI
         {
             // Slight pitch drift so rapid cranking doesn't sound like a machine gun.
             // Presentation-only randomness, so UnityEngine.Random rather than a seeded sim RNG.
+            // The crank's own source hides with the Era 1 screen; from Era 2 the old-workshop
+            // row turns it, so the click comes from the shared source instead.
+            if (!_crankSource.isActiveAndEnabled)
+            {
+                _sfxSource.PlayOneShot(_crankClip);
+                return;
+            }
             _crankSource.pitch = Random.Range(0.92f, 1.08f);
             _crankSource.PlayOneShot(_crankClip);
         }
