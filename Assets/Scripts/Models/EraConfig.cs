@@ -25,7 +25,14 @@ namespace IdlePowerGen.Models
 
         [Header("Economy")]
         public double contractBaseRate = 0.001; // pennies per W·s
+        // Price of spare power sold to the street, as a fraction of contractBaseRate.
+        // 0 = no street trade (Era 1, where spare output banks as joules instead).
+        [Range(0f, 1f)] public float streetRateFactor;
         public float  xpScaleFactor    = 5f;
+
+        [Header("Upgrade tree")]
+        // Column headings of the era's upgrade tree, indexed by UpgradeDefinition.treeBranch.
+        public string[] upgradeBranchNames;
 
         [Header("Flavour")]
         [TextArea] public string offlineFlavorText;

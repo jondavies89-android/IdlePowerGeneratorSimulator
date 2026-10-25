@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1c6c43ca333bc2c4993a73e352ede6b8, type: 3}
+  m_Name: Upgrade_era2_arc_lamps
+  m_EditorClassIdentifier: IdlePowerGen.Models::IdlePowerGen.Models.UpgradeDefinition
+  upgradeId: era2_arc_lamps
+  displayName: Arc Lamps for the Parish
+  description: The vestry lights the whole street from your works, and pays for it.
+  minEra: 2
+  costJoules: 0
+  costPennies: 40000
+  costGrowth: 1
+  maxLevel: 1
+  requiredReputation: 12
+  effect: 13
+  effectValue: 1.5
+  secondaryValue: 0
+  unlocksId: 
+  requiredUpgradeIds:
+  - era2_telegraph
+  requiredStoredJoules: 0
+  requiredPennies: 0
+  treeBranch: 2
+  treeRow: 3
+  icon: {fileID: 0}

@@ -141,7 +141,22 @@ namespace IdlePowerGen.Controllers
             PayWages(hours);
             BurnCoal(hours);
             if (Unlocked(Data.Era2Data.ClerkFeatureId)) ClerkBooks();
+
+            if (hours > 0)
+            {
+                EarnedPerHour = (double)(GM.Contracts.PaidLastTick + GM.Street.LastPennies) / hours;
+                NetPerHour = EarnedPerHour - WagesPerHour - CoalBurnPerHour;
+            }
         }
+
+        // Pennies an hour coming in from engagements and the street as of the last tick, and
+        // the same less wages and coal. Lump payments at an engagement's end aren't counted:
+        // this is the steady rate the player can plan purchases against.
+        public double EarnedPerHour { get; private set; }
+        public double NetPerHour    { get; private set; }
+
+        // Spare watts the street bought on the last tick.
+        public static double StreetWatts => GM != null ? GM.Street.LastWatts : 0;
 
         private void PayWages(double hours)
         {
@@ -212,6 +227,7 @@ namespace IdlePowerGen.Controllers
             Board.LoadFromSave(bookedDays);
             ApprenticesUnpaid = false;
             _toldUnpaid = false;
+            EarnedPerHour = NetPerHour = 0;
         }
     }
 }

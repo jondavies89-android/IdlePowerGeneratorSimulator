@@ -22,6 +22,7 @@ namespace IdlePowerGen.Models
         // Era 2
         MultiplyGeneratorOutput, // effectValue = multiplier; unlocksId = GeneratorType name
         AddContractSlot,         // effectValue = engagements that can run at once, per level
+        MultiplyStreetTrade,     // effectValue = multiplier on the price the street pays
     }
 
     [CreateAssetMenu(fileName = "UpgradeDef", menuName = "IdlePowerGen/Upgrade Definition")]
@@ -54,6 +55,10 @@ namespace IdlePowerGen.Models
         public string[] requiredUpgradeIds;
         public double   requiredStoredJoules; // minimum stored charge to unlock
         public double   requiredPennies;
+
+        [Header("Upgrade tree (Era 2 on)")]
+        public int treeBranch; // column, see EraConfig.upgradeBranchNames
+        public int treeRow;    // 0 at the top; prerequisites sit on earlier rows
 
         [Header("Visuals")]
         public Sprite icon;

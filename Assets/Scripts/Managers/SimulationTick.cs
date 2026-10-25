@@ -86,6 +86,11 @@ namespace IdlePowerGen.Simulation
                 double gameDelta = delta * (GameClock.Instance != null ? GameClock.Instance.GameTimeScale : 1f);
                 ledger.Tick(Grid.TotalOutputWatts, gameDelta, gameTime, eco.Ledger, eco.ContractBaseRate);
                 delivered = ledger.DeliveredWatts;
+
+                // Whatever the engagements left goes to the street, where there is a street.
+                eco.Street.Sell(Grid.TotalOutputWatts - delivered, gameDelta,
+                                eco.StreetPricePerWattHour(era, gameTime), eco.Ledger);
+                delivered += eco.Street.LastWatts;
             }
 
             // The ledger is the one spendable store of joules (taps and purchases already go

@@ -73,6 +73,8 @@ namespace IdlePowerGen.Save
             public string contractId;
             public double startGameTime;
             public double accumulatedWattSeconds;
+            // v5: pennies already paid while it ran (decimal as string, like the purse).
+            public string paidPennies;
         }
     }
 }

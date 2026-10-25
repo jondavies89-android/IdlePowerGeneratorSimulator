@@ -24,5 +24,10 @@ MonoBehaviour:
   offlineEraFactor: 1
   offlineTauHours: 4
   contractBaseRate: 0.4
+  streetRateFactor: 0.2
   xpScaleFactor: 5
+  upgradeBranchNames:
+  - Hands & Water
+  - Steam
+  - Trade
   offlineFlavorText: Your apprentice kept the fires burning while you were away.

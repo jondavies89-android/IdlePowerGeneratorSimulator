@@ -25,7 +25,11 @@ MonoBehaviour:
   effectValue: 1.5
   secondaryValue: 0
   unlocksId: 
-  requiredUpgradeIds: []
+  requiredUpgradeIds:
+  - era2_millrace_weir
+  - era2_boulton_watt
   requiredStoredJoules: 0
   requiredPennies: 0
+  treeBranch: 0
+  treeRow: 4
   icon: {fileID: 0}

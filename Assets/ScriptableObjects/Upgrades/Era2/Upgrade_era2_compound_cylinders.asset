@@ -29,4 +29,6 @@ MonoBehaviour:
   - era2_boulton_watt
   requiredStoredJoules: 0
   requiredPennies: 0
+  treeBranch: 1
+  treeRow: 4
   icon: {fileID: 0}

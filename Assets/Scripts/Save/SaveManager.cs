@@ -16,7 +16,8 @@ namespace IdlePowerGen.Save
         // v1 → v2: reachedMilestones added.
         // v2 → v3: upgrades have levels; the Era 1 tree and its machines were replaced.
         // v3 → v4: the Era 2 works (start day, coal hopper, contracts booked per day).
-        public const int CurrentVersion = 4;
+        // v4 → v5: engagements pay as they run, so each records what it has paid so far.
+        public const int CurrentVersion = 5;
 
         // Tests point this at a scratch file so they never touch a real player's save.
         public static string SaveFileName = "save.json";
@@ -84,6 +85,7 @@ namespace IdlePowerGen.Save
                     contractId             = contract.Definition.contractId,
                     startGameTime          = contract.StartGameTime,
                     accumulatedWattSeconds = contract.AccumulatedWattSeconds,
+                    paidPennies            = contract.PaidSoFar.ToString(CultureInfo.InvariantCulture),
                 });
             }
 
@@ -127,6 +129,15 @@ namespace IdlePowerGen.Save
             if (data.version < 2) MigrateV1ToV2(data);
             if (data.version < 3) MigrateV2ToV3(data);
             if (data.version < 4) MigrateV3ToV4(data);
+            if (data.version < 5) MigrateV4ToV5(data);
+        }
+
+        // A v4 engagement was paid nothing until it ended, so all of its fee is still owed.
+        private static void MigrateV4ToV5(SaveData data)
+        {
+            foreach (var c in data.activeContracts ?? new List<SaveData.ContractEntry>())
+                c.paidPennies = "0";
+            data.version = 5;
         }
 
         // Nobody reached Era 2 before v4, so its state starts empty.
@@ -229,6 +240,8 @@ namespace IdlePowerGen.Save
                 if (def == null) continue;
                 var instance = new Economy.ContractInstance(def, entry.startGameTime);
                 instance.SetAccumulatedFromSave(entry.accumulatedWattSeconds);
+                if (decimal.TryParse(entry.paidPennies, NumberStyles.Number, CultureInfo.InvariantCulture, out var paid))
+                    instance.SetPaidFromSave(paid);
                 gm.Contracts.AddFromSave(instance);
             }
 
@@ -298,15 +311,23 @@ namespace IdlePowerGen.Save
             }
             double sustained = Simulation.SimulationTick.Instance?.Grid.ComputeSustainedOutputWatts() ?? 0;
             double sold = Math.Min(committed, sustained);
-            if (sold <= 0) return;
+            double scale = Utils.GameClock.Instance != null ? Utils.GameClock.Instance.GameTimeScale : 60f;
 
             // Watt-seconds of offline effort; pay is per watt per game hour, and a real
             // second is GameTimeScale game seconds.
-            double wattSeconds = Managers.OfflineProgressionManager.ComputeOfflineJoules(
-                sold, realSeconds, eraFactor, tauHours);
-            double scale = Utils.GameClock.Instance != null ? Utils.GameClock.Instance.GameTimeScale : 60f;
-            double penniesPerWattGameHour = payRate / committed;
-            gm.Ledger.AddPennies((decimal)(wattSeconds * scale / 3600.0 * penniesPerWattGameHour));
+            decimal Earn(double watts, double penniesPerWattGameHour) =>
+                (decimal)(Managers.OfflineProgressionManager.ComputeOfflineJoules(watts, realSeconds, eraFactor, tauHours)
+                          * scale / 3600.0 * penniesPerWattGameHour);
+
+            decimal pay = 0m;
+            if (sold > 0) pay += Earn(sold, payRate / committed);
+
+            // The rest went to the street, priced over whole days rather than the hour it left at.
+            double spare = sustained - sold;
+            double streetPrice = gm.StreetPricePerWattHour(data.currentEra, data.gameTimeSeconds, averageDay: true);
+            if (spare > 0 && streetPrice > 0) pay += Earn(spare, streetPrice);
+
+            if (pay > 0) gm.Ledger.AddPennies(pay);
         }
     }
 }

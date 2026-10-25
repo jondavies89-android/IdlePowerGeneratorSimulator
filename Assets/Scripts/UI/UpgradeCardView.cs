@@ -24,11 +24,14 @@ namespace IdlePowerGen.UI
         public UpgradeDefinition Definition { get; private set; }
         public string CostText => _costLabel.text;
 
+        private void Awake() => _button.onClick.AddListener(OnClicked);
+
+        // Can be called again with another upgrade: the upgrade tree's detail card is one
+        // card that shows whichever node is selected.
         public void Bind(UpgradeDefinition def)
         {
             Definition = def;
-            _descriptionLabel.text = def.description;
-            _button.onClick.AddListener(OnClicked);
+            _descriptionLabel.text = def != null ? def.description : string.Empty;
             Refresh();
         }
 
@@ -47,7 +50,10 @@ namespace IdlePowerGen.UI
             EventBus.Unsubscribe<GameLoadedEvent>(OnGameLoaded);
         }
 
-        private void OnClicked() => Managers.GameManager.Instance?.Upgrades.Purchase(Definition);
+        private void OnClicked()
+        {
+            if (Definition != null) Managers.GameManager.Instance?.Upgrades.Purchase(Definition);
+        }
 
         // Era 1 cards cost joules; Era 2 cards cost pennies and may wait on reputation.
         private void OnCurrencyChanged(CurrencyChangedEvent _) => Refresh();
@@ -62,19 +68,23 @@ namespace IdlePowerGen.UI
 
             bool prereqsMet = registry.PrerequisitesMet(Definition);
             bool affordable = registry.CanAfford(Definition);
+            bool maxed      = registry.IsMaxed(Definition);
             int  level      = registry.Level(Definition.upgradeId);
 
             bool reputable = Managers.GameManager.Instance.Ledger.Reputation >= Definition.requiredReputation;
 
             _nameLabel.text   = NameText(Definition, level);
-            _costLabel.text   = Definition.costPennies > 0
+            _costLabel.text   = maxed ? "Bought"
+                              : Definition.costPennies > 0
                 ? NumberFormatter.FormatPennies((decimal)registry.NextCostPennies(Definition))
                 : NumberFormatter.FormatJoules(registry.NextCostJoules(Definition));
-            _effectLabel.text = !prereqsMet ? NeedsText(Definition)
+            _effectLabel.text = maxed       ? EffectText(Definition, level - 1)
+                              : !prereqsMet ? NeedsText(Definition)
                               : !reputable  ? $"Needs {Definition.requiredReputation:0.#} repute"
                               : EffectText(Definition, level);
-            _button.interactable = prereqsMet && affordable && !registry.IsMaxed(Definition);
-            _group.alpha = _button.interactable ? 1f : DimmedAlpha;
+            _button.interactable = prereqsMet && affordable && !maxed;
+            // A bought upgrade reads at full strength: it is an achievement, not a locked door.
+            _group.alpha = _button.interactable || maxed ? 1f : DimmedAlpha;
         }
 
         // Levelled upgrades show how far along they are; one-time ones just their name.
@@ -106,6 +116,7 @@ namespace IdlePowerGen.UI
                     return $"Every {GeneratorName(def.unlocksId).ToLowerInvariant()} ×{def.effectValue:0.##}";
                 case UpgradeEffect.AddContractSlot:
                     return $"One more engagement at a time ({Data.Era2Data.BaseContractSlots + level + 1} in all)";
+                case UpgradeEffect.MultiplyStreetTrade:   return $"The street pays ×{def.effectValue:0.##} for spare power";
                 case UpgradeEffect.UnlockFeature:
                     return def.unlocksId == Data.Era2Data.ClerkFeatureId ? "Engagements booked for you"
                          : def.unlocksId == Data.Era2Data.CoalMerchantFeatureId ? "Coal ordered for you"

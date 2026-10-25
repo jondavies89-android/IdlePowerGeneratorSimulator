@@ -23,6 +23,7 @@ namespace IdlePowerGen.Managers
         public Economy.CurrencyLedger   Ledger    { get; private set; }
         public Economy.UpgradeRegistry  Upgrades  { get; private set; }
         public Economy.ContractLedger   Contracts { get; private set; }
+        public Economy.StreetTrade      Street    { get; } = new();
 
         private void Awake()
         {
@@ -79,6 +80,22 @@ namespace IdlePowerGen.Managers
         {
             var cfg = GetEraConfig(Mathf.Max(1, def.minEra));
             return cfg != null ? cfg.contractBaseRate : 0.001;
+        }
+
+        // What the street pays for a watt-hour of spare power at this time of day, in pennies.
+        // averageDay prices a whole day at once (the daily shape averages ≈ 1), for offline pay.
+        public double StreetPricePerWattHour(float era, double gameTimeSeconds, bool averageDay = false)
+        {
+            // The latest era built so far: after the Exhibition (Era 3, not yet made) the
+            // works keeps running, and the street keeps buying, on Era 2's terms.
+            Models.EraConfig cfg = null;
+            foreach (var c in _eraConfigs)
+                if (c != null && c.eraNumber <= era && (cfg == null || c.eraNumber > cfg.eraNumber)) cfg = c;
+            if (cfg == null || cfg.streetRateFactor <= 0) return 0;
+            double shape = averageDay ? 1.0
+                         : Simulation.DemandModel.DailyShape(gameTimeSeconds / 3600.0 % 24.0);
+            double upgrades = UpgradeEffectApplier.Instance != null ? UpgradeEffectApplier.Instance.StreetTradeMultiplier : 1.0;
+            return cfg.contractBaseRate * cfg.streetRateFactor * shape * upgrades;
         }
 
         public Models.ContractDefinition FindContract(string contractId)

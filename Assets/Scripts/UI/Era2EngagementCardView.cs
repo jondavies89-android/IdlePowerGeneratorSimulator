@@ -35,8 +35,6 @@ namespace IdlePowerGen.UI
             _bodyLabel.text   = def.description;
             _windowLabel.text = $"{Clock(contract.StartGameTime)} → {Clock(contract.EndGameTime)}";
             _needLabel.text   = $"need {NumberFormatter.FormatWatts(def.requiredWatts)}";
-            _payLabel.text    = $"pays {NumberFormatter.FormatPennies(Controllers.Era2WorksController.Pay(def))} " +
-                                $"on completion · +{def.reputationOnSuccess:0.#} repute";
             Refresh();
         }
 
@@ -55,6 +53,11 @@ namespace IdlePowerGen.UI
 
             float ratio = Contract.RatioSoFar(now);
             var def = Contract.Definition;
+
+            // The client pays as the power arrives; any premium and the repute wait for the end.
+            _payLabel.text = $"paid {NumberFormatter.FormatPennies(Contract.PaidSoFar)} of " +
+                             $"{NumberFormatter.FormatPennies(Controllers.Era2WorksController.Pay(def))} · " +
+                             $"+{def.reputationOnSuccess:0.#} repute on finishing";
             if (ratio >= 0.999f)
             {
                 _stateLabel.text = "holding";

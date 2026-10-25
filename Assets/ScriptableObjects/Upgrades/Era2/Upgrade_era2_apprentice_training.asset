@@ -28,4 +28,6 @@ MonoBehaviour:
   requiredUpgradeIds: []
   requiredStoredJoules: 0
   requiredPennies: 0
+  treeBranch: 0
+  treeRow: 0
   icon: {fileID: 0}

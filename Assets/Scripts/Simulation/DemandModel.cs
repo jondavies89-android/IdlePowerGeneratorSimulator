@@ -47,7 +47,7 @@ namespace IdlePowerGen.Simulation
             double hourOfDay = (gameTimeSeconds / 3600.0) % 24.0;
             int    dayOfWeek = (int)((gameTimeSeconds / 86400.0) % 7.0);
 
-            double sDay  = DailyCurve(hourOfDay);
+            double sDay  = DailyShape(hourOfDay);
             double sWeek = WeekMultiplier[Math.Clamp(dayOfWeek, 0, 6)];
 
             // Tick OU noise (1 Hz tick, so dt = 1 in-game second)
@@ -58,8 +58,9 @@ namespace IdlePowerGen.Simulation
             return BaseDemandWatts * sDay * sWeek * (1.0 + _noiseN);
         }
 
-        // §3.4 — gentle morning ramp + sharp evening peak + Gaussian 5–8 pm spike
-        private static double DailyCurve(double h)
+        // §3.4 — gentle morning ramp + sharp evening peak + Gaussian 5–8 pm spike.
+        // Averages very nearly 1 over a day (≈ 0.6 before dawn, ≈ 1.4 at the lamp-lighting peak).
+        public static double DailyShape(double h)
         {
             return 1.0
                 + Alpha * Math.Sin(2 * Math.PI * (h - PhiMorning) / 24.0)

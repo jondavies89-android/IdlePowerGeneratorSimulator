@@ -27,6 +27,22 @@ namespace IdlePowerGen.Economy
             _accumulatedWattSeconds += outputWatts * deltaTime;
         }
 
+        // Pennies already handed over while it ran; Resolve pays only what is still owed.
+        public decimal PaidSoFar { get; private set; }
+
+        // A client who is judged on average pays for each watt as it arrives, at the plain
+        // rate, so the purse moves every second instead of in one lump hours later. The
+        // multiplier and reputation still wait for the end: they reward finishing the job.
+        // A must-hold contract can still break unpaid, so it keeps paying in one go.
+        public decimal PayAsDelivered(double watts, double deltaTime, CurrencyLedger ledger, double eraBaseRate)
+        {
+            if (Definition.mustHoldOutput || watts <= 0) return 0m;
+            decimal pay = (decimal)(watts * deltaTime / 3600.0 * eraBaseRate);
+            PaidSoFar += pay;
+            ledger.AddPennies(pay);
+            return pay;
+        }
+
         public float FulfillmentRatio()
         {
             double required = Definition.requiredWatts * Definition.durationHours * 3600.0;
@@ -52,20 +68,27 @@ namespace IdlePowerGen.Economy
             float  ratio   = Math.Min(1f, FulfillmentRatio());
             double basePay = Definition.durationHours * Definition.requiredWatts * eraBaseRate;
 
+            // The event carries the whole fee, including what was paid along the way.
             if (ratio >= Definition.failThreshold)
             {
                 decimal pay = (decimal)(basePay * Definition.payRateMultiplier * ratio);
-                ledger.AddPennies(pay);
+                PayBalance(pay, ledger);
                 ledger.AddReputation(Definition.reputationOnSuccess * ratio);
                 EventBus.Publish(new ContractCompletedEvent(this, pay));
             }
             else
             {
-                decimal pay = (decimal)(basePay * ratio);
-                ledger.AddPennies(pay);
+                PayBalance((decimal)(basePay * ratio), ledger);
                 ledger.AddReputation(Definition.reputationOnFail);
                 EventBus.Publish(new ContractFailedEvent(this));
             }
+        }
+
+        private void PayBalance(decimal total, CurrencyLedger ledger)
+        {
+            decimal owed = total - PaidSoFar;
+            if (owed > 0) ledger.AddPennies(owed);
+            PaidSoFar = Math.Max(PaidSoFar, total);
         }
 
         // A must-hold contract whose output dipped: it ends there, unpaid.
@@ -79,6 +102,7 @@ namespace IdlePowerGen.Economy
         // Save support
         public double AccumulatedWattSeconds => _accumulatedWattSeconds;
         public void   SetAccumulatedFromSave(double v) => _accumulatedWattSeconds = v;
+        public void   SetPaidFromSave(decimal v) => PaidSoFar = v;
     }
 
     // -------------------------------------------------------------------------
@@ -106,6 +130,9 @@ namespace IdlePowerGen.Economy
         // it isn't also banked as the workshop's own joules.
         public double DeliveredWatts { get; private set; }
 
+        // Pennies paid on the last tick by clients paying as they go (not lump sums at the end).
+        public decimal PaidLastTick { get; private set; }
+
         // Called every sim tick (1 Hz). outputWatts = total grid output at this moment.
         // Output is shared out oldest contract first, each taking at most what it asked
         // for: two customers can't both be paid for the same watts.
@@ -120,6 +147,7 @@ namespace IdlePowerGen.Economy
         {
             double remaining = Math.Max(0, outputWatts);
             DeliveredWatts = 0;
+            PaidLastTick = 0;
             var ended = new List<ContractInstance>();
 
             foreach (var c in _active)
@@ -139,6 +167,7 @@ namespace IdlePowerGen.Economy
 
                 DeliveredWatts += share;
                 c.RecordOutput(share, deltaTime);
+                PaidLastTick += c.PayAsDelivered(share, deltaTime, ledger, baseRateFor(c.Definition));
 
                 if (gameTime >= c.EndGameTime)
                 {

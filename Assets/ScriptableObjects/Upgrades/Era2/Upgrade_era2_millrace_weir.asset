@@ -25,7 +25,10 @@ MonoBehaviour:
   effectValue: 2
   secondaryValue: 0
   unlocksId: Waterwheel
-  requiredUpgradeIds: []
+  requiredUpgradeIds:
+  - era2_apprentice_training
   requiredStoredJoules: 0
   requiredPennies: 0
+  treeBranch: 0
+  treeRow: 1
   icon: {fileID: 0}

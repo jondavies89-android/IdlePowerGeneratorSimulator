@@ -1,3 +1,4 @@
+using System.Linq;
 using IdlePowerGen.UI;
 using TMPro;
 using UnityEditor;
@@ -15,7 +16,9 @@ public static class Era2ScreenBuilder
     private const string EngagementCardPrefab = PrefabFolder + "/Era2EngagementCard.prefab";
     private const string OfferCardPrefab      = PrefabFolder + "/Era2OfferCard.prefab";
     private const string GeneratorRowPrefab   = PrefabFolder + "/Era2GeneratorRow.prefab";
-    private const string UpgradeCardPrefab    = PrefabFolder + "/Era2UpgradeCard.prefab";
+    private const string UpgradeNodePrefab    = PrefabFolder + "/Era2UpgradeNode.prefab";
+    // The upgrade list's card before the tree replaced it.
+    private const string StaleUpgradeCardPrefab = PrefabFolder + "/Era2UpgradeCard.prefab";
 
     public static void BuildPrefabs()
     {
@@ -23,7 +26,8 @@ public static class Era2ScreenBuilder
         SaveAsPrefab(BuildEngagementCard(), EngagementCardPrefab);
         SaveAsPrefab(BuildOfferCard(), OfferCardPrefab);
         SaveAsPrefab(BuildGeneratorRow(), GeneratorRowPrefab);
-        SaveAsPrefab(BuildUpgradeCard(), UpgradeCardPrefab);
+        SaveAsPrefab(BuildUpgradeNode(), UpgradeNodePrefab);
+        AssetDatabase.DeleteAsset(StaleUpgradeCardPrefab);
     }
 
     // Returns the screen root, inactive until EraScreenSwitcher shows it.
@@ -51,7 +55,7 @@ public static class Era2ScreenBuilder
         CreateHeader(column, controllers);
         CreateStats(column, controllers);
         CreateDayBar(column);
-        CreateLists(column, controllers, toast);
+        CreatePages(column, controllers, toast);
 
         root.gameObject.SetActive(false);
         return root;
@@ -90,6 +94,9 @@ public static class Era2ScreenBuilder
 
         var capacity = StatCell(panel, "Capacity", "CAPACITY", "0 W", Era2Theme.Text);
         var purse    = StatCell(panel, "Purse", "PURSE", "0 d", Era2Theme.Purse);
+        // The steady income under the purse: what an idle game owes the player at a glance.
+        var income = Text(purse.transform.parent, "Income", "", 12, Era2Theme.TextMuted, TextAlignmentOptions.Center,
+                          numerals: true);
 
         var repute = Stack("Repute", panel, spacing: 2);
         repute.GetComponent<VerticalLayoutGroup>().childAlignment = TextAnchor.MiddleCenter;
@@ -125,7 +132,7 @@ public static class Era2ScreenBuilder
 
         var view = panel.gameObject.AddComponent<Era2StatsView>();
         Wire(view, ("_works", controllers.Works), ("_capacityLabel", capacity), ("_purseLabel", purse),
-                   ("_reputeLabel", reputeLabel), ("_supplyLabel", supply));
+                   ("_incomeLabel", income), ("_reputeLabel", reputeLabel), ("_supplyLabel", supply));
         var so = new SerializedObject(view);
         var starsProp = so.FindProperty("_stars");
         starsProp.arraySize = stars.Length;
@@ -190,12 +197,106 @@ public static class Era2ScreenBuilder
         Wire(view, ("_marker", marker), ("_clockLabel", clock));
     }
 
-    // ---- The scrolling list ----
+    // ---- Tabs and their pages ----
 
-    private static void CreateLists(Transform parent, Controllers controllers, ToastView toast)
+    private static readonly string[] TabNames = { "Clients", "Works", "Improvements" };
+
+    // Three pages under the fixed header, switched by a tab bar at the foot of the screen:
+    // one long scroll held the clients, the machines and the improvements in a list the
+    // player had to hunt through.
+    private static void CreatePages(Transform parent, Controllers controllers, ToastView toast)
     {
-        var content = Scroll(parent);
+        var pagesRt = Rect("Pages", parent);
+        var le = pagesRt.gameObject.AddComponent<LayoutElement>();
+        le.flexibleHeight = 1;
+        le.minHeight = 200;
 
+        var clients = Page(pagesRt, "ClientsPage");
+        CreateClients(Scroll(clients), controllers);
+
+        var works = Page(pagesRt, "WorksPage");
+        CreateWorks(Scroll(works), controllers, toast);
+
+        var improvements = Page(pagesRt, "ImprovementsPage");
+        var tree = CreateImprovements(improvements);
+
+        CreateTabBar(parent, controllers, new[] { clients, works, improvements }, tree);
+    }
+
+    private static RectTransform Page(Transform parent, string name)
+    {
+        var page = Rect(name, parent);
+        Stretch(page);
+        page.gameObject.AddComponent<CanvasGroup>();
+        var vlg = page.gameObject.AddComponent<VerticalLayoutGroup>();
+        vlg.spacing = 6;
+        vlg.childControlWidth = vlg.childControlHeight = true;
+        vlg.childForceExpandWidth = true;
+        vlg.childForceExpandHeight = false;
+        return page;
+    }
+
+    private static void CreateTabBar(Transform parent, Controllers controllers, RectTransform[] pages,
+                                     UpgradeTreeView tree)
+    {
+        var bar = Rect("TabBar", parent);
+        Fixed(bar, 56);
+        var hlg = bar.gameObject.AddComponent<HorizontalLayoutGroup>();
+        hlg.padding = new RectOffset(0, 0, 4, 8);
+        hlg.spacing = 6;
+        hlg.childControlWidth = hlg.childControlHeight = true;
+        hlg.childForceExpandWidth = hlg.childForceExpandHeight = true;
+
+        var buttons = new Button[TabNames.Length];
+        var backgrounds = new Image[TabNames.Length];
+        var labels = new TextMeshProUGUI[TabNames.Length];
+        var badges = new Image[TabNames.Length];
+        for (int i = 0; i < TabNames.Length; i++)
+        {
+            var tab = Rect("Tab_" + TabNames[i], bar);
+            var image = AddImage(tab, Era1Theme.PanelSprite, Era2Theme.Panel);
+            image.type = Image.Type.Sliced;
+            var button = tab.gameObject.AddComponent<Button>();
+            button.targetGraphic = image;
+            tab.gameObject.AddComponent<PressFeedback>();
+            var label = Text(tab, "Label", TabNames[i], 16, Era2Theme.TextMuted, TextAlignmentOptions.Center);
+            Stretch(label.rectTransform);
+
+            var badge = Rect("Badge", tab);
+            badge.anchorMin = badge.anchorMax = new Vector2(1, 1);
+            badge.pivot = new Vector2(1, 1);
+            badge.sizeDelta = new Vector2(10, 10);
+            badge.anchoredPosition = new Vector2(-7, -7);
+            var dot = AddImage(badge, Era1SpriteFactory.Disc, Era2Theme.Purse);
+            dot.raycastTarget = false;
+            badge.gameObject.SetActive(false);
+
+            buttons[i] = button; backgrounds[i] = image; labels[i] = label; badges[i] = dot;
+        }
+
+        var view = bar.gameObject.AddComponent<TabBarView>();
+        var so = new SerializedObject(view);
+        SetObjects(so.FindProperty("_pages"), pages.Select(p => (Object)p.GetComponent<CanvasGroup>()).ToArray());
+        SetObjects(so.FindProperty("_tabs"), buttons);
+        SetObjects(so.FindProperty("_tabBackgrounds"), backgrounds);
+        SetObjects(so.FindProperty("_tabLabels"), labels);
+        SetObjects(so.FindProperty("_badges"), badges);
+        so.FindProperty("_selected").colorValue = Era2Theme.PanelRaised;
+        so.FindProperty("_unselected").colorValue = Era2Theme.Panel;
+        so.FindProperty("_selectedText").colorValue = Era2Theme.Text;
+        so.FindProperty("_unselectedText").colorValue = Era2Theme.TextMuted;
+        so.ApplyModifiedPropertiesWithoutUndo();
+
+        var badgesView = bar.gameObject.AddComponent<Era2TabBadgesView>();
+        Wire(badgesView, ("_tabs", view), ("_works", controllers.Works), ("_tree", tree));
+        SetColours(badgesView, ("_opportunity", Era2Theme.Purse), ("_alarm", Era2Theme.Alarm));
+    }
+
+    private static void SetObjects(SerializedProperty prop, Object[] items) => SetArray(prop, items);
+
+    // Engagements running now, then the board of clients asking.
+    private static void CreateClients(Transform content, Controllers controllers)
+    {
         // Engagements running now.
         var engagementsHeader = SectionHeader(content, "EngagementsHeader", "Engagements");
         var engagements = Stack("EngagementPanel", content);
@@ -212,7 +313,11 @@ public static class Era2ScreenBuilder
         var offerList = offers.gameObject.AddComponent<Era2OfferListView>();
         Wire(offerList, ("_works", controllers.Works),
              ("_cardPrefab", AssetDatabase.LoadAssetAtPath<Era2OfferCardView>(OfferCardPrefab)), ("_content", offers));
+    }
 
+    // The coal hopper, the machines, and the office's furniture.
+    private static void CreateWorks(Transform content, Controllers controllers, ToastView toast)
+    {
         CreateCoalHopper(content, controllers);
 
         // Machines.
@@ -224,18 +329,6 @@ public static class Era2ScreenBuilder
         Wire(generatorList, ("_generators", controllers.Generators), ("_works", controllers.Works),
              ("_rowPrefab", AssetDatabase.LoadAssetAtPath<Era2GeneratorRowView>(GeneratorRowPrefab)),
              ("_content", generators), ("_workshopOutputLabel", workshopOutput), ("_runningCostsLabel", costs));
-
-        // Improvements.
-        SectionHeader(content, "ImprovementsHeader", "Improvements");
-        var upgrades = Stack("UpgradePanel", content);
-        var noUpgrades = Text(content, "NothingToImprove", "Nothing more to improve for now.", 14, Era2Theme.TextMuted,
-                              TextAlignmentOptions.Left, FontStyles.Italic);
-        var upgradeList = upgrades.gameObject.AddComponent<UpgradeListView>();
-        Wire(upgradeList, ("_cardPrefab", AssetDatabase.LoadAssetAtPath<UpgradeCardView>(UpgradeCardPrefab)),
-             ("_content", upgrades), ("_emptyHint", noUpgrades.gameObject));
-        var so = new SerializedObject(upgradeList);
-        so.FindProperty("_era").intValue = IdlePowerGen.Data.Era2Data.EraNumber;
-        so.ApplyModifiedPropertiesWithoutUndo();
 
         // The weather glass on the wall (a hint at Era 3's forecasting), and the gas-lamps.
         var glass = MakeButton(content, "WeatherGlass", "The weather glass reads Change");
@@ -249,6 +342,38 @@ public static class Era2ScreenBuilder
 
         Text(content, "Footer", "~ gas-lamps hiss along the wall ~", 14, Era2Theme.TextMuted * new Color(1, 1, 1, 0.7f),
              TextAlignmentOptions.Center, FontStyles.Italic);
+    }
+
+    // The tree scrolls; the detail card for the selected node stays put beneath it, so the
+    // buy button is always in the same place.
+    private static UpgradeTreeView CreateImprovements(RectTransform page)
+    {
+        var content = Scroll(page);
+        var area = Rect("Tree", content);
+        area.gameObject.AddComponent<LayoutElement>();
+
+        var heading = Text(area, "BranchHeading", "", 12, Era2Theme.TextMuted, TextAlignmentOptions.Center);
+        heading.characterSpacing = 6;
+        heading.fontStyle = FontStyles.UpperCase;
+        heading.textWrappingMode = TextWrappingModes.NoWrap;
+        heading.overflowMode = TextOverflowModes.Ellipsis;
+
+        var detail = BuildUpgradeCard();
+        detail.name = "UpgradeDetail";
+        detail.transform.SetParent(page, false);
+        var detailImage = detail.GetComponent<Image>();
+        detailImage.color = Era2Theme.PanelRaised;
+        // The detail card's minimum covers a two-line description without the page jumping.
+        detail.GetComponent<LayoutElement>().minHeight = 92;
+
+        var tree = area.gameObject.AddComponent<UpgradeTreeView>();
+        Wire(tree, ("_nodePrefab", AssetDatabase.LoadAssetAtPath<UpgradeNodeView>(UpgradeNodePrefab)),
+                   ("_area", area), ("_headingTemplate", heading), ("_detail", detail.GetComponent<UpgradeCardView>()));
+        SetColours(tree, ("_line", Era2Theme.StarsEmpty), ("_ownedLine", Era2Theme.Brass));
+        var so = new SerializedObject(tree);
+        so.FindProperty("_era").intValue = IdlePowerGen.Data.Era2Data.EraNumber;
+        so.ApplyModifiedPropertiesWithoutUndo();
+        return tree;
     }
 
     private static RectTransform Scroll(Transform parent)
@@ -475,7 +600,45 @@ public static class Era2ScreenBuilder
         return root.gameObject;
     }
 
-    // The Era 1 upgrade card in Era 2's colours.
+    // A plaque in the upgrade tree: name over price, the whole plaque the button.
+    private static GameObject BuildUpgradeNode()
+    {
+        var root = new GameObject("Era2UpgradeNode", typeof(RectTransform)).GetComponent<RectTransform>();
+        var image = AddImage(root, Era1Theme.PanelSprite, Era2Theme.Panel);
+        image.type = Image.Type.Sliced;
+        var button = root.gameObject.AddComponent<Button>();
+        button.targetGraphic = image;
+        var colors = button.colors;
+        colors.pressedColor = new Color(0.8f, 0.8f, 0.8f);
+        button.colors = colors;
+        root.gameObject.AddComponent<PressFeedback>();
+        var group = root.gameObject.AddComponent<CanvasGroup>();
+        var ring = root.gameObject.AddComponent<Outline>();
+        ring.effectColor = Era2Theme.Purse;
+        ring.effectDistance = new Vector2(2, -2);
+        ring.enabled = false;
+
+        var vlg = root.gameObject.AddComponent<VerticalLayoutGroup>();
+        vlg.padding = new RectOffset(6, 6, 6, 6);
+        vlg.spacing = 2;
+        vlg.childAlignment = TextAnchor.MiddleCenter;
+        vlg.childControlWidth = vlg.childControlHeight = true;
+        vlg.childForceExpandWidth = true;
+        vlg.childForceExpandHeight = false;
+
+        var name = Text(root, "Name", "Upgrade", 14, Era2Theme.Text, TextAlignmentOptions.Center);
+        var cost = Text(root, "Cost", "0 d", 13, Era2Theme.Purse, TextAlignmentOptions.Center, numerals: true);
+
+        var view = root.gameObject.AddComponent<UpgradeNodeView>();
+        Wire(view, ("_nameLabel", name), ("_costLabel", cost), ("_button", button), ("_group", group),
+                   ("_background", image), ("_selectedRing", ring));
+        SetColours(view, ("_panel", Era2Theme.Panel), ("_ready", Era2Theme.PanelRaised), ("_owned", Era2Theme.OwnedPanel),
+                         ("_text", Era2Theme.Text), ("_muted", Era2Theme.TextMuted), ("_price", Era2Theme.Purse),
+                         ("_achievement", Era2Theme.Achievement));
+        return root.gameObject;
+    }
+
+    // The Era 1 upgrade card in Era 2's colours: the tree's detail card.
     private static GameObject BuildUpgradeCard()
     {
         var root = Card("Era2UpgradeCard", out var button, out var group);

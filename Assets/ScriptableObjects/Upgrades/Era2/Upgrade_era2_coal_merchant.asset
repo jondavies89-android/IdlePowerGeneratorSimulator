@@ -29,4 +29,6 @@ MonoBehaviour:
   - era2_watt_patent
   requiredStoredJoules: 0
   requiredPennies: 0
+  treeBranch: 1
+  treeRow: 1
   icon: {fileID: 0}

@@ -26,7 +26,9 @@ MonoBehaviour:
   secondaryValue: 0
   unlocksId: LargeSteamEngine
   requiredUpgradeIds:
-  - era2_watt_patent
+  - era2_pressure_control
   requiredStoredJoules: 0
   requiredPennies: 0
+  treeBranch: 1
+  treeRow: 3
   icon: {fileID: 0}

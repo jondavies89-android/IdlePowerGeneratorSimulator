@@ -25,7 +25,11 @@ MonoBehaviour:
   effectValue: 2
   secondaryValue: 0
   unlocksId: 
-  requiredUpgradeIds: []
+  requiredUpgradeIds:
+  - era2_master_engineer
+  - era2_compound_cylinders
   requiredStoredJoules: 0
   requiredPennies: 0
+  treeBranch: 1
+  treeRow: 5
   icon: {fileID: 0}

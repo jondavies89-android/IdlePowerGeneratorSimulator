@@ -141,6 +141,73 @@ namespace IdlePowerGen.Tests
         }
 
         [Test]
+        public void AnEngagementPaysForEachWattAsItArrives()
+        {
+            var ledger = new ContractLedger();
+            var wallet = new CurrencyLedger();
+            ledger.TryAccept(Contract("lamps", 500, 0, 24, hours: 2), 0);
+            ledger.Tick(500, Hour, Hour, wallet, _ => 0.4);
+            Assert.That(wallet.Pennies, Is.EqualTo(200m)); // one of its two hours
+        }
+
+        [Test]
+        public void TheFeeMultiplierIsPaidOnFinishing()
+        {
+            var ledger = new ContractLedger();
+            var wallet = new CurrencyLedger();
+            var def = Contract("royal", 500, 0, 24, hours: 2);
+            def.payRateMultiplier = 1.5f;
+            ledger.TryAccept(def, 0);
+            ledger.Tick(500, Hour, Hour, wallet, _ => 0.4);
+            ledger.Tick(500, Hour, 2 * Hour, wallet, _ => 0.4);
+            Assert.That(wallet.Pennies, Is.EqualTo(600m)); // 2 h × 500 W × 0.4 × 1.5
+        }
+
+        [Test]
+        public void AFailedEngagementPaysNoMoreThanItsWatts()
+        {
+            var ledger = new ContractLedger();
+            var wallet = new CurrencyLedger();
+            ledger.TryAccept(Contract("lamps", 500, 0, 24, hours: 2), 0);
+            ledger.Tick(200, 2 * Hour, 2 * Hour, wallet, _ => 0.4);
+            Assert.That(wallet.Pennies, Is.EqualTo(160m).Within(0.01m)); // 2 h × 200 W × 0.4; the ratio is a float
+        }
+
+        [Test]
+        public void AMustHoldContractPaysOnlyAtTheEnd()
+        {
+            var ledger = new ContractLedger();
+            var wallet = new CurrencyLedger();
+            var def = Contract("neighbour", 500, 0, 24, hours: 2);
+            def.mustHoldOutput = true;
+            ledger.TryAccept(def, 0);
+            ledger.Tick(500, Hour, Hour, wallet, _ => 0.4);
+            Assert.That(wallet.Pennies, Is.EqualTo(0m));
+        }
+
+        // --- Street trade ---
+
+        [Test]
+        public void TheStreetPaysForSpareWattsByTheHour()
+        {
+            var wallet = new CurrencyLedger();
+            new StreetTrade().Sell(100, Hour, 0.1, wallet);
+            Assert.That(wallet.Pennies, Is.EqualTo(10m));
+        }
+
+        [Test]
+        public void WithNoStreetPriceNothingIsSold()
+        {
+            var street = new StreetTrade();
+            street.Sell(100, Hour, 0, new CurrencyLedger());
+            Assert.That(street.LastWatts, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void TheStreetPaysMoreAtLampLightingThanBeforeDawn() =>
+            Assert.That(Simulation.DemandModel.DailyShape(18), Is.GreaterThan(Simulation.DemandModel.DailyShape(4)));
+
+        [Test]
         public void RatioSoFarIsOneWhileFullySupplied()
         {
             var ledger = new ContractLedger();

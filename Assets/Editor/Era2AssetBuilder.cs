@@ -47,6 +47,8 @@ public static class Era2AssetBuilder
         cfg.useCash           = true;
         cfg.useReputation     = true;
         cfg.contractBaseRate  = Era2Data.ContractBaseRate;
+        cfg.streetRateFactor  = Era2Data.StreetRateFactor;
+        cfg.upgradeBranchNames = Era2Data.BranchNames.ToArray();
         cfg.offlineEraFactor  = Era2Data.OfflineEraFactor;
         cfg.offlineTauHours   = Era2Data.OfflineTauHours;
         cfg.offlineFlavorText = Era2Data.OfflineFlavorText;
@@ -126,8 +128,9 @@ public static class Era2AssetBuilder
             def.effectValue        = s.Value;
             def.secondaryValue     = 0;
             def.unlocksId          = s.UnlocksId;
-            def.requiredUpgradeIds = string.IsNullOrEmpty(s.PrerequisiteId)
-                                     ? Array.Empty<string>() : new[] { s.PrerequisiteId };
+            def.requiredUpgradeIds = s.Prerequisites?.ToArray() ?? Array.Empty<string>();
+            def.treeBranch         = s.Branch;
+            def.treeRow            = s.Row;
             EditorUtility.SetDirty(def);
         }
         DeleteStale<UpgradeDefinition>(UpgradeFolder, keep);

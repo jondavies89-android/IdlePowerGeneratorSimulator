@@ -22,6 +22,14 @@ namespace IdlePowerGen.Data
         // ~2 hours at 0.6, inside the bible's 2–8 hour band; 0.4 sits near three.
         public const double ContractBaseRate = 0.4;
 
+        // Spare power sold to the street, as a fraction of ContractBaseRate (then shaped by the
+        // hour: dearer at the evening lamp-lighting, cheap before dawn). Without it, between
+        // engagements the purse stood still and the first hour had ten-minute waits. The pacing
+        // sim at 0.2 brings the longest first-hour wait to ~3 min (bible §6.2: 1–3) and the era
+        // to ~2.4 h, still in the 2–8 h band. Kept well under 1 even with both street upgrades
+        // (×2, ×1.5 → 0.6) so a booked client always pays better, and only clients bring repute.
+        public const float StreetRateFactor = 0.2f;
+
         public const float  OfflineEraFactor  = 1.0f;
         public const float  OfflineTauHours   = 4.0f;
         public const string OfflineFlavorText = "Your apprentice kept the fires burning while you were away.";
@@ -101,9 +109,18 @@ namespace IdlePowerGen.Data
         // Upgrades, paid in pennies. Reputation is a gate, not a cost (CLAUDE.md).
         // One-time tiers grow roughly ×5–×8 apart (bible §9.3) and each about doubles
         // what it acts on (bible §6.2).
+        //
+        // Laid out as a tree in three branches (columns), each row deeper than its
+        // prerequisites. The two late generalists sit where branches meet: the Master
+        // Engineer needs both water and steam, the Royal Warrant crowns the tree.
         // -------------------------------------------------------------------------------
 
+        public const int HandsBranch = 0, SteamBranch = 1, TradeBranch = 2;
+        public static readonly string[] BranchNames = { "Hands & Water", "Steam", "Trade" };
+
         // Ids are saved, so never rename one.
+        public const string StreetCounterId      = "era2_street_counter";
+        public const string ArcLampsId           = "era2_arc_lamps";
         public const string ApprenticeTrainingId = "era2_apprentice_training";
         public const string MillRaceWeirId       = "era2_millrace_weir";
         public const string WattPatentId         = "era2_watt_patent";
@@ -118,30 +135,40 @@ namespace IdlePowerGen.Data
 
         public static readonly UpgradeSpec[] Upgrades =
         {
-            //  id                    name                          cost       growth max rep  effect                                 value unlocks                               prerequisite
-            new(ApprenticeTrainingId, "Apprentice Training",        150,       1,     1,  0,   UpgradeEffect.MultiplyGeneratorOutput, 2,    nameof(GeneratorType.SmallDynamo),      null,
+            //  id                    name                          cost       growth max rep  effect                                 value unlocks                               branch       row
+            // Hands & Water
+            new(ApprenticeTrainingId, "Apprentice Training",        150,       1,     1,  0,   UpgradeEffect.MultiplyGeneratorOutput, 2,    nameof(GeneratorType.SmallDynamo),      HandsBranch, 0, new string[0],
                 "A month at the Polytechnic. They pedal smarter."),
-            new(ClerkId,              "A Clerk at the Desk",        600,       1,     1,  4,   UpgradeEffect.UnlockFeature,           0,    ClerkFeatureId,                         null,
-                "Books any engagement the works can fully supply while you see to the machines."),
-            new(WattPatentId,         "Watt's Engine Patent",       1_000,     1,     1,  3,   UpgradeEffect.UnlockGenerator,         0,    nameof(GeneratorType.SteamEngine),      null,
-                "The licence to build a proper steam engine."),
-            // Two levels, ×10 apart: a third and a fourth engagement at once.
-            new(TelegraphId,          "Telegraph Lines",            1_500,     10,    2,  5,   UpgradeEffect.AddContractSlot,         1,    null,                                   null,
-                "More clients can reach you by wire."),
-            new(MillRaceWeirId,       "Mill-race Weir",             2_000,     1,     1,  0,   UpgradeEffect.MultiplyGeneratorOutput, 2,    nameof(GeneratorType.Waterwheel),       null,
+            new(MillRaceWeirId,       "Mill-race Weir",             2_000,     1,     1,  0,   UpgradeEffect.MultiplyGeneratorOutput, 2,    nameof(GeneratorType.Waterwheel),       HandsBranch, 1, new[] { ApprenticeTrainingId },
                 "A weir upstream gives the wheels a steadier head of water."),
-            new(CoalMerchantId,       "Coal Merchant's Account",    4_000,     1,     1,  0,   UpgradeEffect.UnlockFeature,           0,    CoalMerchantFeatureId,                  WattPatentId,
-                "The merchant tops up the hopper whenever it runs low."),
-            new(PressureControlId,    "Steam Pressure Control",     6_000,     1,     1,  0,   UpgradeEffect.MultiplyGeneratorOutput, 2,    nameof(GeneratorType.SteamEngine),      WattPatentId,
-                "Governors and gauges. The engines run harder without bursting."),
-            new(BoultonWattId,        "Boulton & Watt Partnership", 25_000,    1,     1,  10,  UpgradeEffect.UnlockGenerator,         0,    nameof(GeneratorType.LargeSteamEngine), WattPatentId,
-                "The Soho works will build you their largest engines."),
-            new(CompoundCylindersId,  "Compound Cylinders",         120_000,   1,     1,  0,   UpgradeEffect.MultiplyGeneratorOutput, 2,    nameof(GeneratorType.LargeSteamEngine), BoultonWattId,
-                "The steam does its work twice before it leaves."),
-            new(MasterEngineerId,     "Master Engineer",            300_000,   1,     1,  18,  UpgradeEffect.MultiplyAllOutput,       1.5,  null,                                   null,
+            new(MasterEngineerId,     "Master Engineer",            300_000,   1,     1,  18,  UpgradeEffect.MultiplyAllOutput,       1.5,  null,                                   HandsBranch, 4, new[] { MillRaceWeirId, BoultonWattId },
                 "A man who has run a works before. Everything runs better."),
-            new(RoyalWarrantId,       "Royal Warrant",              1_000_000, 1,     1,  24,  UpgradeEffect.MultiplyAllOutput,       2,    null,                                   null,
+
+            // Steam. The merchant comes before the pressure gauges: no point running the
+            // engines harder on a hopper that keeps running dry.
+            new(WattPatentId,         "Watt's Engine Patent",       1_000,     1,     1,  3,   UpgradeEffect.UnlockGenerator,         0,    nameof(GeneratorType.SteamEngine),      SteamBranch, 0, new string[0],
+                "The licence to build a proper steam engine."),
+            new(CoalMerchantId,       "Coal Merchant's Account",    4_000,     1,     1,  0,   UpgradeEffect.UnlockFeature,           0,    CoalMerchantFeatureId,                  SteamBranch, 1, new[] { WattPatentId },
+                "The merchant tops up the hopper whenever it runs low."),
+            new(PressureControlId,    "Steam Pressure Control",     6_000,     1,     1,  0,   UpgradeEffect.MultiplyGeneratorOutput, 2,    nameof(GeneratorType.SteamEngine),      SteamBranch, 2, new[] { CoalMerchantId },
+                "Governors and gauges. The engines run harder without bursting."),
+            new(BoultonWattId,        "Boulton & Watt Partnership", 25_000,    1,     1,  10,  UpgradeEffect.UnlockGenerator,         0,    nameof(GeneratorType.LargeSteamEngine), SteamBranch, 3, new[] { PressureControlId },
+                "The Soho works will build you their largest engines."),
+            new(CompoundCylindersId,  "Compound Cylinders",         120_000,   1,     1,  0,   UpgradeEffect.MultiplyGeneratorOutput, 2,    nameof(GeneratorType.LargeSteamEngine), SteamBranch, 4, new[] { BoultonWattId },
+                "The steam does its work twice before it leaves."),
+            new(RoyalWarrantId,       "Royal Warrant",              1_000_000, 1,     1,  24,  UpgradeEffect.MultiplyAllOutput,       2,    null,                                   SteamBranch, 5, new[] { MasterEngineerId, CompoundCylindersId },
                 "By appointment to Her Majesty. Every client wants the best."),
+
+            // Trade
+            new(StreetCounterId,      "A Counter on the Street",    300,       1,     1,  0,   UpgradeEffect.MultiplyStreetTrade,     2,    null,                                   TradeBranch, 0, new string[0],
+                "A shopfront where the neighbours buy their power by the hour."),
+            new(ClerkId,              "A Clerk at the Desk",        600,       1,     1,  4,   UpgradeEffect.UnlockFeature,           0,    ClerkFeatureId,                         TradeBranch, 1, new[] { StreetCounterId },
+                "Books any engagement the works can fully supply while you see to the machines."),
+            // Two levels, ×10 apart: a third and a fourth engagement at once.
+            new(TelegraphId,          "Telegraph Lines",            1_500,     10,    2,  5,   UpgradeEffect.AddContractSlot,         1,    null,                                   TradeBranch, 2, new[] { ClerkId },
+                "More clients can reach you by wire."),
+            new(ArcLampsId,           "Arc Lamps for the Parish",   40_000,    1,     1,  12,  UpgradeEffect.MultiplyStreetTrade,     1.5,  null,                                   TradeBranch, 3, new[] { TelegraphId },
+                "The vestry lights the whole street from your works, and pays for it."),
         };
 
         // -------------------------------------------------------
@@ -199,16 +226,18 @@ namespace IdlePowerGen.Data
             public readonly UpgradeEffect Effect;
             public readonly double        Value;
             public readonly string        UnlocksId;
-            public readonly string        PrerequisiteId;
+            public readonly int           Branch;
+            public readonly int           Row;
+            public readonly string[]      Prerequisites;
             public readonly string        Description;
 
             public UpgradeSpec(string id, string name, double cost, double growth, int maxLevel, float rep,
-                               UpgradeEffect effect, double value, string unlocksId, string prereq,
-                               string description)
+                               UpgradeEffect effect, double value, string unlocksId, int branch, int row,
+                               string[] prereqs, string description)
             {
                 Id = id; Name = name; CostPennies = cost; CostGrowth = growth; MaxLevel = maxLevel;
                 RequiredReputation = rep; Effect = effect; Value = value; UnlocksId = unlocksId;
-                PrerequisiteId = prereq; Description = description;
+                Branch = branch; Row = row; Prerequisites = prereqs; Description = description;
             }
         }
     }

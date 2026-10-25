@@ -26,7 +26,10 @@ MonoBehaviour:
   effectValue: 0
   secondaryValue: 0
   unlocksId: feature_clerk
-  requiredUpgradeIds: []
+  requiredUpgradeIds:
+  - era2_street_counter
   requiredStoredJoules: 0
   requiredPennies: 0
+  treeBranch: 2
+  treeRow: 1
   icon: {fileID: 0}

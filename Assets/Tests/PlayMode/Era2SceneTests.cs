@@ -27,6 +27,24 @@ namespace IdlePowerGen.Tests
         [TearDown]
         public void RestoreTimeScale() => Time.timeScale = 1f;
 
+        private float? _streetRate;
+
+        [TearDown]
+        public void RestoreStreet()
+        {
+            if (_streetRate is float rate) GM.GetEraConfig(EraNumber).streetRateFactor = rate;
+            _streetRate = null;
+        }
+
+        // The street buys more from an apprentice than his wage, so a purse only runs dry,
+        // and wages only show, with the street shut.
+        private void NoStreet()
+        {
+            var cfg = GM.GetEraConfig(EraNumber);
+            _streetRate ??= cfg.streetRateFactor;
+            cfg.streetRateFactor = 0f;
+        }
+
         private static string SavePath =>
             Path.Combine(Application.persistentDataPath, Save.SaveManager.SaveFileName);
 
@@ -184,6 +202,7 @@ namespace IdlePowerGen.Tests
         [UnityTest]
         public IEnumerator WagesComeOutOfThePurse()
         {
+            NoStreet();
             yield return Load(Era2Save(100, 0, StartHour, (GeneratorType.SmallDynamo, 6)));
             yield return Tick();
             // Six apprentices at 1 d a game hour: 0.1 d a real second.
@@ -193,6 +212,7 @@ namespace IdlePowerGen.Tests
         [UnityTest]
         public IEnumerator AnEmptyPurseStopsTheApprentices()
         {
+            NoStreet();
             yield return Load(Era2Save(0, 0, StartHour, (GeneratorType.SmallDynamo, 2)));
             yield return Tick();
             Assert.That(Generators.CountOnline(GeneratorType.SmallDynamo), Is.EqualTo(0));
@@ -201,6 +221,7 @@ namespace IdlePowerGen.Tests
         [UnityTest]
         public IEnumerator PayingThePurseBringsTheApprenticesBack()
         {
+            NoStreet();
             yield return Load(Era2Save(0, 0, StartHour, (GeneratorType.SmallDynamo, 2)));
             yield return Tick();
             GM.Ledger.AddPennies(10);
@@ -240,8 +261,9 @@ namespace IdlePowerGen.Tests
         {
             yield return Load(WithSteam(100, 0));
             yield return Tick();
+            decimal before = GM.Ledger.Pennies;
             Click("Order");
-            Assert.That(GM.Ledger.Pennies, Is.EqualTo(100m - (decimal)Economy.Era2CoalHopper.MinCapacity));
+            Assert.That(before - GM.Ledger.Pennies, Is.EqualTo((decimal)Economy.Era2CoalHopper.MinCapacity));
         }
 
         [UnityTest]
@@ -336,6 +358,42 @@ namespace IdlePowerGen.Tests
         }
 
         [UnityTest]
+        public IEnumerator AnEngagementPaysWhileItRuns()
+        {
+            yield return Load(Era2Save(1000, 0, StartHour, (GeneratorType.SmallDynamo, 12)));
+            Works.Book(Contract("c2_street_lamps"));
+            yield return Tick();
+            Assert.That(GM.Contracts.ActiveContracts[0].PaidSoFar, Is.GreaterThan(0m));
+        }
+
+        [UnityTest]
+        public IEnumerator TheStreetBuysPowerNoClientIsTaking()
+        {
+            yield return Load(Era2Save(0, 0, StartHour, (GeneratorType.Waterwheel, 1)));
+            yield return Tick();
+            Assert.That(GM.Ledger.Pennies, Is.GreaterThan(0m));
+        }
+
+        [UnityTest]
+        public IEnumerator TheStreetOnlyGetsWhatTheClientsLeave()
+        {
+            yield return Load(Era2Save(1000, 0, StartHour, (GeneratorType.SmallDynamo, 12)));
+            Works.Book(Contract("c2_street_lamps"));
+            yield return Tick();
+            Assert.That(GM.Street.LastWatts, Is.EqualTo(100).Within(1e-6)); // 600 W made, 500 W booked
+        }
+
+        [UnityTest]
+        public IEnumerator SoldPowerIsNotAlsoBankedAsJoules()
+        {
+            yield return Load(Era2Save(0, 0, StartHour, (GeneratorType.Waterwheel, 1)));
+            yield return Tick();
+            double before = GM.Ledger.Joules;
+            yield return Tick();
+            Assert.That(GM.Ledger.Joules, Is.EqualTo(before));
+        }
+
+        [UnityTest]
         public IEnumerator EngagementsTakeTheWattsTheyPayFor()
         {
             yield return Load(Era2Save(1000, 0, StartHour, (GeneratorType.SmallDynamo, 12)));
@@ -351,7 +409,78 @@ namespace IdlePowerGen.Tests
         {
             yield return Load(Era2Save(200));
             Click("Upgrade_" + ApprenticeTrainingId);
+            Click("UpgradeDetail");
             Assert.That(GM.Ledger.Pennies, Is.EqualTo(50m));
+        }
+
+        [UnityTest]
+        public IEnumerator TappingATreeNodeShowsItOnTheDetailCard()
+        {
+            yield return Load(Era2Save(0));
+            Click("Upgrade_" + WattPatentId);
+            Assert.That(GameObject.Find("UpgradeDetail").GetComponent<UI.UpgradeCardView>().Definition.upgradeId,
+                        Is.EqualTo(WattPatentId));
+        }
+
+        [UnityTest]
+        public IEnumerator TappingALockedNodeDoesNotBuyIt()
+        {
+            yield return Load(Era2Save(10000, 30));
+            Click("Upgrade_" + ClerkId); // needs the street counter first
+            Click("UpgradeDetail");
+            Assert.That(GM.Upgrades.IsPurchased(ClerkId), Is.False);
+        }
+
+        [UnityTest]
+        public IEnumerator EveryEra2UpgradeIsANodeInTheTree()
+        {
+            yield return Load(Era2Save(0));
+            var tree = UnityEngine.Object.FindAnyObjectByType<UI.UpgradeTreeView>();
+            Assert.That(tree.Nodes.Count, Is.EqualTo(Upgrades.Length));
+        }
+
+        [UnityTest]
+        public IEnumerator TheStreetCounterDoublesWhatTheStreetPays()
+        {
+            var data = Era2Save(0);
+            data.upgradeLevels.Add(new Save.SaveData.UpgradeLevelEntry { upgradeId = StreetCounterId, level = 1 });
+            yield return Load(data);
+            double withCounter = GM.StreetPricePerWattHour(2f, Day + StartHour * Hour);
+            Assert.That(withCounter, Is.EqualTo(2 * ContractBaseRate * StreetRateFactor *
+                                                Simulation.DemandModel.DailyShape(StartHour)).Within(1e-9));
+        }
+
+        // --- Tabs ---
+
+        [UnityTest]
+        public IEnumerator Era2OpensOnTheClientsTab()
+        {
+            yield return Load(Era2Save(0));
+            Assert.That(GameObject.Find("ClientsPage").GetComponent<CanvasGroup>().alpha, Is.EqualTo(1f));
+        }
+
+        [UnityTest]
+        public IEnumerator TappingATabHidesTheOtherPages()
+        {
+            yield return Load(Era2Save(0));
+            Click("Tab_Works");
+            Assert.That(GameObject.Find("ClientsPage").GetComponent<CanvasGroup>().blocksRaycasts, Is.False);
+        }
+
+        [UnityTest]
+        public IEnumerator TappingATabShowsItsPage()
+        {
+            yield return Load(Era2Save(0));
+            Click("Tab_Improvements");
+            Assert.That(GameObject.Find("ImprovementsPage").GetComponent<CanvasGroup>().alpha, Is.EqualTo(1f));
+        }
+
+        [UnityTest]
+        public IEnumerator AnEmptyHopperPutsARedDotOnTheWorksTab()
+        {
+            yield return Load(WithSteam(0, 0));
+            yield return new WaitForSeconds(0.4f);
+            Assert.That(GameObject.Find("Tab_Works/Badge"), Is.Not.Null);
         }
 
         [UnityTest]
@@ -382,8 +511,8 @@ namespace IdlePowerGen.Tests
         public IEnumerator Era1UpgradesStayOffTheEra2Screen()
         {
             yield return Load(Era2Save(0));
-            var cards = GameObject.Find("Era2Screen").GetComponentsInChildren<UI.UpgradeCardView>(true);
-            Assert.That(cards.Select(c => c.Definition.minEra), Is.All.EqualTo(EraNumber));
+            var nodes = GameObject.Find("Era2Screen").GetComponentsInChildren<UI.UpgradeNodeView>(true);
+            Assert.That(nodes.Select(c => c.Definition.minEra), Is.All.EqualTo(EraNumber));
         }
 
         // --- Saving ---
@@ -415,6 +544,37 @@ namespace IdlePowerGen.Tests
             Assert.That(v3.contractBookedDays, Is.Not.Null);
         }
 
+        [Test]
+        public void AV4SaveOwesItsEngagementsTheirWholeFee()
+        {
+            var v4 = new Save.SaveData { version = 4 };
+            v4.activeContracts.Add(new Save.SaveData.ContractEntry { contractId = "c2_hotel" });
+            Save.SaveManager.Migrate(v4);
+            Assert.That(v4.activeContracts[0].paidPennies, Is.EqualTo("0"));
+        }
+
+        [UnityTest]
+        public IEnumerator WhatAnEngagementHasPaidSurvivesSaveAndLoad()
+        {
+            yield return Load(Era2Save(1000, 0, StartHour, (GeneratorType.SmallDynamo, 12)));
+            Works.Book(Contract("c2_street_lamps"));
+            yield return Tick();
+            Time.timeScale = 0f; // no tick between save and check to pay it again
+            decimal paid = GM.Contracts.ActiveContracts[0].PaidSoFar;
+            Save.SaveManager.Instance.Save();
+            yield return Load(JsonUtility.FromJson<Save.SaveData>(File.ReadAllText(SavePath)));
+            Assert.That(GM.Contracts.ActiveContracts[0].PaidSoFar, Is.EqualTo(paid));
+        }
+
+        [UnityTest]
+        public IEnumerator TheStreetPaysWhileThePlayerIsAway()
+        {
+            var data = Era2Save(0, 0, StartHour, (GeneratorType.Waterwheel, 2));
+            data.saveTimestampUnix -= 3600; // an hour away: a medium absence
+            yield return Load(data);
+            Assert.That(GM.Ledger.Pennies, Is.GreaterThan(0m));
+        }
+
         [UnityTest]
         public IEnumerator CustomersPayWhileThePlayerIsAway()
         {
@@ -437,6 +597,10 @@ namespace IdlePowerGen.Tests
             yield return null;
             Assert.That(GameObject.Find("Era2EndOfEra").transform.Find("Panel").gameObject.activeSelf, Is.True);
         }
+
+        [Test]
+        public void TheStreetKeepsBuyingAfterEra2Ends() =>
+            Assert.That(GM.StreetPricePerWattHour(3f, Day + StartHour * Hour), Is.GreaterThan(0));
 
         [UnityTest]
         public IEnumerator TheOfficeStaysUpAfterEra2Ends()

@@ -106,6 +106,10 @@ namespace IdlePowerGen.Managers
                 case UpgradeEffect.AddContractSlot:
                     // Era2WorksController counts slots from the levels owned.
                     break;
+
+                case UpgradeEffect.MultiplyStreetTrade:
+                    StreetTradeMultiplier *= def.effectValue;
+                    break;
             }
         }
 
@@ -128,6 +132,7 @@ namespace IdlePowerGen.Managers
             sim?.WaterWheel.ResetUpgrades();
             _unlockedFeatures.Clear();
             _unlockedGenerators.Clear();
+            StreetTradeMultiplier = 1.0;
 
             foreach (var def in gm.UpgradeCatalogue)
             {
@@ -139,5 +144,8 @@ namespace IdlePowerGen.Managers
         // Public queries used by UI / controllers
         public bool IsFeatureUnlocked(string id)   => _unlockedFeatures.Contains(id);
         public bool IsGeneratorUnlocked(string id) => _unlockedGenerators.Contains(id);
+
+        // Applied to the street's price for spare power.
+        public double StreetTradeMultiplier { get; private set; } = 1.0;
     }
 }

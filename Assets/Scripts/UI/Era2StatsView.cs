@@ -12,6 +12,7 @@ namespace IdlePowerGen.UI
         [SerializeField] private Controllers.Era2WorksController _works;
         [SerializeField] private TMP_Text _capacityLabel;
         [SerializeField] private TMP_Text _purseLabel;
+        [SerializeField] private TMP_Text _incomeLabel;
         [SerializeField] private Image[] _stars;
         [SerializeField] private TMP_Text _reputeLabel;
         [SerializeField] private TMP_Text _supplyLabel;
@@ -47,27 +48,37 @@ namespace IdlePowerGen.UI
             }
             _lastPurse = purse;
 
+            // The steady rate, so a purchase can be planned ("about two minutes to the engine").
+            double net = _works.NetPerHour;
+            _incomeLabel.text = net >= 0 ? $"+{NumberFormatter.FormatPennies((decimal)net)} an hour"
+                                         // A hyphen: the period numeral font has no minus sign.
+                                         : $"-{NumberFormatter.FormatPennies((decimal)-net)} an hour";
+            _incomeLabel.color = net > 0 ? _healthy : net < 0 ? _alarm : _muted;
+
             float rep = gm.Ledger.Reputation;
             for (int i = 0; i < _stars.Length; i++)
                 _stars[i].fillAmount = Mathf.Clamp01(rep / Data.Era2Data.ReputationPerStar - i);
             _reputeLabel.text = $"{rep:0.#} repute";
 
             double drawn = _works.CommittedWatts;
+            double street = Controllers.Era2WorksController.StreetWatts;
             if (drawn <= 0)
             {
-                _supplyLabel.text = "No customers drawing power. Book an engagement below.";
+                _supplyLabel.text = street > 0
+                    ? $"The street buys all {NumberFormatter.FormatWatts(street)}. Clients pay better."
+                    : "No customers drawing power. Book a client.";
                 _supplyLabel.color = _muted;
             }
             else if (capacity >= drawn)
             {
-                _supplyLabel.text = $"Customers draw {NumberFormatter.FormatWatts(drawn)} · " +
-                                    $"{NumberFormatter.FormatWatts(capacity - drawn)} to spare";
+                _supplyLabel.text = $"Clients draw {NumberFormatter.FormatWatts(drawn)} · " +
+                                    $"the street buys {NumberFormatter.FormatWatts(capacity - drawn)}";
                 _supplyLabel.color = _healthy;
             }
             else
             {
                 double ratio = capacity / drawn;
-                _supplyLabel.text = $"Customers draw {NumberFormatter.FormatWatts(drawn)} · " +
+                _supplyLabel.text = $"Clients draw {NumberFormatter.FormatWatts(drawn)} · " +
                                     $"{NumberFormatter.FormatWatts(drawn - capacity)} short. Engagements at risk.";
                 _supplyLabel.color = ratio >= 0.5 ? _caution : _alarm;
             }
