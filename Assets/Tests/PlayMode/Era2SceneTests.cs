@@ -609,6 +609,51 @@ namespace IdlePowerGen.Tests
             Assert.That(v5.activeContracts[0].progressSeconds, Is.EqualTo(2 * Hour));
         }
 
+        // --- Shortfall countdown ---
+
+        [UnityTest]
+        public IEnumerator AShortEngagementsCardWarnsOfTheCancellation()
+        {
+            yield return Load(Era2Save(0)); // no machines, so no power at all
+            Works.Book(Contract("c2_street_lamps"));
+            yield return Tick();
+            var label = GameObject.Find("Engagement_0").GetComponentsInChildren<TMPro.TMP_Text>()
+                                  .Select(t => t.text);
+            Assert.That(label, Has.Some.StartsWith("short of power · cancels in"));
+        }
+
+        [UnityTest]
+        public IEnumerator TheShortfallCountdownSurvivesSaveAndLoad()
+        {
+            yield return Load(Era2Save(0));
+            Works.Book(Contract("c2_street_lamps"));
+            yield return Tick();
+            Time.timeScale = 0f;
+            double shortSeconds = GM.Contracts.ActiveContracts[0].ShortSeconds;
+            Save.SaveManager.Instance.Save();
+            yield return Load(JsonUtility.FromJson<Save.SaveData>(File.ReadAllText(SavePath)));
+            Assert.That(GM.Contracts.ActiveContracts[0].ShortSeconds, Is.EqualTo(shortSeconds).And.GreaterThan(0));
+        }
+
+        [UnityTest]
+        public IEnumerator CatchingUpOnTimeAwayCancelsNoOne()
+        {
+            yield return Load(Era2Save(0));
+            Works.Book(Contract("c2_street_lamps"));
+            Time.timeScale = 0f;
+            Simulation.SimulationTick.Instance.CatchUpOffline(60); // an hour short, while away
+            Assert.That(GM.Contracts.ActiveContracts, Has.Count.EqualTo(1));
+        }
+
+        [Test]
+        public void AV6SaveStartsItsEngagementsWithNoCountdown()
+        {
+            var v6 = new Save.SaveData { version = 6 };
+            v6.activeContracts.Add(new Save.SaveData.ContractEntry { contractId = "c2_street_lamps", shortSeconds = 99 });
+            Save.SaveManager.Migrate(v6);
+            Assert.That(v6.activeContracts[0].shortSeconds, Is.EqualTo(0));
+        }
+
         // --- The ?era=2 shortcut ---
 
         [UnityTest]

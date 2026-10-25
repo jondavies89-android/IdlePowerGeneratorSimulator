@@ -102,6 +102,9 @@ public static class Era2AssetBuilder
             def.reputationOnSuccess = s.ReputationOnSuccess;
             def.reputationOnFail    = -2f;
             def.failThreshold       = 0.5f;
+            def.shortfallLeeway               = Era2Data.ShortfallLeeway;
+            def.shortfallCountdownMinutes     = Era2Data.ShortfallCountdownMinutes;
+            def.shortfallForgivenAfterMinutes = Era2Data.ShortfallForgivenAfterMinutes;
             EditorUtility.SetDirty(def);
         }
         DeleteStale<ContractDefinition>(ContractFolder, keep);

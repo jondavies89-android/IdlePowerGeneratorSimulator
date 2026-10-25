@@ -268,6 +268,134 @@ namespace IdlePowerGen.Tests
             Assert.That(ledger.ActiveContracts[0].RatioSoFar(), Is.EqualTo(1f).Within(1e-6));
         }
 
+        // --- Shortfall countdown ---
+
+        // Runs the ledger in one-minute game ticks, as the sim does (1 real second = 1 game minute).
+        private static void Run(ContractLedger ledger, double watts, double minutes,
+                                CurrencyLedger wallet = null, double speed = 1)
+        {
+            wallet ??= new CurrencyLedger();
+            for (int i = 0; i < minutes; i++)
+                ledger.Tick(watts, 60, 0, wallet, _ => 0.4, speed);
+        }
+
+        private static ContractLedger OneHotel(out ContractInstance hotel)
+        {
+            var ledger = new ContractLedger();
+            ledger.TryAccept(Contract("hotel", 1000, 0, 24, hours: 8), 0);
+            hotel = ledger.ActiveContracts[0];
+            return ledger;
+        }
+
+        [Test]
+        public void AShortfallWithinTheLeewayStartsNoCountdown()
+        {
+            var ledger = OneHotel(out var hotel);
+            Run(ledger, 950, 10); // 5 % short, inside the 10 % leeway
+            Assert.That(hotel.CountdownRunning, Is.False);
+        }
+
+        [Test]
+        public void AShortfallPastTheLeewayStartsTheCountdown()
+        {
+            var ledger = OneHotel(out var hotel);
+            Run(ledger, 800, 1);
+            Assert.That(hotel.FailsInSeconds, Is.EqualTo(29 * 60).Within(1e-6));
+        }
+
+        [Test]
+        public void AClientShortForTheWholeCountdownCancels()
+        {
+            var ledger = OneHotel(out _);
+            Run(ledger, 0, 30);
+            Assert.That(ledger.ActiveContracts, Is.Empty);
+        }
+
+        [Test]
+        public void AClientShortForLessThanTheCountdownStays()
+        {
+            var ledger = OneHotel(out _);
+            Run(ledger, 0, 29);
+            Assert.That(ledger.ActiveContracts, Has.Count.EqualTo(1));
+        }
+
+        [Test]
+        public void ACancelledClientCostsRepute()
+        {
+            var ledger = OneHotel(out var hotel);
+            var wallet = new CurrencyLedger();
+            wallet.AddReputation(5);
+            hotel.Definition.reputationOnFail = -2f;
+            Run(ledger, 0, 30, wallet);
+            Assert.That(wallet.Reputation, Is.EqualTo(3f));
+        }
+
+        [Test]
+        public void ACancelledClientKeepsWhatItPaidAlongTheWay()
+        {
+            var ledger = OneHotel(out _);
+            var wallet = new CurrencyLedger();
+            Run(ledger, 1000, 60, wallet); // 1 h × 1 kW × 0.4 = 400
+            Run(ledger, 0, 30, wallet);
+            Assert.That(wallet.Pennies, Is.EqualTo(400m).Within(0.01m));
+        }
+
+        [Test]
+        public void TheCountdownHoldsWhenThePowerComesBack()
+        {
+            var ledger = OneHotel(out var hotel);
+            Run(ledger, 0, 10);
+            Run(ledger, 1000, 10);
+            Assert.That(hotel.FailsInSeconds, Is.EqualTo(20 * 60).Within(1e-6));
+        }
+
+        [Test]
+        public void TheCountdownClearsAfterAnHourSupplied()
+        {
+            var ledger = OneHotel(out var hotel);
+            Run(ledger, 0, 10);
+            Run(ledger, 1000, 60);
+            Assert.That(hotel.CountdownRunning, Is.False);
+        }
+
+        [Test]
+        public void GoingShortAgainBeforeItClearsCarriesOnTheCountdown()
+        {
+            var ledger = OneHotel(out _);
+            Run(ledger, 0, 20);
+            Run(ledger, 1000, 59); // a minute short of clearing
+            Run(ledger, 0, 10);
+            Assert.That(ledger.ActiveContracts, Is.Empty);
+        }
+
+        [Test]
+        public void TheCountdownRunsOnTheClockNotTheBoost()
+        {
+            var ledger = OneHotel(out _);
+            Run(ledger, 0, 20, speed: 2); // 20 game minutes, though 40 contract minutes
+            Assert.That(ledger.ActiveContracts, Has.Count.EqualTo(1));
+        }
+
+        [Test]
+        public void TheCountdownIsPausedWhileCatchingUpOnTimeAway()
+        {
+            var ledger = OneHotel(out _);
+            ledger.ShortfallPaused = true;
+            Run(ledger, 0, 60);
+            Assert.That(ledger.ActiveContracts, Has.Count.EqualTo(1));
+        }
+
+        [Test]
+        public void AMustHoldContractHasNoCountdown()
+        {
+            var ledger = new ContractLedger();
+            var def = Contract("neighbour", 500, 0, 24, hours: 2);
+            def.mustHoldOutput = true;
+            ledger.TryAccept(def, 0);
+            // It breaks on the first dip instead (ContractHoldTests).
+            Assert.That(ledger.ActiveContracts[0].TrackShortfall(0, Hour), Is.False);
+        }
+
         // --- Coal hopper ---
 
         [Test]

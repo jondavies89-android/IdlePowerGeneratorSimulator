@@ -43,7 +43,10 @@ namespace IdlePowerGen.UI
         {
             if (!IsEra2Contract(e.Contract)) return;
             var def = e.Contract.Definition;
-            _toast.Show($"{def.clientName} went short of power and paid only part.  {def.reputationOnFail:0.#} repute");
+            // Cancelled part-way when the shortfall countdown ran out; otherwise judged at the end.
+            _toast.Show(e.Contract.IsDue
+                ? $"{def.clientName} went short of power and paid only part.  {def.reputationOnFail:0.#} repute"
+                : $"{def.clientName} cancelled after going short of power too long.  {def.reputationOnFail:0.#} repute");
         }
 
         private void OnNotice(WorksNoticeEvent e) => _toast.Show(e.Message);

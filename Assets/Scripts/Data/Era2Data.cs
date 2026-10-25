@@ -40,6 +40,17 @@ namespace IdlePowerGen.Data
         public const int    StartMonth = 10;
         public const int    StartDay   = 9;
 
+        // A client minds a shortfall only past this share of what they asked for, so a works
+        // a few watts shy (the Grand Hotel's 1.2 kW on 1.1 kW) isn't on a cancellation clock.
+        public const float ShortfallLeeway = 0.1f;
+
+        // Game minutes of shortfall, all told, before a client cancels: half a minute of real
+        // time, long enough to order coal or pay the hands, short enough to feel. The clock
+        // holds while the power is back and only clears after an hour fully supplied in a
+        // row, so flickering back on for a moment doesn't buy a fresh half hour.
+        public const float ShortfallCountdownMinutes = 30f;
+        public const float ShortfallForgivenAfterMinutes = 60f;
+
         // Engagements that can run at once before Telegraph Lines.
         public const int BaseContractSlots = 2;
 

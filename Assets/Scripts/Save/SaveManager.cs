@@ -18,7 +18,8 @@ namespace IdlePowerGen.Save
         // v3 → v4: the Era 2 works (start day, coal hopper, contracts booked per day).
         // v4 → v5: engagements pay as they run, so each records what it has paid so far.
         // v5 → v6: contracts keep their own progress (for the 2× boost); the boost's time left.
-        public const int CurrentVersion = 6;
+        // v6 → v7: each engagement's shortfall countdown.
+        public const int CurrentVersion = 7;
 
         // Tests point this at a scratch file so they never touch a real player's save.
         public static string SaveFileName = "save.json";
@@ -89,6 +90,8 @@ namespace IdlePowerGen.Save
                     accumulatedWattSeconds = contract.AccumulatedWattSeconds,
                     paidPennies            = contract.PaidSoFar.ToString(CultureInfo.InvariantCulture),
                     progressSeconds        = contract.ProgressSeconds,
+                    shortSeconds           = contract.ShortSeconds,
+                    suppliedSeconds        = contract.SuppliedSeconds,
                 });
             }
 
@@ -165,6 +168,15 @@ namespace IdlePowerGen.Save
             if (data.version < 4) MigrateV3ToV4(data);
             if (data.version < 5) MigrateV4ToV5(data);
             if (data.version < 6) MigrateV5ToV6(data);
+            if (data.version < 7) MigrateV6ToV7(data);
+        }
+
+        // Before v7 there was no countdown: every engagement starts with a clean slate.
+        private static void MigrateV6ToV7(SaveData data)
+        {
+            foreach (var c in data.activeContracts ?? new List<SaveData.ContractEntry>())
+                c.shortSeconds = c.suppliedSeconds = 0;
+            data.version = 7;
         }
 
         // Before v6 a contract's progress was simply the clock since it started.
@@ -287,6 +299,7 @@ namespace IdlePowerGen.Save
                 if (decimal.TryParse(entry.paidPennies, NumberStyles.Number, CultureInfo.InvariantCulture, out var paid))
                     instance.SetPaidFromSave(paid);
                 instance.SetProgressFromSave(entry.progressSeconds);
+                instance.SetShortfallFromSave(entry.shortSeconds, entry.suppliedSeconds);
                 gm.Contracts.AddFromSave(instance);
             }
             gm.SetContractBoostFromSave(data.contractBoostSecondsLeft);

@@ -53,15 +53,24 @@ namespace IdlePowerGen.Simulation
         {
             const double stepSize = 1.0;
             double remaining = secondsElapsed;
-            while (remaining > 0)
+            var contracts = Managers.GameManager.Instance?.Contracts;
+            if (contracts != null) contracts.ShortfallPaused = true;
+            try
             {
-                double step = Math.Min(stepSize, remaining);
-                // The clock moves with the ticks, so contracts end on time rather than
-                // soaking up minutes of output past their last hour.
-                var clock = GameClock.Instance;
-                clock?.SetGameTime(clock.GameTimeSeconds + step * clock.GameTimeScale);
-                DoTick(step);
-                remaining -= step;
+                while (remaining > 0)
+                {
+                    double step = Math.Min(stepSize, remaining);
+                    // The clock moves with the ticks, so contracts end on time rather than
+                    // soaking up minutes of output past their last hour.
+                    var clock = GameClock.Instance;
+                    clock?.SetGameTime(clock.GameTimeSeconds + step * clock.GameTimeScale);
+                    DoTick(step);
+                    remaining -= step;
+                }
+            }
+            finally
+            {
+                if (contracts != null) contracts.ShortfallPaused = false;
             }
         }
 

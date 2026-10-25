@@ -75,6 +75,56 @@ namespace IdlePowerGen.Economy
             return required <= 0 ? 1f : (float)Math.Min(1.0, _accumulatedWattSeconds / required);
         }
 
+        // ---- Shortfall countdown (contracts judged on average) ----
+        // A shortfall within the leeway goes unremarked. Past it, a countdown runs while the
+        // client is short. It holds, not resets, when the power comes back, and clears only
+        // after the client has been supplied for a good while in a row. When it runs out the
+        // client cancels.
+
+        // Game seconds of shortfall counted against the countdown.
+        public double ShortSeconds    { get; private set; }
+        // Game seconds supplied in a row since the last shortfall, towards clearing it.
+        public double SuppliedSeconds { get; private set; }
+        // Whether the last tick's supply fell past the leeway.
+        public bool   IsShort         { get; private set; }
+
+        public double CountdownSeconds   => Definition.shortfallCountdownMinutes * 60.0;
+        public double ForgivenAfterSeconds => Definition.shortfallForgivenAfterMinutes * 60.0;
+        public double MinimumWatts       => Definition.requiredWatts * (1.0 - Definition.shortfallLeeway);
+        public bool   CountdownRunning   => ShortSeconds > 0;
+        public double FailsInSeconds     => Math.Max(0, CountdownSeconds - ShortSeconds);
+        public double ClearsInSeconds    => Math.Max(0, ForgivenAfterSeconds - SuppliedSeconds);
+
+        // Counts a tick's supply against the countdown; true once it has run out. Game seconds,
+        // not contract seconds: the 2× boost speeds the job, not the client's patience.
+        public bool TrackShortfall(double watts, double deltaTime)
+        {
+            if (Definition.mustHoldOutput) return false;
+            // A hair of tolerance so float sums at exactly the minimum don't read as short.
+            IsShort = watts < MinimumWatts - 1e-6;
+            if (IsShort)
+            {
+                ShortSeconds += deltaTime;
+                SuppliedSeconds = 0;
+            }
+            else if (ShortSeconds > 0)
+            {
+                SuppliedSeconds += deltaTime;
+                if (SuppliedSeconds >= ForgivenAfterSeconds) ShortSeconds = SuppliedSeconds = 0;
+            }
+            return ShortSeconds >= CountdownSeconds;
+        }
+
+        // The client cancels after the countdown ran out. What they paid as the power arrived
+        // stays paid; the premium doesn't come, and the repute is lost as for any failure.
+        public void Cancel(CurrencyLedger ledger)
+        {
+            if (IsResolved) return;
+            IsResolved = true;
+            ledger.AddReputation(Definition.reputationOnFail);
+            EventBus.Publish(new ContractFailedEvent(this));
+        }
+
         // §5.1.6 — resolve pay and reputation, publish outcome event.
         public void Resolve(CurrencyLedger ledger, double eraBaseRate)
         {
@@ -124,6 +174,11 @@ namespace IdlePowerGen.Economy
         public void   SetAccumulatedFromSave(double v) => _accumulatedWattSeconds = v;
         public void   SetPaidFromSave(decimal v) => PaidSoFar = v;
         public void   SetProgressFromSave(double seconds) => ProgressSeconds = Math.Max(0, seconds);
+        public void   SetShortfallFromSave(double shortSeconds, double suppliedSeconds)
+        {
+            ShortSeconds    = Math.Max(0, shortSeconds);
+            SuppliedSeconds = Math.Max(0, suppliedSeconds);
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -153,6 +208,10 @@ namespace IdlePowerGen.Economy
 
         // Pennies paid on the last tick by clients paying as they go (not lump sums at the end).
         public decimal PaidLastTick { get; private set; }
+
+        // Set while catching up on time away: a client never cancels over a shortfall the
+        // player wasn't there to fix (bible §10.5), so the countdown neither runs nor clears.
+        public bool ShortfallPaused { get; set; }
 
         // Called every sim tick (1 Hz). outputWatts = total grid output at this moment.
         // Output is shared out oldest contract first, each taking at most what it asked
@@ -196,7 +255,12 @@ namespace IdlePowerGen.Economy
                 c.RecordOutput(share, served);
                 PaidLastTick += c.PayAsDelivered(share, served, ledger, baseRateFor(c.Definition));
 
-                if (c.IsDue)
+                if (!ShortfallPaused && c.TrackShortfall(share, deltaTime) && !c.IsDue)
+                {
+                    c.Cancel(ledger);
+                    ended.Add(c);
+                }
+                else if (c.IsDue)
                 {
                     c.Resolve(ledger, baseRateFor(c.Definition));
                     ended.Add(c);

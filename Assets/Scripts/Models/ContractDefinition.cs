@@ -20,6 +20,14 @@ namespace IdlePowerGen.Models
         [Tooltip("Output must stay at requiredWatts every tick; one dip breaks the contract off unpaid.")]
         public bool   mustHoldOutput;
 
+        [Header("Shortfall (contracts judged on average)")]
+        [Tooltip("Share of requiredWatts the works may fall short by without the client minding.")]
+        public float shortfallLeeway = 0.1f;
+        [Tooltip("Game minutes of shortfall, all told, before the client cancels.")]
+        public float shortfallCountdownMinutes = 30f;
+        [Tooltip("Game minutes fully supplied in a row that settle the client and clear the countdown.")]
+        public float shortfallForgivenAfterMinutes = 60f;
+
         [Header("Scheduling  §3.4")]
         public float availableStartHour; // in-game hour of day contract becomes available
         public float availableEndHour;   // expires if not accepted before this hour

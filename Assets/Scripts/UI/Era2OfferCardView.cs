@@ -73,7 +73,13 @@ namespace IdlePowerGen.UI
                         _statusLabel.text = "Every engagement is taken. Finish one first.";
                     else if (spare < Definition.requiredWatts)
                     {
-                        _statusLabel.text = $"Book it, though you'd be {NumberFormatter.FormatWatts(Definition.requiredWatts - System.Math.Max(0, spare))} short";
+                        string shortBy = NumberFormatter.FormatWatts(Definition.requiredWatts - System.Math.Max(0, spare));
+                        // Within the leeway the client won't mind; past it they'd cancel once
+                        // the countdown ran out, unless the works grows in time.
+                        bool tolerated = spare >= Definition.requiredWatts * (1.0 - Definition.shortfallLeeway);
+                        _statusLabel.text = tolerated
+                            ? $"Book it, though you'd be {shortBy} short"
+                            : $"Book it · {shortBy} short, they'd cancel in {Definition.shortfallCountdownMinutes:0} m";
                         _statusLabel.color = _cautionColour;
                     }
                     else

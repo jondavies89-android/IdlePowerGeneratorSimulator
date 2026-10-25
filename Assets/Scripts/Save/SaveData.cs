@@ -80,6 +80,10 @@ namespace IdlePowerGen.Save
             public string paidPennies;
             // v6: contract time served, in game seconds (contracts can run faster than the clock).
             public double progressSeconds;
+            // v7: the shortfall countdown, in game seconds: time short so far, and time
+            // supplied in a row towards clearing it.
+            public double shortSeconds;
+            public double suppliedSeconds;
         }
     }
 }

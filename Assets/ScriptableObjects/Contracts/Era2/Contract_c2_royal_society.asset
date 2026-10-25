@@ -20,6 +20,9 @@ MonoBehaviour:
   requiredWatts: 10000
   durationHours: 2
   mustHoldOutput: 0
+  shortfallLeeway: 0.1
+  shortfallCountdownMinutes: 30
+  shortfallForgivenAfterMinutes: 60
   availableStartHour: 18
   availableEndHour: 20
   requiredReputation: 10

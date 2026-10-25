@@ -1,3 +1,4 @@
+using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -27,8 +28,12 @@ namespace IdlePowerGen.UI
 
         public Economy.ContractInstance Contract { get; private set; }
 
+        private Color _stateColour;
+        private bool _stateColourKept;
+
         public void Bind(Economy.ContractInstance contract)
         {
+            if (!_stateColourKept) { _stateColour = _stateLabel.color; _stateColourKept = true; }
             Contract = contract;
             var def = contract.Definition;
             _titleLabel.text  = def.clientName;
@@ -60,17 +65,36 @@ namespace IdlePowerGen.UI
             _payLabel.text = $"paid {NumberFormatter.FormatPennies(Contract.PaidSoFar)} of " +
                              $"{NumberFormatter.FormatPennies(Controllers.Era2WorksController.Pay(def))} · " +
                              $"+{def.reputationOnSuccess:0.#} repute on finishing";
-            if (ratio >= 0.999f)
+            // The shortfall countdown outranks the running average: it is what can end the job.
+            if (Contract.IsShort)
+            {
+                _stateLabel.text = $"short of power · cancels in {Minutes(Contract.FailsInSeconds)}";
+                _stateLabel.color = _alarm;
+                _progressFill.color = _alarm;
+            }
+            else if (Contract.CountdownRunning)
+            {
+                // Same width as the red line it replaces, so it doesn't crowd the time left.
+                _stateLabel.text = $"held at {Minutes(Contract.FailsInSeconds)} · clears in {Minutes(Contract.ClearsInSeconds)}";
+                _stateLabel.color = _caution;
+                _progressFill.color = _caution;
+            }
+            else if (ratio >= 0.999f)
             {
                 _stateLabel.text = "holding";
+                _stateLabel.color = _stateColour;
                 _progressFill.color = _healthy;
             }
             else
             {
-                _stateLabel.text = ratio >= def.failThreshold ? $"{ratio:0%} supplied" : $"{ratio:0%} supplied · failing";
+                _stateLabel.text = $"{ratio:0%} supplied";
+                _stateLabel.color = _stateColour;
                 _progressFill.color = ratio >= HoldingRatio ? _healthy : ratio >= def.failThreshold ? _caution : _alarm;
             }
         }
+
+        // Game minutes, rounded up so the countdown reads "1 m" until it actually runs out.
+        private static string Minutes(double seconds) => $"{Math.Ceiling(seconds / 60.0):0} m";
 
         public static string Clock(double gameTime)
         {
