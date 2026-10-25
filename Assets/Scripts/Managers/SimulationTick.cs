@@ -84,7 +84,9 @@ namespace IdlePowerGen.Simulation
                 // one real-second tick covers GameTimeScale game seconds. Using the real delta
                 // left every contract at 1/60 of its target, i.e. always failed.
                 double gameDelta = delta * (GameClock.Instance != null ? GameClock.Instance.GameTimeScale : 1f);
-                ledger.Tick(Grid.TotalOutputWatts, gameDelta, gameTime, eco.Ledger, eco.ContractBaseRate);
+                ledger.Tick(Grid.TotalOutputWatts, gameDelta, gameTime, eco.Ledger, eco.ContractBaseRate,
+                            eco.ContractSpeed);
+                eco.TickContractBoost(delta);
                 delivered = ledger.DeliveredWatts;
 
                 // Whatever the engagements left goes to the street, where there is a street.

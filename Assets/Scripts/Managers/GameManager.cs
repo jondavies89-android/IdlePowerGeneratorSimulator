@@ -82,6 +82,28 @@ namespace IdlePowerGen.Managers
             return cfg != null ? cfg.contractBaseRate : 0.001;
         }
 
+        // ---- Contracts 2× boost ----
+        // Stands in for a rewarded ad in the published game: one tap (one ad) runs every
+        // engagement at double speed for a while. Fifteen minutes is the usual length of an
+        // idle game's ad boost, long enough to see a couple of engagements through.
+        public const double ContractBoostSpeed   = 2.0;
+        public const double ContractBoostSeconds = 15 * 60;
+
+        // Real seconds of boost left. Counted down by the sim tick, so catch-up after a short
+        // absence spends it too and a boost can't be banked by closing the tab.
+        public double ContractBoostSecondsLeft { get; private set; }
+        public bool   ContractBoostActive => ContractBoostSecondsLeft > 0;
+        public double ContractSpeed => ContractBoostActive ? ContractBoostSpeed : 1.0;
+
+        // Another tap tops it back up to the full length rather than stacking.
+        public void StartContractBoost() => ContractBoostSecondsLeft = ContractBoostSeconds;
+
+        public void TickContractBoost(double realSeconds) =>
+            ContractBoostSecondsLeft = System.Math.Max(0, ContractBoostSecondsLeft - realSeconds);
+
+        public void SetContractBoostFromSave(double seconds) =>
+            ContractBoostSecondsLeft = System.Math.Clamp(seconds, 0, ContractBoostSeconds);
+
         // What the street pays for a watt-hour of spare power at this time of day, in pennies.
         // averageDay prices a whole day at once (the daily shape averages ≈ 1), for offline pay.
         public double StreetPricePerWattHour(float era, double gameTimeSeconds, bool averageDay = false)

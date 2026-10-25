@@ -77,6 +77,7 @@ public static class Era1SceneBuilder
         go.AddComponent<IdlePowerGen.Managers.EraManager>();
         go.AddComponent<IdlePowerGen.Managers.UpgradeEffectApplier>();
         go.AddComponent<IdlePowerGen.Managers.Era1MilestoneTracker>();
+        go.AddComponent<IdlePowerGen.Managers.EraShortcutLink>();
     }
 
     // Todo §4.4 — the Inspector drag-and-drop, done from the asset folders.

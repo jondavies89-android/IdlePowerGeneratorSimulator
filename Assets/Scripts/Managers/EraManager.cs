@@ -39,7 +39,8 @@ namespace IdlePowerGen.Managers
                 AdvanceTo(3);
         }
 
-        private void AdvanceTo(int era)
+        // Public for the Era 2 shortcut link; play reaches it through contracts.
+        public void AdvanceTo(int era)
         {
             int from = (int)CurrentEra;
             CurrentEra = era;

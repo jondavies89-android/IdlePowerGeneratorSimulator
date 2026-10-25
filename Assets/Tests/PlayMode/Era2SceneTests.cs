@@ -544,6 +544,97 @@ namespace IdlePowerGen.Tests
             Assert.That(v3.contractBookedDays, Is.Not.Null);
         }
 
+        // --- 2× contracts boost ---
+
+        [TearDown]
+        public void EndBoost() => GM.SetContractBoostFromSave(0);
+
+        [UnityTest]
+        public IEnumerator TheBoostButtonDoublesContractSpeed()
+        {
+            yield return Load(Era2Save(0));
+            Click("ContractBoost");
+            Assert.That(GM.ContractSpeed, Is.EqualTo(2.0));
+        }
+
+        [UnityTest]
+        public IEnumerator TheBoostWearsOff()
+        {
+            yield return Load(Era2Save(0));
+            Click("ContractBoost");
+            GM.TickContractBoost(Managers.GameManager.ContractBoostSeconds);
+            Assert.That(GM.ContractSpeed, Is.EqualTo(1.0));
+        }
+
+        [UnityTest]
+        public IEnumerator ABoostedEngagementRunsAheadOfTheClock()
+        {
+            yield return Load(Era2Save(1000, 0, StartHour, (GeneratorType.SmallDynamo, 12)));
+            Works.Book(Contract("c2_street_lamps"));
+            Click("ContractBoost");
+            Time.timeScale = 0f; // no ticks but the one below
+            Simulation.SimulationTick.Instance.CatchUpOffline(1.0); // one real second: one game minute
+            Assert.That(GM.Contracts.ActiveContracts[0].ProgressSeconds, Is.EqualTo(2 * 60).Within(1e-6));
+        }
+
+        [UnityTest]
+        public IEnumerator TheBoostSurvivesSaveAndLoad()
+        {
+            yield return Load(Era2Save(0));
+            Click("ContractBoost");
+            Save.SaveManager.Instance.Save();
+            yield return Load(JsonUtility.FromJson<Save.SaveData>(File.ReadAllText(SavePath)));
+            Assert.That(GM.ContractBoostActive, Is.True);
+        }
+
+        [UnityTest]
+        public IEnumerator AnEngagementsProgressSurvivesSaveAndLoad()
+        {
+            yield return Load(Era2Save(1000, 0, StartHour, (GeneratorType.SmallDynamo, 12)));
+            Works.Book(Contract("c2_street_lamps"));
+            yield return Tick();
+            Time.timeScale = 0f;
+            double progress = GM.Contracts.ActiveContracts[0].ProgressSeconds;
+            Save.SaveManager.Instance.Save();
+            yield return Load(JsonUtility.FromJson<Save.SaveData>(File.ReadAllText(SavePath)));
+            Assert.That(GM.Contracts.ActiveContracts[0].ProgressSeconds, Is.EqualTo(progress));
+        }
+
+        [Test]
+        public void AV5SaveTakesItsEngagementsProgressFromTheClock()
+        {
+            var v5 = new Save.SaveData { version = 5, gameTimeSeconds = Day + 20 * Hour };
+            v5.activeContracts.Add(new Save.SaveData.ContractEntry { contractId = "c2_street_lamps", startGameTime = Day + 18 * Hour });
+            Save.SaveManager.Migrate(v5);
+            Assert.That(v5.activeContracts[0].progressSeconds, Is.EqualTo(2 * Hour));
+        }
+
+        // --- The ?era=2 shortcut ---
+
+        [UnityTest]
+        public IEnumerator TheEra2ShortcutOpensTheOffice()
+        {
+            Save.SaveManager.Instance.StartAtEra2();
+            yield return null;
+            Assert.That(GameObject.Find("Era2Screen"), Is.Not.Null);
+        }
+
+        [UnityTest]
+        public IEnumerator TheEra2ShortcutStartsWithAKilowattWorkshop()
+        {
+            Save.SaveManager.Instance.StartAtEra2();
+            yield return Tick();
+            Assert.That(Simulation.SimulationTick.Instance.Grid.TotalOutputWatts, Is.GreaterThanOrEqualTo(1000));
+        }
+
+        [UnityTest]
+        public IEnumerator TheEra2ShortcutReplacesTheSave()
+        {
+            yield return Load(Era2Save(5000, 20));
+            Save.SaveManager.Instance.StartAtEra2();
+            Assert.That(GM.Ledger.Reputation, Is.EqualTo(0f));
+        }
+
         [Test]
         public void AV4SaveOwesItsEngagementsTheirWholeFee()
         {

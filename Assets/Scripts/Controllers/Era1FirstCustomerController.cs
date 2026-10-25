@@ -58,17 +58,7 @@ namespace IdlePowerGen.Controllers
         }
 
         // Fraction of the contract hour that has passed.
-        public float Progress
-        {
-            get
-            {
-                var c = ActiveContract;
-                var clock = Utils.GameClock.Instance;
-                if (c == null || clock == null) return 0f;
-                return Mathf.Clamp01((float)((clock.GameTimeSeconds - c.StartGameTime)
-                                             / (c.EndGameTime - c.StartGameTime)));
-            }
-        }
+        public float Progress => ActiveContract?.Progress01 ?? 0f;
 
         public bool Accept()
         {

@@ -55,6 +55,7 @@ public static class Era2ScreenBuilder
         CreateHeader(column, controllers);
         CreateStats(column, controllers);
         CreateDayBar(column);
+        CreateContractBoost(column);
         CreatePages(column, controllers, toast);
 
         root.gameObject.SetActive(false);
@@ -195,6 +196,25 @@ public static class Era2ScreenBuilder
 
         var view = row.gameObject.AddComponent<Era2DayBarView>();
         Wire(view, ("_marker", marker), ("_clockLabel", clock));
+    }
+
+    // Above the tabs so it shows on every page; 44 tall, the minimum tap target.
+    private static void CreateContractBoost(Transform parent)
+    {
+        var rt = Rect("ContractBoost", parent);
+        Fixed(rt, 44);
+        var image = AddImage(rt, Era1Theme.PanelSprite, Era2Theme.PanelRaised);
+        image.type = Image.Type.Sliced;
+        var button = rt.gameObject.AddComponent<Button>();
+        button.targetGraphic = image;
+        rt.gameObject.AddComponent<PressFeedback>();
+        var label = Text(rt, "Label", "Contracts complete 2× faster", 16, Era2Theme.Purse, TextAlignmentOptions.Center);
+        Stretch(label.rectTransform);
+
+        var view = rt.gameObject.AddComponent<Era2ContractBoostView>();
+        Wire(view, ("_button", button), ("_label", label), ("_background", image));
+        SetColours(view, ("_idle", Era2Theme.PanelRaised), ("_active", Era2Theme.BoostPanel),
+                         ("_idleText", Era2Theme.Purse), ("_activeText", Era2Theme.Healthy));
     }
 
     // ---- Tabs and their pages ----

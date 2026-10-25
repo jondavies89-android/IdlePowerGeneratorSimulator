@@ -213,7 +213,59 @@ namespace IdlePowerGen.Tests
             var ledger = new ContractLedger();
             ledger.TryAccept(Contract("hotel", 1000, 0, 24, hours: 8), 0);
             ledger.Tick(1500, Hour, Hour, new CurrencyLedger(), 0.4);
-            Assert.That(ledger.ActiveContracts[0].RatioSoFar(Hour), Is.EqualTo(1f).Within(1e-6));
+            Assert.That(ledger.ActiveContracts[0].RatioSoFar(), Is.EqualTo(1f).Within(1e-6));
+        }
+
+        [Test]
+        public void AKeptEngagementEarnsItsWholeRepute()
+        {
+            var ledger = new ContractLedger();
+            var wallet = new CurrencyLedger();
+            var def = Contract("hotel", 1200, 0, 24, hours: 2);
+            def.reputationOnSuccess = 1f;
+            ledger.TryAccept(def, 0);
+            ledger.Tick(1100, 2 * Hour, 2 * Hour, wallet, _ => 0.4); // 92 % supplied: kept, a little short
+            Assert.That(wallet.Reputation, Is.EqualTo(1f));
+        }
+
+        [Test]
+        public void TheLastStepDoesNotCreditWattsPastTheEnd()
+        {
+            var ledger = new ContractLedger();
+            ledger.TryAccept(Contract("lamps", 500, 0, 24, hours: 2), 0);
+            var c = ledger.ActiveContracts[0];
+            ledger.Tick(500, 3 * Hour, 3 * Hour, new CurrencyLedger(), 0.4);
+            Assert.That(c.AccumulatedWattSeconds, Is.EqualTo(500 * 2 * Hour));
+        }
+
+        // --- 2× contracts boost ---
+
+        [Test]
+        public void AtDoubleSpeedATwoHourContractEndsInOne()
+        {
+            var ledger = new ContractLedger();
+            ledger.TryAccept(Contract("lamps", 500, 0, 24, hours: 2), 0);
+            ledger.Tick(500, Hour, Hour, new CurrencyLedger(), _ => 0.4, contractSpeed: 2);
+            Assert.That(ledger.ActiveContracts, Is.Empty);
+        }
+
+        [Test]
+        public void AtDoubleSpeedTheFeeIsUnchanged()
+        {
+            var ledger = new ContractLedger();
+            var wallet = new CurrencyLedger();
+            ledger.TryAccept(Contract("lamps", 500, 0, 24, hours: 2), 0);
+            ledger.Tick(500, Hour, Hour, wallet, _ => 0.4, contractSpeed: 2);
+            Assert.That(wallet.Pennies, Is.EqualTo(400m)); // 2 h × 500 W × 0.4, in half the time
+        }
+
+        [Test]
+        public void AtDoubleSpeedAContractIsStillFullySupplied()
+        {
+            var ledger = new ContractLedger();
+            ledger.TryAccept(Contract("lamps", 500, 0, 24, hours: 2), 0);
+            ledger.Tick(500, 0.5 * Hour, 0.5 * Hour, new CurrencyLedger(), _ => 0.4, contractSpeed: 2);
+            Assert.That(ledger.ActiveContracts[0].RatioSoFar(), Is.EqualTo(1f).Within(1e-6));
         }
 
         // --- Coal hopper ---

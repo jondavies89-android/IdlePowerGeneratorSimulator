@@ -17,7 +17,8 @@ namespace IdlePowerGen.Save
         // v2 → v3: upgrades have levels; the Era 1 tree and its machines were replaced.
         // v3 → v4: the Era 2 works (start day, coal hopper, contracts booked per day).
         // v4 → v5: engagements pay as they run, so each records what it has paid so far.
-        public const int CurrentVersion = 5;
+        // v5 → v6: contracts keep their own progress (for the 2× boost); the boost's time left.
+        public const int CurrentVersion = 6;
 
         // Tests point this at a scratch file so they never touch a real player's save.
         public static string SaveFileName = "save.json";
@@ -50,6 +51,7 @@ namespace IdlePowerGen.Save
                                     ? new List<string>(Managers.Era1MilestoneTracker.Instance.Reached)
                                     : new List<string>(),
                 lifetimeMWh       = 0, // updated by stats tracker in later eras
+                contractBoostSecondsLeft = gm.ContractBoostSecondsLeft,
             };
 
             foreach (var (id, level) in gm.Upgrades.Levels)
@@ -86,6 +88,7 @@ namespace IdlePowerGen.Save
                     startGameTime          = contract.StartGameTime,
                     accumulatedWattSeconds = contract.AccumulatedWattSeconds,
                     paidPennies            = contract.PaidSoFar.ToString(CultureInfo.InvariantCulture),
+                    progressSeconds        = contract.ProgressSeconds,
                 });
             }
 
@@ -100,6 +103,37 @@ namespace IdlePowerGen.Save
             if (File.Exists(SavePath)) File.Delete(SavePath);
             PersistentStorage.Flush();
             ApplyToGame(new SaveData { pennies = "0", currentEra = 1f });
+        }
+
+        // The ?era=2 link (EraShortcutLink): wipes the save and starts a fresh run at the
+        // opening of Era 2, with the workshop a player has when the neighbour pays up. The
+        // neighbour wants 1 kW held, and only a water wheel on full belts (50 W × 2⁵) gets
+        // there, so that is the workshop; the crank and flywheel are a middling build.
+        private static readonly (string id, int level)[] Era1FinishedWorkshop =
+        {
+            (Data.Era1Data.BetterCrankId, 5), (Data.Era1Data.IronFlywheelId, 3), (Data.Era1Data.BearingsId, 1),
+            (Data.Era1Data.MagnetsId, 1), (Data.Era1Data.WaterWheelId, 1), (Data.Era1Data.BeltsGearingId, 5),
+        };
+
+        public void StartAtEra2()
+        {
+            if (File.Exists(SavePath)) File.Delete(SavePath);
+            var data = new SaveData
+            {
+                version = CurrentVersion,
+                saveTimestampUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                pennies = "12", // Mr Hale's shilling
+                currentEra = 1f,
+            };
+            foreach (var (id, level) in Era1FinishedWorkshop)
+                data.upgradeLevels.Add(new SaveData.UpgradeLevelEntry { upgradeId = id, level = level });
+            foreach (var m in Data.Era1Data.Milestones) data.reachedMilestones.Add(m.Id);
+
+            ApplyToGame(data);
+            // Advancing (rather than loading an Era 2 save) runs the era's own start: the
+            // title card, the clock wound on to the evening, the hopper filled.
+            Managers.EraManager.Instance?.AdvanceTo(2);
+            Save();
         }
 
         // ---- Load ----
@@ -130,6 +164,16 @@ namespace IdlePowerGen.Save
             if (data.version < 3) MigrateV2ToV3(data);
             if (data.version < 4) MigrateV3ToV4(data);
             if (data.version < 5) MigrateV4ToV5(data);
+            if (data.version < 6) MigrateV5ToV6(data);
+        }
+
+        // Before v6 a contract's progress was simply the clock since it started.
+        private static void MigrateV5ToV6(SaveData data)
+        {
+            foreach (var c in data.activeContracts ?? new List<SaveData.ContractEntry>())
+                c.progressSeconds = Math.Max(0, data.gameTimeSeconds - c.startGameTime);
+            data.contractBoostSecondsLeft = 0;
+            data.version = 6;
         }
 
         // A v4 engagement was paid nothing until it ended, so all of its fee is still owed.
@@ -242,8 +286,10 @@ namespace IdlePowerGen.Save
                 instance.SetAccumulatedFromSave(entry.accumulatedWattSeconds);
                 if (decimal.TryParse(entry.paidPennies, NumberStyles.Number, CultureInfo.InvariantCulture, out var paid))
                     instance.SetPaidFromSave(paid);
+                instance.SetProgressFromSave(entry.progressSeconds);
                 gm.Contracts.AddFromSave(instance);
             }
+            gm.SetContractBoostFromSave(data.contractBoostSecondsLeft);
 
             // Upgrade effects and crank value are runtime state derived from the purchased
             // set; their owners rebuild them on this event.

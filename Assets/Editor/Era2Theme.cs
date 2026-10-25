@@ -17,6 +17,7 @@ public static class Era2Theme
     public static readonly Color Running     = Hex("#E07050"); // coral: what the works costs to run
     public static readonly Color Track       = Hex("#120B07"); // empty part of a bar
     public static readonly Color OwnedPanel  = Hex("#3A2A10"); // a bought improvement: gilded, not lit
+    public static readonly Color BoostPanel  = Hex("#1A2612"); // the 2× boost running: a green-lit plaque
     public static readonly Color Overlay     = new(0.10f, 0.06f, 0.04f, 0.92f);
 
     // Colour grammar (CLAUDE.md), todo §7 shades.

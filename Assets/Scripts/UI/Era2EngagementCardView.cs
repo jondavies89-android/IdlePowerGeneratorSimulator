@@ -33,7 +33,6 @@ namespace IdlePowerGen.UI
             var def = contract.Definition;
             _titleLabel.text  = def.clientName;
             _bodyLabel.text   = def.description;
-            _windowLabel.text = $"{Clock(contract.StartGameTime)} → {Clock(contract.EndGameTime)}";
             _needLabel.text   = $"need {NumberFormatter.FormatWatts(def.requiredWatts)}";
             Refresh();
         }
@@ -44,14 +43,17 @@ namespace IdlePowerGen.UI
         {
             if (Contract == null) return;
             double now = Controllers.Era2WorksController.Now;
-            float span = (float)(Contract.EndGameTime - Contract.StartGameTime);
-            _progressFill.fillAmount = span <= 0 ? 1f : Mathf.Clamp01((float)(now - Contract.StartGameTime) / span);
+            _progressFill.fillAmount = Contract.Progress01;
 
-            double left = System.Math.Max(0, Contract.EndGameTime - now);
+            // Clock time left at the current speed, so the 2× boost pulls the end in.
+            double speed = Managers.GameManager.Instance != null ? Managers.GameManager.Instance.ContractSpeed : 1.0;
+            double left = Contract.SecondsLeft / speed;
+            _windowLabel.text = $"{Clock(Contract.StartGameTime)} → {Clock(now + left)}";
             int hours = (int)(left / 3600), minutes = (int)(left % 3600 / 60);
-            _timeLabel.text = hours > 0 ? $"{hours} h {minutes:00} m left" : $"{minutes} m left";
+            _timeLabel.text = (hours > 0 ? $"{hours} h {minutes:00} m left" : $"{minutes} m left") +
+                              (speed > 1 ? $" · {speed:0}× faster" : string.Empty);
 
-            float ratio = Contract.RatioSoFar(now);
+            float ratio = Contract.RatioSoFar();
             var def = Contract.Definition;
 
             // The client pays as the power arrives; any premium and the repute wait for the end.

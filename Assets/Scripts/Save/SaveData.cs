@@ -40,6 +40,9 @@ namespace IdlePowerGen.Save
         public double coalLevel;           // pennies' worth of coal in the hopper
         public List<BookedDayEntry> contractBookedDays = new();
 
+        // --- Boosts (v6) ---
+        public double contractBoostSecondsLeft; // real seconds of the 2× contracts boost
+
         // --- Lifetime stats (prestige §12) ---
         public double lifetimeMWh;
         public int    engineeringXP;
@@ -75,6 +78,8 @@ namespace IdlePowerGen.Save
             public double accumulatedWattSeconds;
             // v5: pennies already paid while it ran (decimal as string, like the purse).
             public string paidPennies;
+            // v6: contract time served, in game seconds (contracts can run faster than the clock).
+            public double progressSeconds;
         }
     }
 }

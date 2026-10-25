@@ -34,7 +34,7 @@ namespace IdlePowerGen.UI
         {
             if (!IsEra2Contract(e.Contract)) return;
             var def = e.Contract.Definition;
-            float rep = def.reputationOnSuccess * System.Math.Min(1f, e.Contract.FulfillmentRatio());
+            float rep = def.reputationOnSuccess; // a kept engagement earns all of it
             // Most of the fee came in while it ran; the toast gives the whole of it.
             _toast.Show($"{def.clientName} paid {NumberFormatter.FormatPennies(e.PenniesEarned)} in all  ·  +{rep:0.#} repute");
         }
