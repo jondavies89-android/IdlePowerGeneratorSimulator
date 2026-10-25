@@ -43,6 +43,16 @@ namespace IdlePowerGen.Save
         // --- Boosts (v6) ---
         public double contractBoostSecondsLeft; // real seconds of the 2× contracts boost
 
+        // --- Eras 3–5 (v8) ---
+        public double researchPoints;      // bible §13; kept from era to era
+        public long   eraStartDay;         // game day the current era (3 on) began; its date counts from it
+        public List<LoadAreaEntry> loadAreas = new(); // districts, feeders, cities
+        public List<UnitEntry>     units     = new(); // Era 4–5 generating units, one each
+        public double coalStockTonnes;     // Era 4–5 coal stockpile
+        public float  coalTargetDays;      // the fuel manager's target cover, once introduced
+        public List<string> introducedScores = new(); // preparedness scores on the dashboard
+        public bool   capstoneOffered;     // the current era's goal was reached
+
         // --- Lifetime stats (prestige §12) ---
         public double lifetimeMWh;
         public int    engineeringXP;
@@ -68,6 +78,27 @@ namespace IdlePowerGen.Save
         {
             public string generatorType; // maps to GeneratorType enum name
             public int    count;
+        }
+
+        [Serializable]
+        public class LoadAreaEntry
+        {
+            public string id;
+            public bool   connected;
+            public int    copperLevel;    // Era 3: heavier mains to this district
+            public int    capacitorBanks; // Era 5: banks fitted at this city
+            public bool   shed;           // Era 4–5: disconnected by hand to save the grid
+        }
+
+        [Serializable]
+        public class UnitEntry
+        {
+            public string generatorType;  // GeneratorType name
+            public int    number;         // "UNIT 3" on the board
+            public string state;          // GridUnit.UnitState name
+            public double hoursSinceService;
+            public double hoursLeft;      // in service or under repair
+            public bool   blackStart;     // fitted with black-start capability (Era 5)
         }
 
         [Serializable]

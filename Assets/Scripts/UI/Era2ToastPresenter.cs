@@ -27,8 +27,9 @@ namespace IdlePowerGen.UI
             EventBus.Unsubscribe<OfflineProgressEvent>(OnOffline);
         }
 
+        // Era 2's engagements and every later era's contracts (Era 1's neighbour has his own).
         private static bool IsEra2Contract(Economy.ContractInstance c) =>
-            c.Definition.minEra == Data.Era2Data.EraNumber;
+            c.Definition.minEra >= Data.Era2Data.EraNumber;
 
         private void OnCompleted(ContractCompletedEvent e)
         {
@@ -36,7 +37,7 @@ namespace IdlePowerGen.UI
             var def = e.Contract.Definition;
             float rep = def.reputationOnSuccess; // a kept engagement earns all of it
             // Most of the fee came in while it ran; the toast gives the whole of it.
-            _toast.Show($"{def.clientName} paid {NumberFormatter.FormatPennies(e.PenniesEarned)} in all  ·  +{rep:0.#} repute");
+            _toast.Show($"{def.clientName} paid {Managers.Money.Format(e.PenniesEarned, def.minEra)} in all  ·  +{rep:0.#} repute");
         }
 
         private void OnFailed(ContractFailedEvent e)
@@ -55,7 +56,7 @@ namespace IdlePowerGen.UI
         {
             if (e.SecondsAway < MinSecondsAwayWorthMentioning || e.PenniesEarned <= 0) return;
             string flavor = string.IsNullOrEmpty(e.FlavorText) ? "While you were away" : e.FlavorText;
-            _toast.Show($"{flavor}\nYour customers paid {NumberFormatter.FormatPennies(e.PenniesEarned)}");
+            _toast.Show($"{flavor}\nYour customers paid {Managers.Money.Format(e.PenniesEarned)}");
         }
     }
 }

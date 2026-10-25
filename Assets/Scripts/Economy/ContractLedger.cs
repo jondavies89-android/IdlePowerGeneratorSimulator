@@ -232,8 +232,11 @@ namespace IdlePowerGen.Economy
             PaidLastTick = 0;
             var ended = new List<ContractInstance>();
 
-            foreach (var c in _active)
+            // A copy: resolving a contract can end the era, and the era change drops the old
+            // era's contracts from _active while this loop is still going.
+            foreach (var c in _active.ToArray())
             {
+                if (!_active.Contains(c)) continue;
                 double share = Math.Min(c.Definition.requiredWatts, remaining);
                 remaining -= share;
 
@@ -272,6 +275,9 @@ namespace IdlePowerGen.Economy
         }
 
         public void AddFromSave(ContractInstance instance) => _active.Add(instance);
+
+        // Drops running contracts without resolving them (no pay, no repute either way).
+        public void RemoveWhere(Predicate<ContractInstance> match) => _active.RemoveAll(match);
         public void ClearActive() => _active.Clear();
     }
 }

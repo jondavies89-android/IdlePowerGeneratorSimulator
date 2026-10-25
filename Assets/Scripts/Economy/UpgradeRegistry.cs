@@ -30,13 +30,17 @@ namespace IdlePowerGen.Economy
         public double NextCostPennies(UpgradeDefinition def) =>
             def.costPennies * Math.Pow(Growth(def), Level(def.upgradeId));
 
+        public double NextCostResearch(UpgradeDefinition def) =>
+            def.costResearch * Math.Pow(Growth(def), Level(def.upgradeId));
+
         // Assets made before levels existed deserialise growth as 0.
         private static double Growth(UpgradeDefinition def) => def.costGrowth > 0 ? def.costGrowth : 1.0;
 
         public bool CanAfford(UpgradeDefinition def) =>
-            _ledger.Joules        >= NextCostJoules(def)
-            && _ledger.Pennies    >= (decimal)NextCostPennies(def)
-            && _ledger.Reputation >= def.requiredReputation;
+            _ledger.Joules           >= NextCostJoules(def)
+            && _ledger.Pennies       >= (decimal)NextCostPennies(def)
+            && _ledger.ResearchPoints >= NextCostResearch(def)
+            && _ledger.Reputation    >= def.requiredReputation;
 
         public bool PrerequisitesMet(UpgradeDefinition def)
         {
@@ -54,10 +58,12 @@ namespace IdlePowerGen.Economy
         {
             if (!IsAvailable(def)) return false;
 
-            double joules  = NextCostJoules(def);
-            double pennies = NextCostPennies(def);
-            if (joules  > 0) _ledger.SpendJoules(joules);
-            if (pennies > 0) _ledger.SpendPennies((decimal)pennies);
+            double joules   = NextCostJoules(def);
+            double pennies  = NextCostPennies(def);
+            double research = NextCostResearch(def);
+            if (joules   > 0) _ledger.SpendJoules(joules);
+            if (pennies  > 0) _ledger.SpendPennies((decimal)pennies);
+            if (research > 0) _ledger.SpendResearch(research);
             // Reputation is a gate, not a cost — not deducted on purchase.
 
             int level = Level(def.upgradeId) + 1;

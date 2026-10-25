@@ -23,6 +23,28 @@ namespace IdlePowerGen.Controllers
 
         private static bool PaidInPennies(GeneratorDefinition def) => def.baseCostPennies > 0;
 
+        private void Awake()  => EventBus.Subscribe<EraAdvancedEvent>(OnEraAdvanced);
+        private void OnDestroy() => EventBus.Unsubscribe<EraAdvancedEvent>(OnEraAdvanced);
+
+        // The old era's machines become part of the inherited station (PowerGrid.InheritedWatts).
+        private void OnEraAdvanced(EraAdvancedEvent e)
+        {
+            if (e.ToEra >= 3) RetireBefore(e.ToEra);
+        }
+
+        public void RetireBefore(int era)
+        {
+            var grid = Grid;
+            if (grid != null)
+                foreach (var g in new List<Simulation.GeneratorInstance>(grid.Generators))
+                    if (g.Definition.minEra < era) grid.RemoveGenerator(g);
+
+            var gm = Managers.GameManager.Instance;
+            if (gm == null) return;
+            foreach (var def in gm.GeneratorCatalogue)
+                if (def.minEra < era) _owned.Remove(def.generatorType);
+        }
+
         // Cost of the next unit of this generator type, in its own currency.
         public double NextCost(GeneratorDefinition def)
         {

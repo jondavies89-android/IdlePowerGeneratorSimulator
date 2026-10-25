@@ -30,4 +30,6 @@ MonoBehaviour:
   - Hands & Water
   - Steam
   - Trade
+  researchBranchNames: []
+  tariffPenniesPerWattHour: 0
   offlineFlavorText: Your apprentice kept the fires burning while you were away.

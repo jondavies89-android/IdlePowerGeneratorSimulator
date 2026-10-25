@@ -40,6 +40,15 @@ namespace IdlePowerGen
         public WorksNoticeEvent(string message) { Message = message; }
     }
 
+    // --- Eras 3–5 ---
+
+    // The era's output goal is reached: its capstone can be taken (and the era closed).
+    public readonly struct CapstoneReadyEvent
+    {
+        public readonly int Era;
+        public CapstoneReadyEvent(int era) { Era = era; }
+    }
+
     // --- Milestones ---
 
     public readonly struct MilestoneReachedEvent

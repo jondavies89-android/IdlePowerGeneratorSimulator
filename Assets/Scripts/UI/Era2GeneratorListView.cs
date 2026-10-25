@@ -6,8 +6,8 @@ using IdlePowerGen.Utils;
 
 namespace IdlePowerGen.UI
 {
-    // The works' machines: the old workshop from Era 1 first (its crank still turns), then
-    // each Era 2 machine once it is unlocked, and the running costs of the lot.
+    // The works' machines: the old workshop from Era 1 first (a steady kilowatt), then each
+    // Era 2 machine once it is unlocked, and the running costs of the lot.
     public class Era2GeneratorListView : MonoBehaviour
     {
         [SerializeField] private Controllers.Era2GeneratorController _generators;
@@ -51,13 +51,8 @@ namespace IdlePowerGen.UI
 
             var sim = Simulation.SimulationTick.Instance;
             if (sim != null)
-            {
-                // The crank's flywheel and the Era 1 water wheel feed the grid alongside the
-                // new machines; this is what they give, before Era 2's machines.
-                double workshop = (sim.Flywheel.CurrentOutputWatts + sim.WaterWheel.CurrentOutputWatts)
-                                  * sim.Grid.GlobalOutputMultiplier;
-                _workshopOutputLabel.text = NumberFormatter.FormatWatts(workshop);
-            }
+                // The Era 1 workshop, carried over as one steady kilowatt (the inherited station).
+                _workshopOutputLabel.text = NumberFormatter.FormatWatts(sim.Grid.InheritedWatts);
 
             double wages = _works.WagesPerHour, coal = _works.CoalBurnPerHour;
             _runningCostsLabel.text = wages + coal <= 0 ? "Nothing to pay out yet."

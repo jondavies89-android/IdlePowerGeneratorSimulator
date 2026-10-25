@@ -38,6 +38,15 @@ public static class BuildScript
         AssetDatabase.SaveAssets();
     }
 
+    // Every era's ScriptableObjects, then the scene, in order (the scene wires the assets).
+    [MenuItem("IdlePowerGen/Build/All Content")]
+    public static void BuildContent()
+    {
+        Era2AssetBuilder.Build();
+        Era3AssetBuilder.Build();
+        Era1SceneBuilder.Build();
+    }
+
     [MenuItem("IdlePowerGen/Build/Web (WebGL)")]
     public static void BuildWebGL() =>
         Build(BuildTarget.WebGL, GetArg("-customBuildPath") ?? DefaultWebGLPath);

@@ -20,6 +20,8 @@ namespace IdlePowerGen.UI
         [SerializeField] private TMP_Text _headingTemplate; // cloned for each branch's heading
         [SerializeField] private UpgradeCardView _detail;
         [SerializeField] private int _era = 2;
+        // The era's research nodes rather than its purchases (Era 3 on).
+        [SerializeField] private bool _research;
         [SerializeField] private Color _line      = new(0.35f, 0.27f, 0.19f);
         [SerializeField] private Color _ownedLine = new(0.54f, 0.42f, 0.23f);
 
@@ -58,10 +60,11 @@ namespace IdlePowerGen.UI
             var gm = Managers.GameManager.Instance;
             if (gm == null) return;
 
-            var defs = gm.UpgradeCatalogue.Where(u => Mathf.Max(1, u.minEra) == _era).ToList();
+            var defs = gm.UpgradeCatalogue.Where(u => Mathf.Max(1, u.minEra) == _era && u.isResearch == _research).ToList();
             if (defs.Count == 0) return;
 
-            var names = gm.GetEraConfig(_era)?.upgradeBranchNames;
+            var cfg = gm.GetEraConfig(_era);
+            var names = _research ? cfg?.researchBranchNames : cfg?.upgradeBranchNames;
             _branches = Mathf.Max(defs.Max(d => d.treeBranch) + 1, names?.Length ?? 0);
             int rows = defs.Max(d => d.treeRow) + 1;
 
@@ -167,8 +170,11 @@ namespace IdlePowerGen.UI
                 ?? _nodes.FirstOrDefault()?.Definition;
         }
 
-        private static double Cost(UpgradeDefinition d) =>
-            Managers.GameManager.Instance.Upgrades.NextCostPennies(d) + Managers.GameManager.Instance.Upgrades.NextCostJoules(d);
+        private static double Cost(UpgradeDefinition d)
+        {
+            var u = Managers.GameManager.Instance.Upgrades;
+            return u.NextCostPennies(d) + u.NextCostJoules(d) + u.NextCostResearch(d);
+        }
 
         public void Select(UpgradeDefinition def)
         {

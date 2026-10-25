@@ -71,15 +71,13 @@ namespace IdlePowerGen.UI
                     : registry.CanAfford(Definition) ? State.Affordable
                     : State.Open;
 
-            string cost = Definition.costPennies > 0
-                ? NumberFormatter.FormatPennies((decimal)registry.NextCostPennies(Definition))
-                : NumberFormatter.FormatJoules(registry.NextCostJoules(Definition));
+            string cost = UpgradeCardView.PriceText(Definition);
             string levels = Definition.maxLevel > 1 ? $"{level}/{Definition.maxLevel}" : null;
 
             switch (Current)
             {
                 case State.Owned:
-                    _costLabel.text = levels ?? "Bought";
+                    _costLabel.text = levels ?? (Definition.isResearch ? "Known" : "Bought");
                     _costLabel.color = _achievement;
                     _nameLabel.color = _achievement;
                     _background.color = _owned;

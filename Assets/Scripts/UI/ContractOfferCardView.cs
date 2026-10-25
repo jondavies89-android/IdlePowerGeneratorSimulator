@@ -8,7 +8,7 @@ namespace IdlePowerGen.UI
 {
     // One client on the board. Tapping the card books it. Clients outside their hours are
     // shown dimmed with when they'll ask, so the day's shape is visible ahead of time.
-    public class Era2OfferCardView : MonoBehaviour
+    public class ContractOfferCardView : MonoBehaviour
     {
         [SerializeField] private TMP_Text _titleLabel;
         [SerializeField] private TMP_Text _bodyLabel;
@@ -24,12 +24,12 @@ namespace IdlePowerGen.UI
 
         public enum State { Hidden, Offered, Later, Locked }
 
-        private Controllers.Era2WorksController _works;
+        private Controllers.ContractDesk _works;
         public ContractDefinition Definition { get; private set; }
         public State Current { get; private set; }
         public float HoursUntilOpen { get; private set; }
 
-        public void Bind(ContractDefinition def, Controllers.Era2WorksController works)
+        public void Bind(ContractDefinition def, Controllers.ContractDesk works)
         {
             Definition = def;
             _works = works;
@@ -37,7 +37,7 @@ namespace IdlePowerGen.UI
             _bodyLabel.text  = def.description;
             _detailLabel.text =
                 $"{NumberFormatter.FormatWatts(def.requiredWatts)} for {def.durationHours:0.#} hours · " +
-                $"pays {NumberFormatter.FormatPennies(Controllers.Era2WorksController.Pay(def))} · " +
+                $"pays {Managers.Money.Format(Controllers.ContractDesk.Pay(def), works.EraNumber)} · " +
                 $"+{def.reputationOnSuccess:0.#} repute";
             if (_badge != null) _badge.SetActive(def.tier == ContractTier.Reputation);
             _button.onClick.AddListener(() => _works.Book(Definition));
@@ -47,7 +47,7 @@ namespace IdlePowerGen.UI
         public void Evaluate(bool showLocked)
         {
             var gm = Managers.GameManager.Instance;
-            double now = Controllers.Era2WorksController.Now;
+            double now = Controllers.ContractDesk.Now;
             float hour = Economy.ContractBoard.HourOf(now);
             HoursUntilOpen = Economy.ContractBoard.HoursUntilOpen(Definition, hour);
 
@@ -68,7 +68,7 @@ namespace IdlePowerGen.UI
             switch (Current)
             {
                 case State.Offered:
-                    double spare = Controllers.Era2WorksController.CapacityWatts - _works.CommittedWatts;
+                    double spare = _works.SpareForContracts;
                     if (!_works.HasFreeSlot)
                         _statusLabel.text = "Every engagement is taken. Finish one first.";
                     else if (spare < Definition.requiredWatts)

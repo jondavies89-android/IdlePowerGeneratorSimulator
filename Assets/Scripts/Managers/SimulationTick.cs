@@ -37,13 +37,23 @@ namespace IdlePowerGen.Simulation
             Grid.AddSource(WaterWheel);
         }
 
+        // At the DEV strip's top speed a frame holds ~17 ticks; past this many the frame gives
+        // up the backlog rather than falling further behind each frame.
+        private const int MaxTicksPerFrame = 200;
+
+        // Held while a minigame runs on its own clock.
+        public bool Paused { get; set; }
+
         private void Update()
         {
-            _accumulator += Time.deltaTime;
+            if (Paused) return;
+            _accumulator += Time.deltaTime * DevTime.Multiplier;
+            int ticks = 0;
             while (_accumulator >= TickInterval)
             {
                 _accumulator -= TickInterval;
                 DoTick(TickInterval);
+                if (++ticks >= MaxTicksPerFrame) { _accumulator = 0f; break; }
             }
         }
 
@@ -94,8 +104,11 @@ namespace IdlePowerGen.Simulation
                 // left every contract at 1/60 of its target, i.e. always failed.
                 var clock = GameClock.Instance;
                 double gameDelta = delta * (clock != null ? clock.GameTimeScale : 1f);
-                ledger.Tick(Grid.TotalOutputWatts, gameDelta, gameTime, eco.Ledger, eco.ContractBaseRate);
-                delivered = ledger.DeliveredWatts;
+                // From Era 3 a contract client is at the far end of a line, so it gets what
+                // survives the losses; the era's works shares out what the contracts leave.
+                double contractSupply = Grid.TotalOutputWatts * eco.ContractSupplyFactor;
+                ledger.Tick(contractSupply, gameDelta, gameTime, eco.Ledger, eco.ContractBaseRate);
+                delivered = eco.ContractSupplyFactor > 0 ? ledger.DeliveredWatts / eco.ContractSupplyFactor : 0;
 
                 // Whatever the engagements left goes to the street, where there is a street.
                 // At the unboosted pace: under the 2× boost the clock runs double, and each

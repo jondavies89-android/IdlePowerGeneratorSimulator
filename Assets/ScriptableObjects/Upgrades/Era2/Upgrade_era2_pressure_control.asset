@@ -18,7 +18,9 @@ MonoBehaviour:
   minEra: 2
   costJoules: 0
   costPennies: 6000
+  costResearch: 0
   costGrowth: 1
+  isResearch: 0
   maxLevel: 1
   requiredReputation: 0
   effect: 11

@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a8f973e04dbf78469f34c18f32bb0f1, type: 3}
+  m_Name: Era3Config
+  m_EditorClassIdentifier: IdlePowerGen.Models::IdlePowerGen.Models.EraConfig
+  eraNumber: 3
+  eraName: The War of Currents
+  flavorYear: 1893
+  flavorLocation: Westgate
+  minWatts: 100000
+  maxWatts: 10000000
+  useJoules: 0
+  useCash: 1
+  useReputation: 1
+  offlineEraFactor: 1
+  offlineTauHours: 24
+  contractBaseRate: 0.15
+  streetRateFactor: 0
+  xpScaleFactor: 5
+  upgradeBranchNames:
+  - Generation
+  - Mains
+  - Customers
+  researchBranchNames:
+  - Generation
+  - Mains
+  - Customers
+  tariffPenniesPerWattHour: 0.1
+  offlineFlavorText: The night engineer kept the dynamos turning while you were away.

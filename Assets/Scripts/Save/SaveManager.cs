@@ -19,7 +19,9 @@ namespace IdlePowerGen.Save
         // v4 → v5: engagements pay as they run, so each records what it has paid so far.
         // v5 → v6: contracts keep their own progress (for the 2× boost); the boost's time left.
         // v6 → v7: each engagement's shortfall countdown.
-        public const int CurrentVersion = 7;
+        // v7 → v8: Eras 3–5 (research points, the era's start day, load areas, units, coal,
+        //          the preparedness dashboard). Nobody reached Era 3 before v8.
+        public const int CurrentVersion = 8;
 
         // Tests point this at a scratch file so they never touch a real player's save.
         public static string SaveFileName = "save.json";
@@ -53,6 +55,7 @@ namespace IdlePowerGen.Save
                                     : new List<string>(),
                 lifetimeMWh       = 0, // updated by stats tracker in later eras
                 contractBoostSecondsLeft = gm.ContractBoostSecondsLeft,
+                researchPoints    = gm.Ledger.ResearchPoints,
             };
 
             foreach (var (id, level) in gm.Upgrades.Levels)
@@ -95,6 +98,8 @@ namespace IdlePowerGen.Save
                 });
             }
 
+            foreach (var p in Participants()) p.WriteSave(data);
+
             File.WriteAllText(SavePath, JsonUtility.ToJson(data));
             PersistentStorage.Flush();
         }
@@ -108,36 +113,51 @@ namespace IdlePowerGen.Save
             ApplyToGame(new SaveData { pennies = "0", currentEra = 1f });
         }
 
-        // The ?era=2 link (EraShortcutLink): wipes the save and starts a fresh run at the
-        // opening of Era 2, with the workshop a player has when the neighbour pays up. The
-        // neighbour wants 1 kW held, and only a water wheel on full belts (50 W × 2⁵) gets
-        // there, so that is the workshop; the crank and flywheel are a middling build.
-        private static readonly (string id, int level)[] Era1FinishedWorkshop =
-        {
-            (Data.Era1Data.BetterCrankId, 5), (Data.Era1Data.IronFlywheelId, 3), (Data.Era1Data.BearingsId, 1),
-            (Data.Era1Data.MagnetsId, 1), (Data.Era1Data.WaterWheelId, 1), (Data.Era1Data.BeltsGearingId, 5),
-        };
+        // The ?era=2 link (EraShortcutLink) and the DEV strip: wipes the save and starts a
+        // fresh run at the opening of the given era, as a player arrives there. The old works
+        // come along as the inherited station (EraManager.InheritedWattsFor), so all an era
+        // start needs is the purse, the repute and the research a player brings.
+        public void StartAtEra2() => StartAtEra(2);
 
-        public void StartAtEra2()
+        public void StartAtEra(int era)
         {
+            if (era <= 1) { ResetProgress(); return; }
             if (File.Exists(SavePath)) File.Delete(SavePath);
+
+            var start = EraStart(era);
             var data = new SaveData
             {
                 version = CurrentVersion,
                 saveTimestampUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-                pennies = "12", // Mr Hale's shilling
-                currentEra = 1f,
+                pennies = start.pennies.ToString(CultureInfo.InvariantCulture),
+                reputation = start.reputation,
+                researchPoints = start.research,
+                currentEra = era - 1,
             };
-            foreach (var (id, level) in Era1FinishedWorkshop)
-                data.upgradeLevels.Add(new SaveData.UpgradeLevelEntry { upgradeId = id, level = level });
             foreach (var m in Data.Era1Data.Milestones) data.reachedMilestones.Add(m.Id);
+            // Earlier eras' research, all of it: a player only leaves an era by using it.
+            var gm = Managers.GameManager.Instance;
+            if (gm != null)
+                foreach (var def in gm.UpgradeCatalogue)
+                    if (def.isResearch && def.minEra < era)
+                        data.upgradeLevels.Add(new SaveData.UpgradeLevelEntry { upgradeId = def.upgradeId, level = 1 });
 
             ApplyToGame(data);
-            // Advancing (rather than loading an Era 2 save) runs the era's own start: the
-            // title card, the clock wound on to the evening, the hopper filled.
-            Managers.EraManager.Instance?.AdvanceTo(2);
+            // Advancing (rather than loading a save in the era) runs the era's own start: the
+            // title card, the clock wound on to its date, its first customers connected.
+            Managers.EraManager.Instance?.AdvanceTo(era);
             Save();
         }
+
+        // What a player typically brings into an era. Era 2: Mr Hale's shilling. Later eras:
+        // the last era's capstone fee and some savings, in pennies (240 d = £1).
+        private static (decimal pennies, float reputation, double research) EraStart(int era) => era switch
+        {
+            2 => (12m, 0f, 0),
+            3 => (Managers.Money.FromPounds(Data.Era3Data.TypicalStartPounds), Data.Era3Data.TypicalStartReputation, 0),
+            4 => (Managers.Money.FromPounds(Data.Era4Data.TypicalStartPounds), Data.Era4Data.TypicalStartReputation, 0),
+            _ => (Managers.Money.FromPounds(Data.Era5Data.TypicalStartPounds), Data.Era5Data.TypicalStartReputation, 0),
+        };
 
         // ---- Load ----
 
@@ -169,6 +189,19 @@ namespace IdlePowerGen.Save
             if (data.version < 5) MigrateV4ToV5(data);
             if (data.version < 6) MigrateV5ToV6(data);
             if (data.version < 7) MigrateV6ToV7(data);
+            if (data.version < 8) MigrateV7ToV8(data);
+        }
+
+        // A v7 save is in Era 1 or 2 (Era 3 didn't exist), so Eras 3–5 start empty. An Era 2
+        // save past the Exhibition (Era 3 in name only) is left there: it opens on Era 3's
+        // title card and the inherited station, as if the Exhibition had just closed.
+        private static void MigrateV7ToV8(SaveData data)
+        {
+            data.loadAreas ??= new List<SaveData.LoadAreaEntry>();
+            data.units ??= new List<SaveData.UnitEntry>();
+            data.introducedScores ??= new List<string>();
+            data.researchPoints = 0;
+            data.version = 8;
         }
 
         // Before v7 there was no countdown: every engagement starts with a clean slate.
@@ -251,7 +284,7 @@ namespace IdlePowerGen.Save
 
             decimal pennies = decimal.TryParse(data.pennies, NumberStyles.Number,
                                                CultureInfo.InvariantCulture, out var p) ? p : 0m;
-            gm.Ledger.SetFromSave(data.joules, pennies, data.reputation);
+            gm.Ledger.SetFromSave(data.joules, pennies, data.reputation, data.researchPoints);
             var levels = new Dictionary<string, int>();
             foreach (var entry in data.upgradeLevels ?? new List<SaveData.UpgradeLevelEntry>())
                 levels[entry.upgradeId] = entry.level;
@@ -277,6 +310,9 @@ namespace IdlePowerGen.Save
                 }
                 genCtrl.LoadFromSave(counts,
                     new List<GeneratorDefinition>(gm.GeneratorCatalogue));
+                // An Era 2 save past the Exhibition still lists Era 2's machines; from Era 3
+                // they are the inherited station.
+                if (data.currentEra >= 3f) genCtrl.RetireBefore((int)data.currentEra);
             }
 
             var works = FindAnyObjectByType<Controllers.Era2WorksController>();
@@ -304,9 +340,17 @@ namespace IdlePowerGen.Save
             }
             gm.SetContractBoostFromSave(data.contractBoostSecondsLeft);
 
+            foreach (var participant in Participants()) participant.ReadSave(data);
+
             // Upgrade effects and crank value are runtime state derived from the purchased
             // set; their owners rebuild them on this event.
             EventBus.Publish(new GameLoadedEvent());
+        }
+
+        private static IEnumerable<ISaveParticipant> Participants()
+        {
+            foreach (var mb in FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                if (mb is ISaveParticipant p) yield return p;
         }
 
         // ---- Offline progression ----
@@ -344,7 +388,17 @@ namespace IdlePowerGen.Save
                 double offlineJoules = Managers.OfflineProgressionManager.ComputeOfflineJoules(
                     onlineWatts, realSeconds, eraFactor, tauHours);
                 gm?.Ledger.AddJoules(offlineJoules);
-                if (data.currentEra >= 2f && gm != null) PayOfflineCustomers(gm, data, realSeconds, eraFactor, tauHours);
+                if (data.currentEra >= 3f && gm != null)
+                {
+                    // Contracts resume where they were (the clock waits); the towns pay on.
+                    foreach (var mb in FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None))
+                        if (mb is IOfflineEarner earner)
+                        {
+                            decimal pay = earner.OfflineEarnings(data, realSeconds, eraFactor, tauHours);
+                            if (pay > 0) gm.Ledger.AddPennies(pay);
+                        }
+                }
+                else if (data.currentEra >= 2f && gm != null) PayOfflineCustomers(gm, data, realSeconds, eraFactor, tauHours);
             }
 
             double earned = (gm?.Ledger.Joules ?? 0) - before;

@@ -15,6 +15,21 @@ namespace IdlePowerGen.Models
         CoalFiredBoiler,
         SteamEngine,
         LargeSteamEngine,
+        // Era 3 (saved by name, so append only)
+        JumboDynamo,
+        ParsonsTurbine,
+        CoalStation,
+        CityStation,
+        // Era 4 units
+        CoalUnit,
+        HydroSet,
+        TurboAlternator,
+        RegionalStation,
+        // Era 5 units
+        LargeCoalUnit,
+        OilPeaker,
+        HydroScheme,
+        MagnoxReactor,
     }
 
     [CreateAssetMenu(fileName = "GeneratorDef", menuName = "IdlePowerGen/Generator Definition")]

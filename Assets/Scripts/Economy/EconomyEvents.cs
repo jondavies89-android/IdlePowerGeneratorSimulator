@@ -3,7 +3,7 @@ namespace IdlePowerGen
     // Events raised by the economy layer; kept in the Economy assembly for the same
     // reason SimulationEvents live in Simulation.
 
-    public enum CurrencyType { Joules, Pennies, Reputation }
+    public enum CurrencyType { Joules, Pennies, Reputation, Research }
 
     public readonly struct CurrencyChangedEvent
     {

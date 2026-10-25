@@ -20,6 +20,15 @@ namespace IdlePowerGen.Simulation
         // Virtual passive watts added to the grid each tick (e.g. UpgradeEffect.AddPassiveWatts).
         public double VirtualPassiveWatts { get; set; }
 
+        // The previous era's works, carried over as one steady station at that era's full
+        // output. Added after the multipliers: the new era's upgrades improve the new era's
+        // machines, not the old station.
+        public double InheritedWatts { get; set; }
+
+        // Era 1's crank, flywheel and water wheel feed the grid only in Era 1; from Era 2 the
+        // workshop is part of the inherited station.
+        public bool SourcesEnabled { get; set; } = true;
+
         private readonly List<GeneratorInstance> _generators = new();
         public IReadOnlyList<GeneratorInstance> Generators => _generators;
 
@@ -40,8 +49,8 @@ namespace IdlePowerGen.Simulation
         public double ComputeOutputWatts()
         {
             double sum = FleetWatts();
-            foreach (var s in _sources) sum += s.CurrentOutputWatts;
-            return sum * GlobalOutputMultiplier + VirtualPassiveWatts;
+            if (SourcesEnabled) foreach (var s in _sources) sum += s.CurrentOutputWatts;
+            return sum * GlobalOutputMultiplier + VirtualPassiveWatts + InheritedWatts;
         }
 
         // Output the grid would keep delivering untended. Offline progress pays on this,
@@ -49,8 +58,8 @@ namespace IdlePowerGen.Simulation
         public double ComputeSustainedOutputWatts()
         {
             double sum = FleetWatts();
-            foreach (var s in _sources) sum += s.SustainedOutputWatts;
-            return sum * GlobalOutputMultiplier + VirtualPassiveWatts;
+            if (SourcesEnabled) foreach (var s in _sources) sum += s.SustainedOutputWatts;
+            return sum * GlobalOutputMultiplier + VirtualPassiveWatts + InheritedWatts;
         }
 
         // Surplus energy produced since the last tick that the next tick will credit.
@@ -58,9 +67,9 @@ namespace IdlePowerGen.Simulation
         public double ComputePendingJoules(double secondsIntoTick)
         {
             double sources = 0;
-            foreach (var s in _sources) sources += s.PendingJoules(secondsIntoTick);
+            if (SourcesEnabled) foreach (var s in _sources) sources += s.PendingJoules(secondsIntoTick);
             double produced = (FleetWatts() * secondsIntoTick + sources) * GlobalOutputMultiplier
-                              + VirtualPassiveWatts * secondsIntoTick;
+                              + (VirtualPassiveWatts + InheritedWatts) * secondsIntoTick;
             return Math.Max(0, produced - TotalDemandWatts * secondsIntoTick);
         }
 
@@ -100,9 +109,14 @@ namespace IdlePowerGen.Simulation
                 TotalOutputWatts += gen.CurrentOutputWatts;
             }
             foreach (var s in _sources)
-                TotalOutputWatts += s.Tick(deltaTime);
+            {
+                // Still ticked from Era 2 so a flywheel left spinning runs down rather than
+                // waiting, frozen, for a return to Era 1 that never comes.
+                double w = s.Tick(deltaTime);
+                if (SourcesEnabled) TotalOutputWatts += w;
+            }
 
-            TotalOutputWatts = TotalOutputWatts * GlobalOutputMultiplier + VirtualPassiveWatts;
+            TotalOutputWatts = TotalOutputWatts * GlobalOutputMultiplier + VirtualPassiveWatts + InheritedWatts;
 
             double surplus = TotalOutputWatts - TotalDemandWatts;
             LastTickSurplusJoules = surplus * deltaTime;

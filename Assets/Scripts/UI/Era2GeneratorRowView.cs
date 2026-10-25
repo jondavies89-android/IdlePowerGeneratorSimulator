@@ -44,10 +44,17 @@ namespace IdlePowerGen.UI
 
             _nameLabel.text   = owned > 0 ? $"{Definition.displayName}  ×{owned}" : Definition.displayName;
             _outputLabel.text = NumberFormatter.FormatWatts(_generators.OutputWatts(Definition));
-            _costLabel.text   = "Build\n" + NumberFormatter.FormatPennies(_generators.NextCostPennies(Definition));
+            _costLabel.text   = "Build\n" + Managers.Money.Format(_generators.NextCostPennies(Definition), Definition.minEra);
 
             _runningLabel.color = _runningColour;
-            if (Definition.wagePenniesPerHour > 0)
+            if (_works == null)
+            {
+                // From Era 3 fuel is reckoned into the tariff: the row says what each one adds.
+                var grid = Simulation.SimulationTick.Instance?.Grid;
+                double each = grid != null ? grid.UnitOutputWatts(Definition) : Definition.basePowerWatts;
+                _runningLabel.text = $"{NumberFormatter.FormatWatts(each)} each";
+            }
+            else if (Definition.wagePenniesPerHour > 0)
             {
                 _runningLabel.text = $"wage {Definition.wagePenniesPerHour:0.#} d/hr each";
                 if (owned > online)

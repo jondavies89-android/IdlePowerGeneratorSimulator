@@ -322,17 +322,17 @@ public static class Era2ScreenBuilder
         var engagements = Stack("EngagementPanel", content);
         var noEngagements = Text(content, "NoEngagements", "None running. Book a client from the board below.",
                                  14, Era2Theme.TextMuted, TextAlignmentOptions.Left, FontStyles.Italic);
-        var engagementList = engagements.gameObject.AddComponent<Era2EngagementListView>();
+        var engagementList = engagements.gameObject.AddComponent<ContractEngagementListView>();
         Wire(engagementList, ("_works", controllers.Works),
-             ("_cardPrefab", AssetDatabase.LoadAssetAtPath<Era2EngagementCardView>(EngagementCardPrefab)),
+             ("_cardPrefab", AssetDatabase.LoadAssetAtPath<ContractEngagementCardView>(EngagementCardPrefab)),
              ("_content", engagements), ("_headerLabel", engagementsHeader), ("_emptyHint", noEngagements.gameObject));
 
         // The contract board.
         SectionHeader(content, "BoardHeader", "On the board");
         var offers = Stack("OfferPanel", content);
-        var offerList = offers.gameObject.AddComponent<Era2OfferListView>();
+        var offerList = offers.gameObject.AddComponent<ContractOfferListView>();
         Wire(offerList, ("_works", controllers.Works),
-             ("_cardPrefab", AssetDatabase.LoadAssetAtPath<Era2OfferCardView>(OfferCardPrefab)), ("_content", offers));
+             ("_cardPrefab", AssetDatabase.LoadAssetAtPath<ContractOfferCardView>(OfferCardPrefab)), ("_content", offers));
     }
 
     // The coal hopper, the machines, and the office's furniture.
@@ -495,22 +495,21 @@ public static class Era2ScreenBuilder
         panel.gameObject.SetActive(false);
     }
 
-    // The Era 1 workshop, still turning: its output, and a tap turns the crank.
+    // The Era 1 workshop, carried over as one steady kilowatt: a row to read, not to tap.
     private static TextMeshProUGUI CreateWorkshopRow(Transform parent, Controllers controllers)
     {
         var row = Card("Workshop", out var button, out _);
         row.SetParent(parent, false);
         Recolour(button, Era2Theme.Panel);
+        button.interactable = false;
 
         var texts = Stack("Texts", row, spacing: 2);
         texts.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1;
         Text(texts, "Name", "The old workshop", 18, Era2Theme.Text, TextAlignmentOptions.Left);
-        Text(texts, "Running", "crank, flywheel and water wheel · tap to turn the crank", 13, Era2Theme.TextMuted,
+        Text(texts, "Running", "crank, flywheel and water wheel, kept turning by the old hands", 13, Era2Theme.TextMuted,
              TextAlignmentOptions.Left, FontStyles.Italic);
         var output = Text(row, "Output", "0 W", 18, Era2Theme.Text, TextAlignmentOptions.Right, numerals: true);
         output.gameObject.AddComponent<LayoutElement>().preferredWidth = 84;
-
-        UnityEventTools.AddPersistentListener(button.onClick, controllers.Tap.OnCrankTapped);
         return output;
     }
 
@@ -560,7 +559,7 @@ public static class Era2ScreenBuilder
 
         var pay = Text(root, "Pay", "", 15, Era2Theme.Purse, TextAlignmentOptions.Left, FontStyles.Italic);
 
-        var view = root.gameObject.AddComponent<Era2EngagementCardView>();
+        var view = root.gameObject.AddComponent<ContractEngagementCardView>();
         Wire(view, ("_titleLabel", title), ("_bodyLabel", body), ("_windowLabel", window), ("_needLabel", need),
                    ("_progressFill", fill), ("_timeLabel", time), ("_stateLabel", state), ("_payLabel", pay));
         SetColours(view, ("_healthy", Era2Theme.Healthy), ("_caution", Era2Theme.Caution), ("_alarm", Era2Theme.Alarm));
@@ -592,7 +591,7 @@ public static class Era2ScreenBuilder
         var detail = Text(root, "Detail", "", 14, Era2Theme.Purse, TextAlignmentOptions.Left);
         var status = Text(root, "Status", "", 15, Era2Theme.Text, TextAlignmentOptions.Left);
 
-        var view = root.gameObject.AddComponent<Era2OfferCardView>();
+        var view = root.gameObject.AddComponent<ContractOfferCardView>();
         Wire(view, ("_titleLabel", title), ("_bodyLabel", body), ("_detailLabel", detail), ("_statusLabel", status),
                    ("_badge", badge.gameObject), ("_button", button), ("_group", group));
         SetColours(view, ("_statusColour", Era2Theme.Text), ("_cautionColour", Era2Theme.Caution));
@@ -677,48 +676,6 @@ public static class Era2ScreenBuilder
         Wire(view, ("_nameLabel", name), ("_descriptionLabel", desc), ("_effectLabel", effect),
                    ("_costLabel", cost), ("_button", button), ("_group", group));
         return root.gameObject;
-    }
-
-    // ---- End of Era 2 ----
-
-    // Shown once the Great Exhibition is lit; the end of the playable Era 2 slice.
-    public static void CreateEndOfEra(Transform canvas)
-    {
-        var holder = Rect("Era2EndOfEra", canvas);
-        Stretch(holder);
-
-        var panel = Rect("Panel", holder);
-        Stretch(panel);
-        AddImage(panel, Era1SpriteFactory.White, Era2Theme.Overlay);
-        var group = panel.gameObject.AddComponent<CanvasGroup>();
-
-        var box = Stack("Box", panel, spacing: 12);
-        box.anchorMin = new Vector2(0, 0.5f);
-        box.anchorMax = new Vector2(1, 0.5f);
-        box.pivot = new Vector2(0.5f, 0.5f);
-        box.offsetMin = new Vector2(Gutter, 0);
-        box.offsetMax = new Vector2(-Gutter, 0);
-        box.GetComponent<VerticalLayoutGroup>().padding = new RectOffset(20, 20, 24, 20);
-        box.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-        AddImage(box, Era1Theme.PanelSprite, Era2Theme.PanelRaised).type = Image.Type.Sliced;
-
-        Text(box, "Kicker", "End of Era 2", 14, Era2Theme.TextMuted, TextAlignmentOptions.Center, FontStyles.Italic);
-        Text(box, "Title", "The Crystal Palace, lit", 28, Era2Theme.Achievement, TextAlignmentOptions.Center);
-        Text(box, "Body",
-             "For a week the Great Exhibition shone with your power, and all London came to see it. " +
-             "You are no longer a workshop: you are a power company.\n\n" +
-             "Era 3, The War of Currents (1893), is still being built.",
-             16, Era2Theme.Text, TextAlignmentOptions.Center);
-
-        var keep = MakeButton(box, "KeepRunning", "Keep running the works");
-        Recolour(keep, Era2Theme.Panel);
-        var restart = MakeButton(box, "StartAgain", "Start again from 1 W");
-        Recolour(restart, Era2Theme.Panel);
-
-        var view = holder.gameObject.AddComponent<Era2EndOfEraView>();
-        Wire(view, ("_panel", panel.gameObject), ("_group", group),
-                   ("_continueButton", keep), ("_restartButton", restart));
-        panel.gameObject.SetActive(false);
     }
 
     // ---- Helpers ----

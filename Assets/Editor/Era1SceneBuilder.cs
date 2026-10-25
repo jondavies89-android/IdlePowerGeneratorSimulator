@@ -28,10 +28,12 @@ public static class Era1SceneBuilder
     public static void Build()
     {
         Era1SpriteFactory.Build();
+        GridSpriteFactory.Build();
         Era1FontBuilder.Build();
         Era1AudioFactory.Build();
         BuildPrefabs();
         Era2ScreenBuilder.BuildPrefabs();
+        Era3ScreenBuilder.BuildPrefabs();
 
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
@@ -86,11 +88,14 @@ public static class Era1SceneBuilder
         var so = new SerializedObject(gm);
         SetArray(so.FindProperty("_eraConfigs"),           Era1AssetBuilder.EraConfigs());
         SetArray(so.FindProperty("_upgradeDefinitions"),
-                 Era1AssetBuilder.Upgrades().Concat(Era2AssetBuilder.Upgrades()).ToArray());
+                 Era1AssetBuilder.Upgrades().Concat(Era2AssetBuilder.Upgrades())
+                     .Concat(Era3AssetBuilder.Upgrades()).ToArray());
         SetArray(so.FindProperty("_generatorDefinitions"),
-                 Era1AssetBuilder.Generators().Concat(Era2AssetBuilder.Generators()).ToArray());
+                 Era1AssetBuilder.Generators().Concat(Era2AssetBuilder.Generators())
+                     .Concat(Era3AssetBuilder.Generators()).ToArray());
         SetArray(so.FindProperty("_contractDefinitions"),
-                 Era1AssetBuilder.Contracts().Concat(Era2AssetBuilder.Contracts()).ToArray());
+                 Era1AssetBuilder.Contracts().Concat(Era2AssetBuilder.Contracts())
+                     .Concat(Era3AssetBuilder.Contracts()).ToArray());
         so.ApplyModifiedPropertiesWithoutUndo();
     }
 
@@ -100,6 +105,7 @@ public static class Era1SceneBuilder
         public Era2GeneratorController Generators;
         public Era1FirstCustomerController FirstCustomer;
         public Era2WorksController Works;
+        public Era3TownController Era3;
     }
 
     // Scene-scoped (not DontDestroyOnLoad): they belong to the era screens.
@@ -112,6 +118,7 @@ public static class Era1SceneBuilder
             Generators    = go.AddComponent<Era2GeneratorController>(),
             FirstCustomer = go.AddComponent<Era1FirstCustomerController>(),
             Works         = go.AddComponent<Era2WorksController>(),
+            Era3          = go.AddComponent<Era3TownController>(),
         };
         Wire(controllers.Works, ("_generators", controllers.Generators));
         return controllers;
@@ -174,16 +181,22 @@ public static class Era1SceneBuilder
         CreateCrank(column, controllers);
         CreateLists(column, controllers);
 
-        // The Era 2 screen draws its own gas-lit background over the workshop's.
+        // Each later era's screen draws its own background over the workshop's.
         var toast = CreateToast(canvasGo.transform);
         var era2 = Era2ScreenBuilder.Create(canvasGo.transform, controllers, toast);
-        // Toasts and era cards sit above both screens.
+        var era3 = Era3ScreenBuilder.Create(canvasGo.transform, controllers);
+        // Toasts and era cards sit above every screen.
         toast.transform.SetAsLastSibling();
         CreateEndOfEra(canvasGo.transform);
-        Era2ScreenBuilder.CreateEndOfEra(canvasGo.transform);
+        Era3ScreenBuilder.CreateTitleCard(canvasGo.transform);
 
         var switcher = canvasGo.AddComponent<EraScreenSwitcher>();
-        Wire(switcher, ("_era1Screen", column.gameObject), ("_era2Screen", era2.gameObject));
+        var screens = new SerializedObject(switcher);
+        SetArray(screens.FindProperty("_screens"), new Object[] { column.gameObject, era2.gameObject, era3.gameObject });
+        screens.ApplyModifiedPropertiesWithoutUndo();
+
+        // Over everything, title cards included, so a tester can always reach it.
+        DevToolsBuilder.Create(canvasGo.transform);
     }
 
     private static void CreateHeader(Transform parent)

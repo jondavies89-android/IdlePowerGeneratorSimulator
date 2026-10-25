@@ -753,7 +753,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 863bc37aba0fb424fb9303cdfa4e2e4b, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: IdlePowerGen.Runtime::IdlePowerGen.UI.Era2EngagementCardView
+  m_EditorClassIdentifier: IdlePowerGen.Runtime::IdlePowerGen.UI.ContractEngagementCardView
   _titleLabel: {fileID: 7189603149374434939}
   _bodyLabel: {fileID: 662428937776343293}
   _windowLabel: {fileID: 2705523975381476249}

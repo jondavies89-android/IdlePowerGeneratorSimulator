@@ -9,7 +9,7 @@ namespace IdlePowerGen.UI
     // One running engagement (bible Appendix A, Era 2: "the contract progress bar is the
     // era's spotlight mechanic"). The bar is the hours passing; its colour is how well the
     // customer is being supplied so far: green holding, amber short, red failing.
-    public class Era2EngagementCardView : MonoBehaviour
+    public class ContractEngagementCardView : MonoBehaviour
     {
         [SerializeField] private TMP_Text _titleLabel;
         [SerializeField] private TMP_Text _bodyLabel;
@@ -47,7 +47,7 @@ namespace IdlePowerGen.UI
         private void Refresh()
         {
             if (Contract == null) return;
-            double now = Controllers.Era2WorksController.Now;
+            double now = Controllers.ContractDesk.Now;
             _progressFill.fillAmount = Contract.Progress01;
 
             // Game time, so the 2× boost (which runs the clock faster) leaves the end hour alone.
@@ -60,8 +60,8 @@ namespace IdlePowerGen.UI
             var def = Contract.Definition;
 
             // The client pays as the power arrives; any premium and the repute wait for the end.
-            _payLabel.text = $"paid {NumberFormatter.FormatPennies(Contract.PaidSoFar)} of " +
-                             $"{NumberFormatter.FormatPennies(Controllers.Era2WorksController.Pay(def))} · " +
+            _payLabel.text = $"paid {Managers.Money.Format(Contract.PaidSoFar, def.minEra)} of " +
+                             $"{Managers.Money.Format(Controllers.ContractDesk.Pay(def), def.minEra)} · " +
                              $"+{def.reputationOnSuccess:0.#} repute on finishing";
             // The shortfall countdown outranks the running average: it is what can end the job.
             if (Contract.IsShort)

@@ -33,6 +33,13 @@ namespace IdlePowerGen.Models
         [Header("Upgrade tree")]
         // Column headings of the era's upgrade tree, indexed by UpgradeDefinition.treeBranch.
         public string[] upgradeBranchNames;
+        // The same for its research tree (Era 3 on).
+        public string[] researchBranchNames;
+
+        [Header("Era 3 on")]
+        // Pennies paid per watt-hour delivered to a connected district, feeder or city
+        // (shown in pounds: 240 d = £1). Contracts use contractBaseRate as before.
+        public double tariffPenniesPerWattHour;
 
         [Header("Flavour")]
         [TextArea] public string offlineFlavorText;

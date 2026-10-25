@@ -113,6 +113,10 @@ namespace IdlePowerGen.Managers
             if (clock != null) clock.SpeedMultiplier = (float)ContractSpeed;
         }
 
+        // Share of the station's output that reaches a contract client (Era 3 on: the lines
+        // lose the rest). Set each tick by the era's works from its last share-out.
+        public double ContractSupplyFactor { get; set; } = 1.0;
+
         // What the street pays for a watt-hour of spare power at this time of day, in pennies.
         // averageDay prices a whole day at once (the daily shape averages ≈ 1), for offline pay.
         public double StreetPricePerWattHour(float era, double gameTimeSeconds, bool averageDay = false)

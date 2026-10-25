@@ -28,6 +28,9 @@ namespace IdlePowerGen.Tests
         {
             Save.SaveManager.Instance?.ResetProgress();
             Save.SaveManager.SaveFileName = "save.json";
+            Utils.DevTime.Multiplier = 1f;
+            if (Utils.GameClock.Instance != null) Utils.GameClock.Instance.Paused = false;
+            if (Simulation.SimulationTick.Instance != null) Simulation.SimulationTick.Instance.Paused = false;
         }
 
         // Owns these upgrade levels, as a loaded save would, with their effects applied.

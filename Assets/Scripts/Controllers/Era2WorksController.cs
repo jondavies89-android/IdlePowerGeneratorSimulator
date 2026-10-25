@@ -9,11 +9,10 @@ namespace IdlePowerGen.Controllers
 {
     // The running of the Era 2 works: the contract board and its bookings, wages, the coal
     // hopper, and the clerk and coal merchant once they are hired. Ticks with the sim.
-    public class Era2WorksController : MonoBehaviour
+    public class Era2WorksController : ContractDesk
     {
         [SerializeField] private Era2GeneratorController _generators;
 
-        public Economy.ContractBoard  Board  { get; } = new();
         public Economy.Era2CoalHopper Hopper { get; } = new();
 
         // Game day Era 2 began on: the date shown counts on from 9 October 1851 there.
@@ -21,13 +20,14 @@ namespace IdlePowerGen.Controllers
 
         private bool _toldUnpaid;
 
-        private static Managers.GameManager GM => Managers.GameManager.Instance;
         private static Simulation.SimulationTick Sim => Simulation.SimulationTick.Instance;
 
-        public static bool IsEra2 =>
-            Managers.EraManager.Instance != null && Managers.EraManager.Instance.CurrentEra >= 2f;
+        public override int EraNumber => Data.Era2Data.EraNumber;
+        protected override int BaseSlots => Data.Era2Data.BaseContractSlots;
 
-        public static double Now => GameClock.Instance != null ? GameClock.Instance.GameTimeSeconds : 0;
+        // Era 2 only: from Era 3 the works is the inherited station, with no hands or hopper.
+        public static bool IsEra2 =>
+            Managers.EraManager.Instance != null && Managers.EraManager.Instance.Era == Data.Era2Data.EraNumber;
 
         private void Awake()
         {
@@ -60,45 +60,12 @@ namespace IdlePowerGen.Controllers
 
         // ---- Contracts ----
 
-        public IEnumerable<ContractDefinition> Era2Contracts =>
-            GM == null ? Enumerable.Empty<ContractDefinition>()
-                       : GM.ContractCatalogue.Where(c => c != null && c.minEra == Data.Era2Data.EraNumber);
-
-        public int Slots
-        {
-            get
-            {
-                int slots = Data.Era2Data.BaseContractSlots;
-                var gm = GM;
-                if (gm == null) return slots;
-                foreach (var def in gm.UpgradeCatalogue)
-                    if (def.effect == UpgradeEffect.AddContractSlot)
-                        slots += (int)Math.Round(def.effectValue) * gm.Upgrades.Level(def.upgradeId);
-                return slots;
-            }
-        }
-
-        public IEnumerable<Economy.ContractInstance> Engagements =>
-            GM == null ? Enumerable.Empty<Economy.ContractInstance>()
-                       : GM.Contracts.ActiveContracts.Where(c => c.Definition.minEra == Data.Era2Data.EraNumber);
-
-        // Watts the works has promised to customers right now.
-        public double CommittedWatts => Engagements.Sum(c => c.Definition.requiredWatts);
+        public IEnumerable<ContractDefinition> Era2Contracts => Contracts;
 
         // Output on the last tick: what the works actually made.
         public static double CapacityWatts => Sim != null ? Sim.Grid.TotalOutputWatts : 0;
 
-        public bool IsOffered(ContractDefinition def) =>
-            IsEra2 && GM != null && Board.IsOffered(def, Now, GM.Ledger.Reputation, GM.Contracts.ActiveContracts);
-
-        public bool HasFreeSlot => GM != null && GM.Contracts.ActiveContracts.Count < Slots;
-
-        public bool Book(ContractDefinition def) =>
-            IsEra2 && GM != null && Board.TryBook(def, Now, GM.Ledger.Reputation, GM.Contracts, Slots);
-
-        public static decimal Pay(ContractDefinition def) =>
-            GM == null ? 0m
-                       : (decimal)(def.durationHours * def.requiredWatts * GM.ContractBaseRate(def) * def.payRateMultiplier);
+        public override double SpareForContracts => CapacityWatts - CommittedWatts;
 
         // ---- Running costs ----
 

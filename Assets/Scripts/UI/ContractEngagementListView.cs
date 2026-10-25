@@ -5,16 +5,18 @@ using UnityEngine;
 
 namespace IdlePowerGen.UI
 {
-    // The engagements running now, one card each, and how many more the works can take.
-    public class Era2EngagementListView : MonoBehaviour
+    // The contracts running now, one card each, and how many more the works can take.
+    public class ContractEngagementListView : MonoBehaviour
     {
-        [SerializeField] private Controllers.Era2WorksController _works;
-        [SerializeField] private Era2EngagementCardView _cardPrefab;
+        [SerializeField] private Controllers.ContractDesk _works;
+        [SerializeField] private ContractEngagementCardView _cardPrefab;
         [SerializeField] private Transform _content;
         [SerializeField] private TMP_Text _headerLabel;
         [SerializeField] private GameObject _emptyHint;
+        // Era 2 calls them engagements; later eras, contracts.
+        [SerializeField] private string _heading = "Engagements";
 
-        private readonly List<Era2EngagementCardView> _cards = new();
+        private readonly List<ContractEngagementCardView> _cards = new();
 
         // Polled: contracts start and end inside the sim tick, and a handful of cards is cheap.
         private void Update()
@@ -34,7 +36,7 @@ namespace IdlePowerGen.UI
                 if (used && _cards[i].Contract != running[i]) _cards[i].Bind(running[i]);
             }
 
-            _headerLabel.text = $"Engagements  ·  {running.Count} of {_works.Slots}";
+            _headerLabel.text = $"{_heading}  ·  {running.Count} of {_works.Slots}";
             _emptyHint.SetActive(running.Count == 0);
         }
     }

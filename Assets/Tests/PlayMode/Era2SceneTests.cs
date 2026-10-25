@@ -182,13 +182,21 @@ namespace IdlePowerGen.Tests
         }
 
         [UnityTest]
-        public IEnumerator TheOldWorkshopRowTurnsTheCrank()
+        public IEnumerator TheOldWorkshopIsASteadyKilowatt()
         {
             yield return Load(Era2Save(0));
-            double before = GM.Ledger.Joules;
-            Click("Workshop");
-            yield return null;
-            Assert.That(GM.Ledger.Joules, Is.GreaterThan(before));
+            yield return Tick();
+            Assert.That(Simulation.SimulationTick.Instance.Grid.TotalOutputWatts, Is.EqualTo(IdlePowerGen.Data.Era1Data.MaxWatts));
+        }
+
+        // The crank, flywheel and water wheel are part of the inherited kilowatt from Era 2.
+        [UnityTest]
+        public IEnumerator Era1SourcesStopFeedingTheGridInEra2()
+        {
+            yield return Load(Era2Save(0));
+            SetLevels((IdlePowerGen.Data.Era1Data.WaterWheelId, 1), (IdlePowerGen.Data.Era1Data.BeltsGearingId, 5));
+            yield return Tick();
+            Assert.That(Simulation.SimulationTick.Instance.Grid.TotalOutputWatts, Is.EqualTo(IdlePowerGen.Data.Era1Data.MaxWatts));
         }
 
         [UnityTest]
@@ -380,7 +388,8 @@ namespace IdlePowerGen.Tests
             yield return Load(Era2Save(1000, 0, StartHour, (GeneratorType.SmallDynamo, 12)));
             Works.Book(Contract("c2_street_lamps"));
             yield return Tick();
-            Assert.That(GM.Street.LastWatts, Is.EqualTo(100).Within(1e-6)); // 600 W made, 500 W booked
+            // 600 W made and the old workshop's 1 kW, 500 W booked.
+            Assert.That(GM.Street.LastWatts, Is.EqualTo(1100).Within(1e-6));
         }
 
         [UnityTest]
@@ -641,8 +650,9 @@ namespace IdlePowerGen.Tests
         [UnityTest]
         public IEnumerator AShortEngagementsCardWarnsOfTheCancellation()
         {
-            yield return Load(Era2Save(0)); // no machines, so no power at all
-            Works.Book(Contract("c2_street_lamps"));
+            yield return Load(Era2Save(0)); // only the old workshop's 1 kW
+            // The Grand Hotel's 1.2 kW on the old workshop's 1 kW: short past the leeway.
+            Works.Book(Contract("c2_hotel"));
             yield return Tick();
             var label = GameObject.Find("Engagement_0").GetComponentsInChildren<TMPro.TMP_Text>()
                                   .Select(t => t.text);
@@ -653,7 +663,8 @@ namespace IdlePowerGen.Tests
         public IEnumerator TheShortfallCountdownSurvivesSaveAndLoad()
         {
             yield return Load(Era2Save(0));
-            Works.Book(Contract("c2_street_lamps"));
+            // The Grand Hotel's 1.2 kW on the old workshop's 1 kW: short past the leeway.
+            Works.Book(Contract("c2_hotel"));
             yield return Tick();
             Time.timeScale = 0f;
             double shortSeconds = GM.Contracts.ActiveContracts[0].ShortSeconds;
@@ -666,7 +677,8 @@ namespace IdlePowerGen.Tests
         public IEnumerator CatchingUpOnTimeAwayCancelsNoOne()
         {
             yield return Load(Era2Save(0));
-            Works.Book(Contract("c2_street_lamps"));
+            // The Grand Hotel's 1.2 kW on the old workshop's 1 kW: short past the leeway.
+            Works.Book(Contract("c2_hotel"));
             Time.timeScale = 0f;
             Simulation.SimulationTick.Instance.CatchUpOffline(60); // an hour short, while away
             Assert.That(GM.Contracts.ActiveContracts, Has.Count.EqualTo(1));
@@ -758,21 +770,22 @@ namespace IdlePowerGen.Tests
             var expo = Contract(ExhibitionContractId);
             Utils.EventBus.Publish(new ContractCompletedEvent(new Economy.ContractInstance(expo, 0), 1m));
             yield return null;
-            Assert.That(GameObject.Find("Era2EndOfEra").transform.Find("Panel").gameObject.activeSelf, Is.True);
+            Assert.That(GameObject.Find("Era3TitleCard").transform.Find("Panel").gameObject.activeSelf, Is.True);
         }
 
+        // Era 3's town pays a tariff instead: nobody buys spare power off the street.
         [Test]
-        public void TheStreetKeepsBuyingAfterEra2Ends() =>
-            Assert.That(GM.StreetPricePerWattHour(3f, Day + StartHour * Hour), Is.GreaterThan(0));
+        public void TheStreetClosesWithEra2() =>
+            Assert.That(GM.StreetPricePerWattHour(3f, Day + StartHour * Hour), Is.EqualTo(0));
 
         [UnityTest]
-        public IEnumerator TheOfficeStaysUpAfterEra2Ends()
+        public IEnumerator LightingTheExhibitionOpensTheEra3Screen()
         {
             yield return Load(Era2Save(0, 30));
             var expo = Contract(ExhibitionContractId);
             Utils.EventBus.Publish(new ContractCompletedEvent(new Economy.ContractInstance(expo, 0), 1m));
             yield return null;
-            Assert.That(GameObject.Find("Era2Screen"), Is.Not.Null);
+            Assert.That(GameObject.Find("Era3Screen"), Is.Not.Null);
         }
     }
 }

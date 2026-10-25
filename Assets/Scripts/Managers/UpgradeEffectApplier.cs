@@ -9,6 +9,10 @@ namespace IdlePowerGen.Managers
     // Subscribes to UpgradePurchasedEvent and applies one level of the effect each time.
     // Crank effects (MultiplyCrankTapValue, AddCrankJoules) are left to Era1TapController,
     // since the value of a turn is per-controller state.
+    //
+    // Only the current era's purchases apply, plus research from any era: a multiplier
+    // bought for Era 2's engines has no business multiplying Era 3's turbines, and the old
+    // works it improved are now the inherited station, which no multiplier touches.
     public class UpgradeEffectApplier : MonoBehaviour
     {
         public static UpgradeEffectApplier Instance { get; private set; }
@@ -38,9 +42,18 @@ namespace IdlePowerGen.Managers
             EventBus.Unsubscribe<EraAdvancedEvent>(OnEraAdvanced);
         }
 
-        private void OnUpgradePurchased(UpgradePurchasedEvent evt) => Apply(evt.Definition);
+        private void OnUpgradePurchased(UpgradePurchasedEvent evt)
+        {
+            if (Applies(evt.Definition)) Apply(evt.Definition);
+        }
+
         private void OnGameLoaded(GameLoadedEvent _)              => ReapplyFromPurchasedSet();
         private void OnEraAdvanced(EraAdvancedEvent _)            => ReapplyFromPurchasedSet();
+
+        private static int CurrentEra => EraManager.Instance != null ? EraManager.Instance.Era : 1;
+
+        public static bool Applies(UpgradeDefinition def) =>
+            def.isResearch || Mathf.Max(1, def.minEra) >= CurrentEra;
 
         // Applies one level.
         private void Apply(UpgradeDefinition def)
@@ -104,11 +117,27 @@ namespace IdlePowerGen.Managers
                     break;
 
                 case UpgradeEffect.AddContractSlot:
-                    // Era2WorksController counts slots from the levels owned.
+                    // The era's contract desk counts slots from the levels owned.
                     break;
 
                 case UpgradeEffect.MultiplyStreetTrade:
                     StreetTradeMultiplier *= def.effectValue;
+                    break;
+
+                case UpgradeEffect.AddResearchRate:
+                    ResearchPerHour += def.effectValue;
+                    break;
+
+                case UpgradeEffect.MultiplyTariff:
+                    TariffMultiplier *= def.effectValue;
+                    break;
+
+                case UpgradeEffect.MultiplyLineLosses:
+                    LineLossMultiplier *= def.effectValue;
+                    break;
+
+                case UpgradeEffect.SetMainsTier:
+                    MainsTier = Mathf.Max(MainsTier, (int)def.effectValue);
                     break;
             }
         }
@@ -133,9 +162,14 @@ namespace IdlePowerGen.Managers
             _unlockedFeatures.Clear();
             _unlockedGenerators.Clear();
             StreetTradeMultiplier = 1.0;
+            ResearchPerHour       = 0.0;
+            TariffMultiplier      = 1.0;
+            LineLossMultiplier    = 1.0;
+            MainsTier             = 0;
 
             foreach (var def in gm.UpgradeCatalogue)
             {
+                if (!Applies(def)) continue;
                 int level = gm.Upgrades.Level(def.upgradeId);
                 for (int i = 0; i < level; i++) Apply(def);
             }
@@ -147,5 +181,17 @@ namespace IdlePowerGen.Managers
 
         // Applied to the street's price for spare power.
         public double StreetTradeMultiplier { get; private set; } = 1.0;
+
+        // Research points per game hour from the current era's R&D buildings.
+        public double ResearchPerHour { get; private set; }
+
+        // On what every connected load area pays per unit delivered (Era 3 on).
+        public double TariffMultiplier { get; private set; } = 1.0;
+
+        // On every line's losses (Era 3 on).
+        public double LineLossMultiplier { get; private set; } = 1.0;
+
+        // How far the current era's mains have come (Era 3: 0 DC, 1 three-wire, 2 AC, 3 HV AC).
+        public int MainsTier { get; private set; }
     }
 }

@@ -74,10 +74,7 @@ namespace IdlePowerGen.UI
             bool reputable = Managers.GameManager.Instance.Ledger.Reputation >= Definition.requiredReputation;
 
             _nameLabel.text   = NameText(Definition, level);
-            _costLabel.text   = maxed ? "Bought"
-                              : Definition.costPennies > 0
-                ? NumberFormatter.FormatPennies((decimal)registry.NextCostPennies(Definition))
-                : NumberFormatter.FormatJoules(registry.NextCostJoules(Definition));
+            _costLabel.text   = maxed ? (Definition.isResearch ? "Known" : "Bought") : PriceText(Definition);
             _effectLabel.text = maxed       ? EffectText(Definition, level - 1)
                               : !prereqsMet ? NeedsText(Definition)
                               : !reputable  ? $"Needs {Definition.requiredReputation:0.#} repute"
@@ -85,6 +82,17 @@ namespace IdlePowerGen.UI
             _button.interactable = prereqsMet && affordable && !maxed;
             // A bought upgrade reads at full strength: it is an achievement, not a locked door.
             _group.alpha = _button.interactable || maxed ? 1f : DimmedAlpha;
+        }
+
+        // The next level's price in whatever it costs: research points, money (pence or
+        // pounds by era), or Era 1's joules.
+        public static string PriceText(UpgradeDefinition def)
+        {
+            var registry = Managers.GameManager.Instance.Upgrades;
+            if (def.costResearch > 0) return $"{registry.NextCostResearch(def):N0} RP";
+            if (def.costPennies > 0)
+                return Managers.Money.Format((decimal)registry.NextCostPennies(def), Mathf.Max(1, def.minEra));
+            return NumberFormatter.FormatJoules(registry.NextCostJoules(def));
         }
 
         // Levelled upgrades show how far along they are; one-time ones just their name.
@@ -111,7 +119,9 @@ namespace IdlePowerGen.UI
                 case UpgradeEffect.MultiplyWaterWheelOutput: return $"Water wheel ×{def.effectValue:0.##}";
                 case UpgradeEffect.MultiplyAllOutput:     return $"Every machine ×{def.effectValue:0.##}";
                 case UpgradeEffect.AddPassiveWatts:       return $"+{watts} without cranking";
-                case UpgradeEffect.UnlockGenerator:       return $"New machine: {GeneratorName(def.unlocksId)}";
+                case UpgradeEffect.UnlockGenerator:
+                    string opens = def.isResearch ? OpensText(def) : null;
+                    return string.IsNullOrEmpty(opens) ? $"New machine: {GeneratorName(def.unlocksId)}" : opens;
                 case UpgradeEffect.MultiplyGeneratorOutput:
                     return $"Every {GeneratorName(def.unlocksId).ToLowerInvariant()} ×{def.effectValue:0.##}";
                 case UpgradeEffect.AddContractSlot:
@@ -120,9 +130,27 @@ namespace IdlePowerGen.UI
                 case UpgradeEffect.UnlockFeature:
                     return def.unlocksId == Data.Era2Data.ClerkFeatureId ? "Engagements booked for you"
                          : def.unlocksId == Data.Era2Data.CoalMerchantFeatureId ? "Coal ordered for you"
-                         : string.Empty;
+                         : OpensText(def);
+                case UpgradeEffect.AddResearchRate:
+                    return $"+{def.effectValue:0.#} research points an hour" + (level > 0 ? $" ({def.effectValue * level:0.#} now)" : "");
+                case UpgradeEffect.MultiplyTariff:        return $"Customers pay ×{def.effectValue:0.##} per unit";
+                case UpgradeEffect.MultiplyLineLosses:    return $"Every line loses {1 - def.effectValue:0%} less";
+                case UpgradeEffect.SetMainsTier:
+                    int tier = (int)def.effectValue;
+                    return tier < Data.Era3Data.Mains.Length ? $"The mains become {Data.Era3Data.Mains[tier].Name.ToLowerInvariant()}" : string.Empty;
                 default:                                  return string.Empty;
             }
+        }
+
+        // A research node's effect is what it opens: the purchases and machines that need it.
+        private static string OpensText(UpgradeDefinition def)
+        {
+            var gm = Managers.GameManager.Instance;
+            var names = gm.UpgradeCatalogue.Where(u => u.requiredUpgradeIds != null && u.requiredUpgradeIds.Contains(def.upgradeId))
+                                           .Select(u => u.displayName)
+                          .Concat(gm.GeneratorCatalogue.Where(g => g.requiredUpgradeId == def.upgradeId).Select(g => g.displayName))
+                          .ToList();
+            return names.Count == 0 ? string.Empty : "Opens " + string.Join(", ", names);
         }
 
         private static string NeedsText(UpgradeDefinition def)

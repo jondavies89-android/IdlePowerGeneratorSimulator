@@ -23,6 +23,12 @@ namespace IdlePowerGen.Models
         MultiplyGeneratorOutput, // effectValue = multiplier; unlocksId = GeneratorType name
         AddContractSlot,         // effectValue = engagements that can run at once, per level
         MultiplyStreetTrade,     // effectValue = multiplier on the price the street pays
+
+        // Era 3 on
+        AddResearchRate,         // effectValue = research points per game hour, per level (an R&D building)
+        MultiplyTariff,          // effectValue = multiplier on what load areas pay per unit
+        MultiplyLineLosses,      // effectValue = multiplier on every line's losses
+        SetMainsTier,            // effectValue = mains tier reached (Era 3: 1 three-wire DC, 2 AC, 3 high-voltage AC)
     }
 
     [CreateAssetMenu(fileName = "UpgradeDef", menuName = "IdlePowerGen/Upgrade Definition")]
@@ -36,8 +42,15 @@ namespace IdlePowerGen.Models
 
         [Header("Cost — level n costs base × costGrowth^n  §9.3")]
         public double costJoules;
+        // Money is held in pennies in every era; from Era 3 it shows as pounds (240 d = £1).
         public double costPennies;
+        public double costResearch; // research points (bible §13)
         public double costGrowth = 1.0;
+
+        [Header("Research (Era 3 on)")]
+        // A research node rather than a purchase: shown on the Research tab, and kept from era
+        // to era (bible §13: research is the long memory of the player's career).
+        public bool isResearch;
 
         [Header("Levels (1 = one-time purchase)")]
         public int maxLevel = 1;

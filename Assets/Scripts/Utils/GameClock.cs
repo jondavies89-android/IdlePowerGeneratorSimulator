@@ -24,7 +24,8 @@ namespace IdlePowerGen.Utils
 
         private void Update()
         {
-            GameTimeSeconds += Time.deltaTime * GameTimeScale;
+            if (Paused) return;
+            GameTimeSeconds += Time.deltaTime * DevTime.Multiplier * GameTimeScale;
         }
 
         public void SetGameTime(double seconds) => GameTimeSeconds = seconds;
@@ -38,5 +39,8 @@ namespace IdlePowerGen.Utils
 
         // Set by the 2× boost, which runs the whole clock faster so contracts end on time.
         public float SpeedMultiplier { get; set; } = 1f;
+
+        // Held while a minigame runs on its own clock (synchronising a unit, a black start).
+        public bool Paused { get; set; }
     }
 }

@@ -603,7 +603,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e60c2a1b148dc6a47938fc74349e41cd, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: IdlePowerGen.Runtime::IdlePowerGen.UI.Era2OfferCardView
+  m_EditorClassIdentifier: IdlePowerGen.Runtime::IdlePowerGen.UI.ContractOfferCardView
   _titleLabel: {fileID: 1321282740827090908}
   _bodyLabel: {fileID: 3610986695251519953}
   _detailLabel: {fileID: 9048642746924814331}
