@@ -213,8 +213,9 @@ public static class Era3ScreenBuilder
     }
 
     internal static void CreateGoal(Transform content, IdlePowerGen.Controllers.GridWorksController works,
-                                    string goalText, string capstoneText)
+                                    string goalText, string capstoneText, ScreenTheme theme = null)
     {
+        var T = theme ?? Era3Theme.Theme;
         var goal = Box(T, content, "Goal", 14, 6);
         var label = Text(T, goal, "Label", "", 14, T.Text);
         var barRow = Stack("BarRow", goal, spacing: 0);
@@ -228,8 +229,9 @@ public static class Era3ScreenBuilder
         SetString(view, "_goalText", goalText);
     }
 
-    internal static void CreateResearchSummary(Transform content, int era)
+    internal static void CreateResearchSummary(Transform content, int era, ScreenTheme theme = null)
     {
+        var T = theme ?? Era3Theme.Theme;
         var box = Box(T, content, "ResearchSummary", 14, 4);
         Caption(T, box, "Caption", "Research in progress");
         var top = Row(box, "Top");

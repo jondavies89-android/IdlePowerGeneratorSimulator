@@ -13,6 +13,8 @@ namespace IdlePowerGen.UI
         [SerializeField] private CanvasGroup _group;
         [SerializeField] private Button _continueButton;
         [SerializeField] private int _toEra = 3;
+        // The card after the last built era's capstone ("Era 6 is still being built").
+        [SerializeField] private bool _contentEnd;
 
         private void Awake()
         {
@@ -20,17 +22,24 @@ namespace IdlePowerGen.UI
             _continueButton.onClick.AddListener(() => _panel.SetActive(false));
             EventBus.Subscribe<EraAdvancedEvent>(OnEraAdvanced);
             EventBus.Subscribe<GameLoadedEvent>(OnGameLoaded);
+            EventBus.Subscribe<ContentEndEvent>(OnContentEnd);
         }
 
         private void OnDestroy()
         {
             EventBus.Unsubscribe<EraAdvancedEvent>(OnEraAdvanced);
             EventBus.Unsubscribe<GameLoadedEvent>(OnGameLoaded);
+            EventBus.Unsubscribe<ContentEndEvent>(OnContentEnd);
+        }
+
+        private void OnContentEnd(ContentEndEvent _)
+        {
+            if (_contentEnd) Show();
         }
 
         private void OnEraAdvanced(EraAdvancedEvent e)
         {
-            if (e.ToEra == _toEra) Show();
+            if (!_contentEnd && e.ToEra == _toEra) Show();
         }
 
         private void OnGameLoaded(GameLoadedEvent _) => _panel.SetActive(false);

@@ -135,6 +135,12 @@ namespace IdlePowerGen.UI
                     return $"+{def.effectValue:0.#} research points an hour" + (level > 0 ? $" ({def.effectValue * level:0.#} now)" : "");
                 case UpgradeEffect.MultiplyTariff:        return $"Customers pay ×{def.effectValue:0.##} per unit";
                 case UpgradeEffect.MultiplyLineLosses:    return $"Every line loses {1 - def.effectValue:0%} less";
+                case UpgradeEffect.MultiplyFuelBurn:      return $"Coal units burn {1 - def.effectValue:0%} less";
+                case UpgradeEffect.MultiplyServiceTime:   return $"Services and repairs take {1 - def.effectValue:0%} less time";
+                case UpgradeEffect.MultiplyFuelPrice:     return $"Coal costs {1 - def.effectValue:0%} less";
+                case UpgradeEffect.MultiplyGovernorTime:  return $"Units pick up load {1 / def.effectValue:0.#}× as fast";
+                case UpgradeEffect.AddCapacitorStrength:  return $"Each capacitor bank supplies {def.effectValue:0%} more";
+                case UpgradeEffect.AddVoltageSupport:     return $"Every city's voltage held {def.effectValue:0.#%} higher";
                 case UpgradeEffect.SetMainsTier:
                     int tier = (int)def.effectValue;
                     return tier < Data.Era3Data.Mains.Length ? $"The mains become {Data.Era3Data.Mains[tier].Name.ToLowerInvariant()}" : string.Empty;

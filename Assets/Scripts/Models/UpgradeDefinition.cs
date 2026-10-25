@@ -29,6 +29,16 @@ namespace IdlePowerGen.Models
         MultiplyTariff,          // effectValue = multiplier on what load areas pay per unit
         MultiplyLineLosses,      // effectValue = multiplier on every line's losses
         SetMainsTier,            // effectValue = mains tier reached (Era 3: 1 three-wire DC, 2 AC, 3 high-voltage AC)
+
+        // Era 4 on
+        MultiplyFuelBurn,        // effectValue = multiplier on coal burned per MWh
+        MultiplyServiceTime,     // effectValue = multiplier on how long a service or repair takes
+        MultiplyFuelPrice,       // effectValue = multiplier on the price of coal
+        MultiplyGovernorTime,    // effectValue = multiplier on every governor's lag (smaller is quicker)
+
+        // Era 5 on
+        AddCapacitorStrength,    // effectValue = extra share of a city's reactive power each bank supplies
+        AddVoltageSupport,       // effectValue = per-unit voltage the tap changers add at every city
     }
 
     [CreateAssetMenu(fileName = "UpgradeDef", menuName = "IdlePowerGen/Upgrade Definition")]

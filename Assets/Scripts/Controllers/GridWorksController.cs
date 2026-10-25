@@ -96,10 +96,17 @@ namespace IdlePowerGen.Controllers
 
             // Contracts were served in the sim tick from what reaches the far end of a line;
             // the towns share what is left of the station's output.
-            double station = StationWatts();
             double factor = GM.ContractSupplyFactor;
             double contractDelivered = GM.Contracts.DeliveredWatts;
             double contractSent = factor > 0 ? contractDelivered / factor : 0;
+            double townsWant = 0;
+            foreach (var a in _areas)
+                if (a.Supplied)
+                {
+                    double d = Math.Max(0, a.DemandWatts);
+                    townsWant += d + TransmissionNetwork.EffectiveLoss(a) * d * d;
+                }
+            double station = Dispatch(townsWant + contractSent, e.DeltaTime, hours);
             var share = TransmissionNetwork.Share(_areas, Math.Max(0, station - contractSent));
             LastShare = share;
 
@@ -110,7 +117,9 @@ namespace IdlePowerGen.Controllers
             // Next tick's contracts lose what the towns lose now, on average.
             GM.ContractSupplyFactor = share.Sent > 0 ? 1 - share.LossFraction : 1 - StandingLossFraction;
 
-            decimal pay = (decimal)(share.Delivered * Tariff * hours);
+            double paid = 0;
+            foreach (var a in _areas) if (a.Supplied) paid += a.DeliveredWatts * PayFactor(a);
+            decimal pay = (decimal)(paid * Tariff * hours);
             if (pay > 0) GM.Ledger.AddPennies(pay);
             if (hours > 0) IncomePerHour = (double)(pay + GM.Contracts.PaidLastTick) / hours;
 
@@ -130,8 +139,16 @@ namespace IdlePowerGen.Controllers
         // What the station can send this tick. Era 3: everything the machines make.
         protected virtual double StationWatts() => Simulation.SimulationTick.Instance?.Grid.TotalOutputWatts ?? 0;
 
+        // Runs the station against what the towns and contracts would take (sent watts, losses
+        // included) and returns what it sends. Era 3's machines simply make their output;
+        // Eras 4–5 dispatch their units and the frequency answers. dt is real seconds.
+        protected virtual double Dispatch(double wantedWatts, double dt, double gameHours) => StationWatts();
+
         // Losses a contract client would see when no town is being supplied.
         protected virtual double StandingLossFraction => 0.05;
+
+        // Share of the tariff an area pays for what reaches it (Era 5: less when its voltage sags).
+        protected virtual double PayFactor(LoadArea area) => 1.0;
 
         // Era-specific work after the share-out (frequency, fuel, alerts).
         protected virtual void AfterShare(double gameHours) { }
@@ -165,7 +182,8 @@ namespace IdlePowerGen.Controllers
         {
             if (!CapstoneReady) return;
             int next = EraNumber + 1;
-            if (next > Managers.EraManager.LastBuiltEra) return;
+            // Past the last era built: the end-of-content card, and the grid runs on.
+            if (next > Managers.EraManager.LastBuiltEra) { EventBus.Publish(new ContentEndEvent(EraNumber)); return; }
             Managers.EraManager.Instance?.AdvanceTo(next);
         }
 

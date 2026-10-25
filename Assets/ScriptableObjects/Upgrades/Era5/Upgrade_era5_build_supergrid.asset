@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1c6c43ca333bc2c4993a73e352ede6b8, type: 3}
+  m_Name: Upgrade_era5_build_supergrid
+  m_EditorClassIdentifier: IdlePowerGen.Models::IdlePowerGen.Models.UpgradeDefinition
+  upgradeId: era5_build_supergrid
+  displayName: Build the supergrid
+  description: 275 kV trunk lines across the region.
+  minEra: 5
+  costJoules: 0
+  costPennies: 60000000000
+  costResearch: 0
+  costGrowth: 1
+  isResearch: 0
+  maxLevel: 1
+  requiredReputation: 70
+  effect: 16
+  effectValue: 0.35
+  secondaryValue: 0
+  unlocksId: 
+  requiredUpgradeIds:
+  - era5_fit_tap_changers
+  - res5_supergrid
+  requiredStoredJoules: 0
+  requiredPennies: 0
+  treeBranch: 1
+  treeRow: 2
+  icon: {fileID: 0}

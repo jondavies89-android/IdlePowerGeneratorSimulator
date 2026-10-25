@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b1ef69a6463a757468aee85a57370b63, type: 3}
+  m_Name: Generator_CoalUnit
+  m_EditorClassIdentifier: IdlePowerGen.Models::IdlePowerGen.Models.GeneratorDefinition
+  generatorType: 13
+  displayName: Coal unit
+  description: 'A boiler and a turbo-alternator: the station''s workhorse.'
+  minEra: 4
+  basePowerWatts: 20000000
+  fuelConsumptionPerSecond: 0
+  wagePenniesPerHour: 0
+  coalPenniesPerHour: 0
+  baseCostJoules: 0
+  baseCostPennies: 3600000
+  maintenanceBaseRate: 0.03
+  maintenanceAgeRate: 0.005
+  serviceIntervalHours: 240
+  governorSeconds: 6
+  inertiaSeconds: 5
+  coalTonnesPerMWh: 0.6
+  blackStartCapable: 0
+  maxUnits: 0
+  requiredUpgradeId: 
+  icon: {fileID: 0}

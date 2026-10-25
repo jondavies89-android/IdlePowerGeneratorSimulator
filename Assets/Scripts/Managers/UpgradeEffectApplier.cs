@@ -139,6 +139,13 @@ namespace IdlePowerGen.Managers
                 case UpgradeEffect.SetMainsTier:
                     MainsTier = Mathf.Max(MainsTier, (int)def.effectValue);
                     break;
+
+                case UpgradeEffect.MultiplyFuelBurn:     FuelBurnMultiplier     *= def.effectValue; break;
+                case UpgradeEffect.MultiplyServiceTime:  ServiceTimeMultiplier  *= def.effectValue; break;
+                case UpgradeEffect.MultiplyFuelPrice:    FuelPriceMultiplier    *= def.effectValue; break;
+                case UpgradeEffect.MultiplyGovernorTime: GovernorTimeMultiplier *= def.effectValue; break;
+                case UpgradeEffect.AddCapacitorStrength: CapacitorStrengthBonus += def.effectValue; break;
+                case UpgradeEffect.AddVoltageSupport:    VoltageSupport         += def.effectValue; break;
             }
         }
 
@@ -166,6 +173,8 @@ namespace IdlePowerGen.Managers
             TariffMultiplier      = 1.0;
             LineLossMultiplier    = 1.0;
             MainsTier             = 0;
+            FuelBurnMultiplier = ServiceTimeMultiplier = FuelPriceMultiplier = GovernorTimeMultiplier = 1.0;
+            CapacitorStrengthBonus = VoltageSupport = 0.0;
 
             foreach (var def in gm.UpgradeCatalogue)
             {
@@ -193,5 +202,15 @@ namespace IdlePowerGen.Managers
 
         // How far the current era's mains have come (Era 3: 0 DC, 1 three-wire, 2 AC, 3 HV AC).
         public int MainsTier { get; private set; }
+
+        // Eras 4–5: running the units.
+        public double FuelBurnMultiplier     { get; private set; } = 1.0;
+        public double ServiceTimeMultiplier  { get; private set; } = 1.0;
+        public double FuelPriceMultiplier    { get; private set; } = 1.0;
+        public double GovernorTimeMultiplier { get; private set; } = 1.0;
+
+        // Era 5: reactive power.
+        public double CapacitorStrengthBonus { get; private set; }
+        public double VoltageSupport         { get; private set; }
     }
 }

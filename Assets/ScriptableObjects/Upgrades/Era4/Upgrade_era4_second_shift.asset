@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1c6c43ca333bc2c4993a73e352ede6b8, type: 3}
+  m_Name: Upgrade_era4_second_shift
+  m_EditorClassIdentifier: IdlePowerGen.Models::IdlePowerGen.Models.UpgradeDefinition
+  upgradeId: era4_second_shift
+  displayName: A second shift of fitters
+  description: Services done in half the time.
+  minEra: 4
+  costJoules: 0
+  costPennies: 6000000
+  costResearch: 0
+  costGrowth: 1
+  isResearch: 0
+  maxLevel: 1
+  requiredReputation: 0
+  effect: 19
+  effectValue: 0.5
+  secondaryValue: 0
+  unlocksId: 
+  requiredUpgradeIds: []
+  requiredStoredJoules: 0
+  requiredPennies: 0
+  treeBranch: 1
+  treeRow: 0
+  icon: {fileID: 0}

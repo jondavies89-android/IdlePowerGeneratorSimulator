@@ -59,12 +59,18 @@ namespace IdlePowerGen.Simulation
 
         // §7.1.1 short-absence catch-up: tick at 10× until current.
         // For medium/long absences the SaveManager uses algebraic offline compute instead.
-        public void CatchUpOffline(double secondsElapsed)
+        public void CatchUpOffline(double secondsElapsed) => RunTicks(secondsElapsed, away: true);
+
+        // Ticks the sim forward now, as if the player were here (tests only: a real absence
+        // always goes through CatchUpOffline, where nothing can go wrong).
+        public void CatchUpOfflineAsIfHere(double secondsElapsed) => RunTicks(secondsElapsed, away: false);
+
+        private void RunTicks(double secondsElapsed, bool away)
         {
             const double stepSize = 1.0;
             double remaining = secondsElapsed;
             var contracts = Managers.GameManager.Instance?.Contracts;
-            if (contracts != null) contracts.ShortfallPaused = true;
+            if (contracts != null && away) contracts.ShortfallPaused = true;
             try
             {
                 while (remaining > 0)
@@ -80,7 +86,7 @@ namespace IdlePowerGen.Simulation
             }
             finally
             {
-                if (contracts != null) contracts.ShortfallPaused = false;
+                if (contracts != null && away) contracts.ShortfallPaused = false;
             }
         }
 

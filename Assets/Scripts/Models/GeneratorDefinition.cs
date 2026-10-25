@@ -58,6 +58,18 @@ namespace IdlePowerGen.Models
         public float maintenanceAgeRate   = 0.005f; // +0.5 % / yr of age
         public float serviceIntervalHours = 720f;   // 30 in-game days
 
+        [Header("Grid unit (Era 4–5)")]
+        // How fast its governor picks up load (seconds to ~63 %): hydro is quick, coal slow.
+        public float governorSeconds = 5f;
+        // Spinning mass, as the inertia constant H in seconds (bible §4.1).
+        public float inertiaSeconds = 5f;
+        // Coal burned per megawatt-hour sent (0 = no coal: hydro, the inherited station).
+        public double coalTonnesPerMWh;
+        // Can start a dead grid on its own (bible §10.3.2): hydro does; coal needs fitting.
+        public bool blackStartCapable;
+        // Most that can be built (hydro: the valleys run out). 0 = no limit.
+        public int maxUnits;
+
         [Header("Unlock Gate")]
         // Empty = always available; otherwise must be purchased before this generator can be built
         public string requiredUpgradeId;

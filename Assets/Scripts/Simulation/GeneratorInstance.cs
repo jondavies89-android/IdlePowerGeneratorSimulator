@@ -60,6 +60,14 @@ namespace IdlePowerGen.Simulation
             IsOnline = true;
         }
 
+        // Eras 4–5: a unit's breaker, set by its GridUnit state. Quiet: the unit reports its
+        // own trips, with their reasons.
+        public void SetOnline(bool online)
+        {
+            IsOnline = online;
+            if (!online) CurrentOutputWatts = 0;
+        }
+
         public void Service()        => HoursSinceService = 0;
         public void Refuel(double v) => FuelLevel = Math.Clamp(FuelLevel + v, 0.0, 1.0);
 

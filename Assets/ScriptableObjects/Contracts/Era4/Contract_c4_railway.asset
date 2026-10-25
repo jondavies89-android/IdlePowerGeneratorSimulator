@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 01b459ccb044bf04bb47750814cab6bb, type: 3}
+  m_Name: Contract_c4_railway
+  m_EditorClassIdentifier: IdlePowerGen.Models::IdlePowerGen.Models.ContractDefinition
+  contractId: c4_railway
+  clientName: Southern Electric Railway
+  description: The morning commuter trains, every one electric.
+  tier: 0
+  minEra: 4
+  requiredWatts: 30000000
+  durationHours: 6
+  mustHoldOutput: 0
+  shortfallLeeway: 0.1
+  shortfallCountdownMinutes: 30
+  shortfallForgivenAfterMinutes: 60
+  availableStartHour: 6
+  availableEndHour: 10
+  requiredReputation: 0
+  payRateMultiplier: 1
+  reputationOnSuccess: 1
+  reputationOnFail: -2
+  failThreshold: 0.5
+  reputationTierPayMultiplier: 1

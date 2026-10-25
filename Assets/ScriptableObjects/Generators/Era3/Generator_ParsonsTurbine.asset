@@ -25,5 +25,10 @@ MonoBehaviour:
   maintenanceBaseRate: 0.03
   maintenanceAgeRate: 0.005
   serviceIntervalHours: 720
+  governorSeconds: 5
+  inertiaSeconds: 5
+  coalTonnesPerMWh: 0
+  blackStartCapable: 0
+  maxUnits: 0
   requiredUpgradeId: res3_steam_turbine
   icon: {fileID: 0}

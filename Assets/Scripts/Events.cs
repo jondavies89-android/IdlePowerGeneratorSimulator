@@ -49,6 +49,30 @@ namespace IdlePowerGen
         public CapstoneReadyEvent(int era) { Era = era; }
     }
 
+    // The last built era's capstone was taken: there is no next era yet.
+    public readonly struct ContentEndEvent
+    {
+        public readonly int Era;
+        public ContentEndEvent(int era) { Era = era; }
+    }
+
+    // A preparedness score joins the dashboard (bible §14.1): the failure has happened, here is
+    // its name, and here is the first thing to do about it.
+    public readonly struct ScoreIntroducedEvent
+    {
+        public readonly string Score;
+        public readonly string Title;
+        public readonly string Story;
+        public ScoreIntroducedEvent(string score, string title, string story) { Score = score; Title = title; Story = story; }
+    }
+
+    // The grid has gone dark: the black start begins (bible §10).
+    public readonly struct BlackoutEvent
+    {
+        public readonly int Era;
+        public BlackoutEvent(int era) { Era = era; }
+    }
+
     // --- Milestones ---
 
     public readonly struct MilestoneReachedEvent
