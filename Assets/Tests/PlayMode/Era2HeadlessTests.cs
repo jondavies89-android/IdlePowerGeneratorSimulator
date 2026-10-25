@@ -238,45 +238,15 @@ namespace IdlePowerGen.Tests
             Assert.That(c.AccumulatedWattSeconds, Is.EqualTo(500 * 2 * Hour));
         }
 
-        // --- 2× contracts boost ---
-
-        [Test]
-        public void AtDoubleSpeedATwoHourContractEndsInOne()
-        {
-            var ledger = new ContractLedger();
-            ledger.TryAccept(Contract("lamps", 500, 0, 24, hours: 2), 0);
-            ledger.Tick(500, Hour, Hour, new CurrencyLedger(), _ => 0.4, contractSpeed: 2);
-            Assert.That(ledger.ActiveContracts, Is.Empty);
-        }
-
-        [Test]
-        public void AtDoubleSpeedTheFeeIsUnchanged()
-        {
-            var ledger = new ContractLedger();
-            var wallet = new CurrencyLedger();
-            ledger.TryAccept(Contract("lamps", 500, 0, 24, hours: 2), 0);
-            ledger.Tick(500, Hour, Hour, wallet, _ => 0.4, contractSpeed: 2);
-            Assert.That(wallet.Pennies, Is.EqualTo(400m)); // 2 h × 500 W × 0.4, in half the time
-        }
-
-        [Test]
-        public void AtDoubleSpeedAContractIsStillFullySupplied()
-        {
-            var ledger = new ContractLedger();
-            ledger.TryAccept(Contract("lamps", 500, 0, 24, hours: 2), 0);
-            ledger.Tick(500, 0.5 * Hour, 0.5 * Hour, new CurrencyLedger(), _ => 0.4, contractSpeed: 2);
-            Assert.That(ledger.ActiveContracts[0].RatioSoFar(), Is.EqualTo(1f).Within(1e-6));
-        }
-
         // --- Shortfall countdown ---
 
         // Runs the ledger in one-minute game ticks, as the sim does (1 real second = 1 game minute).
         private static void Run(ContractLedger ledger, double watts, double minutes,
-                                CurrencyLedger wallet = null, double speed = 1)
+                                CurrencyLedger wallet = null)
         {
             wallet ??= new CurrencyLedger();
             for (int i = 0; i < minutes; i++)
-                ledger.Tick(watts, 60, 0, wallet, _ => 0.4, speed);
+                ledger.Tick(watts, 60, 0, wallet, _ => 0.4);
         }
 
         private static ContractLedger OneHotel(out ContractInstance hotel)
@@ -366,14 +336,6 @@ namespace IdlePowerGen.Tests
             Run(ledger, 1000, 59); // a minute short of clearing
             Run(ledger, 0, 10);
             Assert.That(ledger.ActiveContracts, Is.Empty);
-        }
-
-        [Test]
-        public void TheCountdownRunsOnTheClockNotTheBoost()
-        {
-            var ledger = OneHotel(out _);
-            Run(ledger, 0, 20, speed: 2); // 20 game minutes, though 40 contract minutes
-            Assert.That(ledger.ActiveContracts, Has.Count.EqualTo(1));
         }
 
         [Test]

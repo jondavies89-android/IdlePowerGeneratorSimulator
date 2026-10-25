@@ -50,13 +50,11 @@ namespace IdlePowerGen.UI
             double now = Controllers.Era2WorksController.Now;
             _progressFill.fillAmount = Contract.Progress01;
 
-            // Clock time left at the current speed, so the 2× boost pulls the end in.
-            double speed = Managers.GameManager.Instance != null ? Managers.GameManager.Instance.ContractSpeed : 1.0;
-            double left = Contract.SecondsLeft / speed;
+            // Game time, so the 2× boost (which runs the clock faster) leaves the end hour alone.
+            double left = Contract.SecondsLeft;
             _windowLabel.text = $"{Clock(Contract.StartGameTime)} → {Clock(now + left)}";
             int hours = (int)(left / 3600), minutes = (int)(left % 3600 / 60);
-            _timeLabel.text = (hours > 0 ? $"{hours} h {minutes:00} m left" : $"{minutes} m left") +
-                              (speed > 1 ? $" · {speed:0}× faster" : string.Empty);
+            _timeLabel.text = hours > 0 ? $"{hours} h {minutes:00} m left" : $"{minutes} m left";
 
             float ratio = Contract.RatioSoFar();
             var def = Contract.Definition;

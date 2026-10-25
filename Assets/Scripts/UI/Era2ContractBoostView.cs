@@ -6,6 +6,7 @@ namespace IdlePowerGen.UI
 {
     // The "contracts complete 2× faster" button on the Era 2 office screen. In the published
     // game this is where a rewarded ad would play; for now a tap starts (or tops up) the boost.
+    // While it runs, the label says what the player sees happen: the clock going faster.
     public class Era2ContractBoostView : MonoBehaviour
     {
         [SerializeField] private Button _button;
@@ -34,7 +35,7 @@ namespace IdlePowerGen.UI
             if (gm.ContractBoostActive)
             {
                 int left = Mathf.CeilToInt((float)gm.ContractBoostSecondsLeft);
-                _label.text = $"Contracts {gm.ContractSpeed:0}× faster · {left / 60}:{left % 60:00} left";
+                _label.text = $"Time runs {gm.ContractSpeed:0}× faster · {left / 60}:{left % 60:00} left";
                 _label.color = _activeText;
                 _background.color = _active;
             }

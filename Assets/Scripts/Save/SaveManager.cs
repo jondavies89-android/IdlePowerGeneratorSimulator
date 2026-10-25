@@ -370,10 +370,10 @@ namespace IdlePowerGen.Save
             }
             double sustained = Simulation.SimulationTick.Instance?.Grid.ComputeSustainedOutputWatts() ?? 0;
             double sold = Math.Min(committed, sustained);
-            double scale = Utils.GameClock.Instance != null ? Utils.GameClock.Instance.GameTimeScale : 60f;
+            double scale = Utils.GameClock.Instance != null ? Utils.GameClock.Instance.BaseTimeScale : 60f;
 
             // Watt-seconds of offline effort; pay is per watt per game hour, and a real
-            // second is GameTimeScale game seconds.
+            // second is BaseTimeScale game seconds (a boost doesn't pay while away).
             decimal Earn(double watts, double penniesPerWattGameHour) =>
                 (decimal)(Managers.OfflineProgressionManager.ComputeOfflineJoules(watts, realSeconds, eraFactor, tauHours)
                           * scale / 3600.0 * penniesPerWattGameHour);

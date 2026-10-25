@@ -135,7 +135,9 @@ namespace IdlePowerGen.Controllers
         private void OnSimTick(SimTickEvent e)
         {
             if (!IsEra2 || GM == null) return;
-            double scale = GameClock.Instance != null ? GameClock.Instance.GameTimeScale : 1f;
+            // Wages and coal go at the unboosted pace, like the street: the 2× boost doubles
+            // the clock to finish contracts sooner, not to double the running costs.
+            double scale = GameClock.Instance != null ? GameClock.Instance.BaseTimeScale : 1f;
             double hours = e.DeltaTime * scale / 3600.0;
 
             PayWages(hours);
@@ -151,7 +153,8 @@ namespace IdlePowerGen.Controllers
 
         // Pennies an hour coming in from engagements and the street as of the last tick, and
         // the same less wages and coal. Lump payments at an engagement's end aren't counted:
-        // this is the steady rate the player can plan purchases against.
+        // this is the steady rate the player can plan purchases against. Hours at the
+        // unboosted pace, so the 2× boost shows as the contracts' pay going up.
         public double EarnedPerHour { get; private set; }
         public double NetPerHour    { get; private set; }
 

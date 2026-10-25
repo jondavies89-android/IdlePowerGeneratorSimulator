@@ -549,12 +549,14 @@ namespace IdlePowerGen.Tests
         [TearDown]
         public void EndBoost() => GM.SetContractBoostFromSave(0);
 
+        private static Utils.GameClock Clock => Utils.GameClock.Instance;
+
         [UnityTest]
-        public IEnumerator TheBoostButtonDoublesContractSpeed()
+        public IEnumerator TheBoostButtonDoublesTheClock()
         {
             yield return Load(Era2Save(0));
             Click("ContractBoost");
-            Assert.That(GM.ContractSpeed, Is.EqualTo(2.0));
+            Assert.That(Clock.GameTimeScale, Is.EqualTo(2 * Clock.BaseTimeScale));
         }
 
         [UnityTest]
@@ -563,18 +565,43 @@ namespace IdlePowerGen.Tests
             yield return Load(Era2Save(0));
             Click("ContractBoost");
             GM.TickContractBoost(Managers.GameManager.ContractBoostSeconds);
-            Assert.That(GM.ContractSpeed, Is.EqualTo(1.0));
+            Assert.That(Clock.GameTimeScale, Is.EqualTo(Clock.BaseTimeScale));
         }
 
         [UnityTest]
-        public IEnumerator ABoostedEngagementRunsAheadOfTheClock()
+        public IEnumerator ABoostedEngagementRunsTwiceAsFast()
         {
             yield return Load(Era2Save(1000, 0, StartHour, (GeneratorType.SmallDynamo, 12)));
             Works.Book(Contract("c2_street_lamps"));
             Click("ContractBoost");
             Time.timeScale = 0f; // no ticks but the one below
-            Simulation.SimulationTick.Instance.CatchUpOffline(1.0); // one real second: one game minute
+            Simulation.SimulationTick.Instance.CatchUpOffline(1.0); // one real second: two game minutes
             Assert.That(GM.Contracts.ActiveContracts[0].ProgressSeconds, Is.EqualTo(2 * 60).Within(1e-6));
+        }
+
+        [UnityTest]
+        public IEnumerator ABoostedEngagementKeepsPaceWithTheClock()
+        {
+            yield return Load(Era2Save(1000, 0, StartHour, (GeneratorType.SmallDynamo, 12)));
+            Time.timeScale = 0f;
+            Works.Book(Contract("c2_street_lamps"));
+            Click("ContractBoost");
+            Simulation.SimulationTick.Instance.CatchUpOffline(5.0);
+            var c = GM.Contracts.ActiveContracts[0];
+            Assert.That(c.ProgressSeconds, Is.EqualTo(Clock.GameTimeSeconds - c.StartGameTime).Within(1e-6));
+        }
+
+        [UnityTest]
+        public IEnumerator TheStreetPaysTheSamePerSecondUnderTheBoost()
+        {
+            yield return Load(Era2Save(1000, 0, StartHour, (GeneratorType.SmallDynamo, 12)));
+            Time.timeScale = 0f;
+            Simulation.SimulationTick.Instance.CatchUpOffline(1.0);
+            decimal before = GM.Street.LastPennies;
+            Click("ContractBoost");
+            Simulation.SimulationTick.Instance.CatchUpOffline(1.0);
+            // The evening's price moves a little in two game minutes; the boost alone would double it.
+            Assert.That((double)GM.Street.LastPennies, Is.EqualTo((double)before).Within(5).Percent);
         }
 
         [UnityTest]

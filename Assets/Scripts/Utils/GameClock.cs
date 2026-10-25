@@ -24,11 +24,19 @@ namespace IdlePowerGen.Utils
 
         private void Update()
         {
-            GameTimeSeconds += Time.deltaTime * _gameTimeScale;
+            GameTimeSeconds += Time.deltaTime * GameTimeScale;
         }
 
         public void SetGameTime(double seconds) => GameTimeSeconds = seconds;
 
-        public float GameTimeScale => _gameTimeScale;
+        // Game seconds per real second right now, boost included.
+        public float GameTimeScale => _gameTimeScale * SpeedMultiplier;
+
+        // Game seconds per real second without any boost: the pace of what shouldn't speed up
+        // with the clock (the street's trade, wages, coal, offline pay).
+        public float BaseTimeScale => _gameTimeScale;
+
+        // Set by the 2× boost, which runs the whole clock faster so contracts end on time.
+        public float SpeedMultiplier { get; set; } = 1f;
     }
 }

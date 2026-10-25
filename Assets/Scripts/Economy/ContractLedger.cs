@@ -6,8 +6,9 @@ using IdlePowerGen.Utils;
 namespace IdlePowerGen.Economy
 {
     // Runtime state for one active contract.
-    // A contract keeps its own clock (ProgressSeconds) rather than ending at a fixed game
-    // time, so it can run faster than the day around it (the 2× contracts boost).
+    // A contract keeps its own count of hours served (ProgressSeconds) rather than ending at
+    // a fixed game time, so time skipped without ticking (a medium or long absence, when
+    // the clock waits for the player) isn't counted as served.
     public class ContractInstance
     {
         public ContractDefinition Definition      { get; }
@@ -95,8 +96,7 @@ namespace IdlePowerGen.Economy
         public double FailsInSeconds     => Math.Max(0, CountdownSeconds - ShortSeconds);
         public double ClearsInSeconds    => Math.Max(0, ForgivenAfterSeconds - SuppliedSeconds);
 
-        // Counts a tick's supply against the countdown; true once it has run out. Game seconds,
-        // not contract seconds: the 2× boost speeds the job, not the client's patience.
+        // Counts a tick's supply against the countdown, in game seconds; true once it has run out.
         public bool TrackShortfall(double watts, double deltaTime)
         {
             if (Definition.mustHoldOutput) return false;
@@ -222,13 +222,10 @@ namespace IdlePowerGen.Economy
 
         // baseRateFor: the pay rate of the era a contract belongs to, so a contract still
         // running when the era changes is paid at the rate it was offered at.
-        // contractSpeed: contract seconds served per game second (2 under the 2× boost). The
-        // watts drawn don't change; a faster contract takes the same power for less time, so
-        // it pays out faster too. gameTime is the clock at this tick, kept for callers' sake:
-        // contracts now end on their own progress, not on the clock.
+        // deltaTime is game seconds; the 2× boost speeds the game clock itself, so contracts
+        // finish sooner in real time and still end at the hour their card shows.
         public void Tick(double outputWatts, double deltaTime, double gameTime,
-                         CurrencyLedger ledger, Func<ContractDefinition, double> baseRateFor,
-                         double contractSpeed = 1.0)
+                         CurrencyLedger ledger, Func<ContractDefinition, double> baseRateFor)
         {
             double remaining = Math.Max(0, outputWatts);
             DeliveredWatts = 0;
@@ -251,7 +248,7 @@ namespace IdlePowerGen.Economy
                 }
 
                 DeliveredWatts += share;
-                double served = c.Advance(deltaTime * Math.Max(0, contractSpeed));
+                double served = c.Advance(deltaTime);
                 c.RecordOutput(share, served);
                 PaidLastTick += c.PayAsDelivered(share, served, ledger, baseRateFor(c.Definition));
 

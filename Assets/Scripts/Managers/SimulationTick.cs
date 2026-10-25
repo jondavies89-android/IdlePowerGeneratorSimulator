@@ -92,15 +92,19 @@ namespace IdlePowerGen.Simulation
                 // Contract durations are in game time, so their delivered energy must be too:
                 // one real-second tick covers GameTimeScale game seconds. Using the real delta
                 // left every contract at 1/60 of its target, i.e. always failed.
-                double gameDelta = delta * (GameClock.Instance != null ? GameClock.Instance.GameTimeScale : 1f);
-                ledger.Tick(Grid.TotalOutputWatts, gameDelta, gameTime, eco.Ledger, eco.ContractBaseRate,
-                            eco.ContractSpeed);
-                eco.TickContractBoost(delta);
+                var clock = GameClock.Instance;
+                double gameDelta = delta * (clock != null ? clock.GameTimeScale : 1f);
+                ledger.Tick(Grid.TotalOutputWatts, gameDelta, gameTime, eco.Ledger, eco.ContractBaseRate);
                 delivered = ledger.DeliveredWatts;
 
                 // Whatever the engagements left goes to the street, where there is a street.
-                eco.Street.Sell(Grid.TotalOutputWatts - delivered, gameDelta,
+                // At the unboosted pace: under the 2× boost the clock runs double, and each
+                // game hour sells half the energy, so the street pays the same per real second
+                // and only the contracts gain from the boost.
+                double streetDelta = delta * (clock != null ? clock.BaseTimeScale : 1f);
+                eco.Street.Sell(Grid.TotalOutputWatts - delivered, streetDelta,
                                 eco.StreetPricePerWattHour(era, gameTime), eco.Ledger);
+                eco.TickContractBoost(delta);
                 delivered += eco.Street.LastWatts;
             }
 

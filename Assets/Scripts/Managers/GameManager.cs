@@ -83,9 +83,11 @@ namespace IdlePowerGen.Managers
         }
 
         // ---- Contracts 2× boost ----
-        // Stands in for a rewarded ad in the published game: one tap (one ad) runs every
-        // engagement at double speed for a while. Fifteen minutes is the usual length of an
-        // idle game's ad boost, long enough to see a couple of engagements through.
+        // Stands in for a rewarded ad in the published game: one tap (one ad) runs the game
+        // clock at double speed for a while, so engagements finish twice as fast and still end
+        // at the hour their card shows. Fifteen minutes is the usual length of an idle game's
+        // ad boost, long enough to see a couple of engagements through. The street, wages and
+        // coal keep to the unboosted pace (GameClock.BaseTimeScale), so only contracts gain.
         public const double ContractBoostSpeed   = 2.0;
         public const double ContractBoostSeconds = 15 * 60;
 
@@ -96,13 +98,20 @@ namespace IdlePowerGen.Managers
         public double ContractSpeed => ContractBoostActive ? ContractBoostSpeed : 1.0;
 
         // Another tap tops it back up to the full length rather than stacking.
-        public void StartContractBoost() => ContractBoostSecondsLeft = ContractBoostSeconds;
+        public void StartContractBoost() => SetBoost(ContractBoostSeconds);
 
         public void TickContractBoost(double realSeconds) =>
-            ContractBoostSecondsLeft = System.Math.Max(0, ContractBoostSecondsLeft - realSeconds);
+            SetBoost(System.Math.Max(0, ContractBoostSecondsLeft - realSeconds));
 
         public void SetContractBoostFromSave(double seconds) =>
-            ContractBoostSecondsLeft = System.Math.Clamp(seconds, 0, ContractBoostSeconds);
+            SetBoost(System.Math.Clamp(seconds, 0, ContractBoostSeconds));
+
+        private void SetBoost(double secondsLeft)
+        {
+            ContractBoostSecondsLeft = secondsLeft;
+            var clock = Utils.GameClock.Instance;
+            if (clock != null) clock.SpeedMultiplier = (float)ContractSpeed;
+        }
 
         // What the street pays for a watt-hour of spare power at this time of day, in pennies.
         // averageDay prices a whole day at once (the daily shape averages ≈ 1), for offline pay.
