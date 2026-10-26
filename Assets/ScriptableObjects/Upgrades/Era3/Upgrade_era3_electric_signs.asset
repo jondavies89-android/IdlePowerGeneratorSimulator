@@ -32,5 +32,5 @@ MonoBehaviour:
   requiredStoredJoules: 0
   requiredPennies: 0
   treeBranch: 2
-  treeRow: 3
+  treeRow: 4
   icon: {fileID: 0}

@@ -13,21 +13,21 @@ MonoBehaviour:
   m_Name: Upgrade_era2_clerk
   m_EditorClassIdentifier: IdlePowerGen.Models::IdlePowerGen.Models.UpgradeDefinition
   upgradeId: era2_clerk
-  displayName: A Clerk at the Desk
-  description: Books any engagement the works can fully supply while you see to the
-    machines.
+  displayName: Contract Manager
+  description: A clerk who books a client for one slot while you see to the machines,
+    for a cut of the fee.
   minEra: 2
   costJoules: 0
   costPennies: 600
   costResearch: 0
-  costGrowth: 1
+  costGrowth: 3
   isResearch: 0
-  maxLevel: 1
+  maxLevel: 4
   requiredReputation: 4
-  effect: 3
+  effect: 24
   effectValue: 0
   secondaryValue: 0
-  unlocksId: feature_clerk
+  unlocksId: 
   requiredUpgradeIds:
   - era2_street_counter
   requiredStoredJoules: 0

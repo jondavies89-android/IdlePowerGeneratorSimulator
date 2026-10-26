@@ -544,10 +544,44 @@ public static class ScreenKit
         return root.gameObject;
     }
 
+    // The contract managers hired (ContractManagersView), one card each, from a template:
+    // name and on/off; the client it books, stepped with the arrows; what it's doing, and a
+    // Start button for when it's off.
+    public static void Managers(ScreenTheme t, Transform content, IdlePowerGen.Controllers.ContractDesk desk)
+    {
+        var header = SectionHeader(t, content, "ManagersHeader", "Contract managers");
+        var rows = Stack("ManagerPanel", content);
+
+        var card = Box(t, rows, "ManagerTemplate", 12, 6);
+        var top = Row(card, "Top");
+        Flexible(Text(t, top, "Name", "Manager 1", 17, t.Text));
+        var toggle = Button(t, top, "Toggle", "On", 36, t.PanelRaised, 15);
+        toggle.GetComponent<LayoutElement>().preferredWidth = 72;
+
+        var choose = Row(card, "Choose", 6);
+        var prev = Button(t, choose, "Prev", "<", 44, t.PanelRaised, 18);
+        prev.GetComponent<LayoutElement>().preferredWidth = 48;
+        var choice = Text(t, choose, "Choice", "", 15, t.Money, TextAlignmentOptions.Center);
+        Flexible(choice);
+        var next = Button(t, choose, "Next", ">", 44, t.PanelRaised, 18);
+        next.GetComponent<LayoutElement>().preferredWidth = 48;
+
+        var bottom = Row(card, "Bottom");
+        Flexible(Text(t, bottom, "Status", "", 13, t.TextMuted, style: FontStyles.Italic));
+        var start = Button(t, bottom, "Start", "Start", 40, t.PanelRaised, 15);
+        start.GetComponent<LayoutElement>().preferredWidth = 84;
+
+        var view = rows.gameObject.AddComponent<ContractManagersView>();
+        Wire(view, ("_desk", desk), ("_rowTemplate", card.gameObject), ("_content", rows), ("_headerLabel", header));
+        SetColours(view, ("_text", t.Text), ("_muted", t.TextMuted), ("_healthy", t.Healthy), ("_caution", t.Caution));
+        header.gameObject.SetActive(false);
+    }
+
     // Engagements running, then the board, on one scrolling page.
     public static void Contracts(ScreenTheme t, Transform content, IdlePowerGen.Controllers.ContractDesk desk,
                                  string engagementPrefabPath, string offerPrefabPath)
     {
+        Managers(t, content, desk);
         var header = SectionHeader(t, content, "ContractsHeader", "Contracts");
         var running = Stack("EngagementPanel", content);
         var none = Text(t, content, "NoEngagements", "None running. Book a client from the board below.", 14,

@@ -128,9 +128,10 @@ namespace IdlePowerGen.UI
                     return $"One more engagement at a time ({Data.Era2Data.BaseContractSlots + level + 1} in all)";
                 case UpgradeEffect.MultiplyStreetTrade:   return $"The street pays ×{def.effectValue:0.##} for spare power";
                 case UpgradeEffect.UnlockFeature:
-                    return def.unlocksId == Data.Era2Data.ClerkFeatureId ? "Engagements booked for you"
-                         : def.unlocksId == Data.Era2Data.CoalMerchantFeatureId ? "Coal ordered for you"
-                         : OpensText(def);
+                    return def.unlocksId == Data.Era2Data.CoalMerchantFeatureId ? "Coal ordered for you" : OpensText(def);
+                case UpgradeEffect.AddContractManager:
+                    return $"Books a client for one slot, for {Controllers.ContractDesk.ManagerCommission:0%} of the fee" +
+                           (level > 0 ? $" ({level} hired)" : "");
                 case UpgradeEffect.AddResearchRate:
                     return $"+{def.effectValue:0.#} research points an hour" + (level > 0 ? $" ({def.effectValue * level:0.#} now)" : "");
                 case UpgradeEffect.MultiplyTariff:        return $"Customers pay ×{def.effectValue:0.##} per unit";

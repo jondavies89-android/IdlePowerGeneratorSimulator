@@ -60,7 +60,6 @@ namespace IdlePowerGen.Data
         public const float ReputationPerStar = 6f;
 
         // Feature flags (UpgradeEffect.UnlockFeature). Saved via the upgrade ids that set them.
-        public const string ClerkFeatureId        = "feature_clerk";
         public const string CoalMerchantFeatureId = "feature_coal_merchant";
 
         // -------------------------------------------------------------------------------
@@ -85,8 +84,6 @@ namespace IdlePowerGen.Data
         // -------------------------------------------------------------------------------
         // Contracts — bible §5.1.6. Pay = hours × watts × ContractBaseRate × pay multiplier.
         // Below 50 % of the watts asked for on average: −2 reputation, pro-rated pay.
-        // Windows follow the shape of a day's demand (bible §3.4): bakeries before dawn,
-        // mills and presses in the morning, lamps and theatres in the evening.
         // -------------------------------------------------------------------------------
 
         public const string ExhibitionContractId = "c2_exhibition";
@@ -137,7 +134,7 @@ namespace IdlePowerGen.Data
         public const string ApprenticeTrainingId = "era2_apprentice_training";
         public const string MillRaceWeirId       = "era2_millrace_weir";
         public const string WattPatentId         = "era2_watt_patent";
-        public const string ClerkId              = "era2_clerk";
+        public const string ContractManagerId    = "era2_clerk"; // the clerk it replaced: kept for saves
         public const string TelegraphId          = "era2_telegraph";
         public const string PressureControlId    = "era2_pressure_control";
         public const string CoalMerchantId       = "era2_coal_merchant";
@@ -175,10 +172,11 @@ namespace IdlePowerGen.Data
             // Trade
             new(StreetCounterId,      "A Counter on the Street",    300,       1,     1,  0,   UpgradeEffect.MultiplyStreetTrade,     2,    null,                                   TradeBranch, 0, new string[0],
                 "A shopfront where the neighbours buy their power by the hour."),
-            new(ClerkId,              "A Clerk at the Desk",        600,       1,     1,  4,   UpgradeEffect.UnlockFeature,           0,    ClerkFeatureId,                         TradeBranch, 1, new[] { StreetCounterId },
-                "Books any engagement the works can fully supply while you see to the machines."),
+            // One per engagement slot (up to the four Telegraph Lines give), ×3 apart.
+            new(ContractManagerId,    "Contract Manager",           600,       3,     4,  4,   UpgradeEffect.AddContractManager,      0,    null,                                   TradeBranch, 1, new[] { StreetCounterId },
+                "A clerk who books a client for one slot while you see to the machines, for a cut of the fee."),
             // Two levels, ×10 apart: a third and a fourth engagement at once.
-            new(TelegraphId,          "Telegraph Lines",            1_500,     10,    2,  5,   UpgradeEffect.AddContractSlot,         1,    null,                                   TradeBranch, 2, new[] { ClerkId },
+            new(TelegraphId,          "Telegraph Lines",            1_500,     10,    2,  5,   UpgradeEffect.AddContractSlot,         1,    null,                                   TradeBranch, 2, new[] { ContractManagerId },
                 "More clients can reach you by wire."),
             new(ArcLampsId,           "Arc Lamps for the Parish",   40_000,    1,     1,  12,  UpgradeEffect.MultiplyStreetTrade,     1.5,  null,                                   TradeBranch, 3, new[] { TelegraphId },
                 "The vestry lights the whole street from your works, and pays for it."),

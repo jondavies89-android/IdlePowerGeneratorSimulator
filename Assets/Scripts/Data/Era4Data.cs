@@ -182,6 +182,7 @@ namespace IdlePowerGen.Data
         public const string SidingsId      = "era4_coal_sidings";
         public const string TuneId         = "era4_fit_governors";
         public const string OfficeId       = "era4_engineering_office";
+        public const string ManagerId      = "era4_contract_manager";
         public const string TelephonesId   = "era4_control_telephones";
         public const string ShowroomsId    = "era4_showrooms";
 
@@ -207,9 +208,11 @@ namespace IdlePowerGen.Data
                 "Every unit answers a change of load twice as fast."),
             new(OfficeId,      "Engineering office",         20_000,     1.15,  10, 0,   UpgradeEffect.AddResearchRate,            OfficeResearchPerHour, null,                  CustomersBranch,  0,   new string[0],
                 "Draughtsmen and a test bay. Makes research."),
-            new(TelephonesId,  "Control-room telephones",    80_000,     8,     2,  56,  UpgradeEffect.AddContractSlot,            1,     null,                                  CustomersBranch,  1,   new[] { OfficeId },
+            new(ManagerId,     "Contract manager",           30_000,     3,     4,  0,   UpgradeEffect.AddContractManager,         0,     null,                                  CustomersBranch,  1,   new[] { OfficeId },
+                "Books a client for one contract slot, for a cut of the fee. One per slot."),
+            new(TelephonesId,  "Control-room telephones",    80_000,     8,     2,  56,  UpgradeEffect.AddContractSlot,            1,     null,                                  CustomersBranch,  2,   new[] { ManagerId },
                 "The big works ring the desk directly. One more contract at a time."),
-            new(ShowroomsId,   "Electricity showrooms",      400_000,    1,     1,  62,  UpgradeEffect.MultiplyTariff,             1.2,   null,                                  CustomersBranch,  2,   new[] { TelephonesId },
+            new(ShowroomsId,   "Electricity showrooms",      400_000,    1,     1,  62,  UpgradeEffect.MultiplyTariff,             1.2,   null,                                  CustomersBranch,  3,   new[] { TelephonesId },
                 "Cookers, irons and wireless sets in every window."),
         };
 

@@ -23,6 +23,20 @@ namespace IdlePowerGen.Economy
             StartGameTime = startGameTime;
         }
 
+        // The contract manager who booked it (1, 2, …), or 0 if the player did, and the share
+        // of every payment that manager keeps.
+        public int   ManagerNumber { get; set; }
+        public float Commission    { get; set; }
+        public decimal CommissionPaid { get; private set; }
+
+        // What reaches the purse of a payment, the manager's cut taken out.
+        private decimal Net(decimal gross)
+        {
+            decimal cut = gross * (decimal)Commission;
+            CommissionPaid += cut;
+            return gross - cut;
+        }
+
         public double DurationSeconds => Definition.durationHours * 3600.0;
 
         // Contract time served so far, in game seconds.
@@ -58,8 +72,9 @@ namespace IdlePowerGen.Economy
             if (Definition.mustHoldOutput || watts <= 0) return 0m;
             decimal pay = (decimal)(watts * deltaTime / 3600.0 * eraBaseRate);
             PaidSoFar += pay;
-            ledger.AddPennies(pay);
-            return pay;
+            decimal net = Net(pay);
+            ledger.AddPennies(net);
+            return net;
         }
 
         public float FulfillmentRatio()
@@ -144,7 +159,7 @@ namespace IdlePowerGen.Economy
                 // turned a client who was briefly short a few watts into "+0.9 repute" against
                 // the "+1" the board promised; the pay already reflects any shortfall.
                 ledger.AddReputation(Definition.reputationOnSuccess);
-                EventBus.Publish(new ContractCompletedEvent(this, pay));
+                EventBus.Publish(new ContractCompletedEvent(this, pay * (1 - (decimal)Commission)));
             }
             else
             {
@@ -157,7 +172,7 @@ namespace IdlePowerGen.Economy
         private void PayBalance(decimal total, CurrencyLedger ledger)
         {
             decimal owed = total - PaidSoFar;
-            if (owed > 0) ledger.AddPennies(owed);
+            if (owed > 0) ledger.AddPennies(Net(owed));
             PaidSoFar = Math.Max(PaidSoFar, total);
         }
 
@@ -193,10 +208,11 @@ namespace IdlePowerGen.Economy
         public IReadOnlyList<ContractInstance> ActiveContracts => _active;
         public IReadOnlyList<ContractInstance> History         => _history;
 
-        public bool TryAccept(ContractDefinition def, double gameTime, int maxConcurrent = 3)
+        public bool TryAccept(ContractDefinition def, double gameTime, int maxConcurrent = 3,
+                              int managerNumber = 0, float commission = 0f)
         {
             if (_active.Count >= maxConcurrent) return false;
-            var instance = new ContractInstance(def, gameTime);
+            var instance = new ContractInstance(def, gameTime) { ManagerNumber = managerNumber, Commission = commission };
             _active.Add(instance);
             EventBus.Publish(new ContractAcceptedEvent(def));
             return true;

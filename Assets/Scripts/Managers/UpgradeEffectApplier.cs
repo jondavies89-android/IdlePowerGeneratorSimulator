@@ -117,7 +117,8 @@ namespace IdlePowerGen.Managers
                     break;
 
                 case UpgradeEffect.AddContractSlot:
-                    // The era's contract desk counts slots from the levels owned.
+                case UpgradeEffect.AddContractManager:
+                    // The era's contract desk counts slots and managers from the levels owned.
                     break;
 
                 case UpgradeEffect.MultiplyStreetTrade:

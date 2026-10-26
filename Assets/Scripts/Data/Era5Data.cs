@@ -157,6 +157,7 @@ namespace IdlePowerGen.Data
         public const string FitTapsId    = "era5_fit_tap_changers";
         public const string BuildSuperId = "era5_build_supergrid";
         public const string LabId        = "era5_rd_laboratory";
+        public const string ManagerId    = "era5_contract_manager";
         public const string ControlId    = "era5_grid_control";
         public const string CouncilId    = "era5_electricity_council";
 
@@ -180,9 +181,11 @@ namespace IdlePowerGen.Data
                 "275 kV trunk lines across the region."),
             new(LabId,        "R&D laboratory",           500_000,     1.15, 10, 0,  UpgradeEffect.AddResearchRate,         LabResearchPerHour, null,                   OperationsBranch, 0, new string[0],
                 "Scientists, a test hall and a reactor model. Makes research."),
-            new(ControlId,    "Grid control centre",      20_000_000,  8,    2,  66, UpgradeEffect.AddContractSlot,         1,    null,                                 OperationsBranch, 1, new[] { LabId },
+            new(ManagerId,    "Contract manager",         2_000_000,   3,    4,  0,  UpgradeEffect.AddContractManager,      0,    null,                                 OperationsBranch, 1, new[] { LabId },
+                "Books a client for one contract slot, for a cut of the fee. One per slot."),
+            new(ControlId,    "Grid control centre",      20_000_000,  8,    2,  66, UpgradeEffect.AddContractSlot,         1,    null,                                 OperationsBranch, 2, new[] { ManagerId },
                 "A national control room. One more contract at a time."),
-            new(CouncilId,    "The Electricity Council",  120_000_000, 1,    1,  72, UpgradeEffect.MultiplyTariff,          1.2,  null,                                 OperationsBranch, 2, new[] { ControlId },
+            new(CouncilId,    "The Electricity Council",  120_000_000, 1,    1,  72, UpgradeEffect.MultiplyTariff,          1.2,  null,                                 OperationsBranch, 3, new[] { ControlId },
                 "Showrooms, all-electric homes, and a tariff to suit."),
         };
 

@@ -52,6 +52,9 @@ namespace IdlePowerGen.Save
         public List<string> introducedScores = new(); // preparedness scores on the dashboard
         public bool   capstoneOffered;     // the current era's goal was reached
 
+        // --- Contract managers (v10), the current era's ---
+        public List<ContractManagerEntry> contractManagers = new();
+
         // --- Lifetime stats (prestige §12) ---
         public double lifetimeMWh;
         public int    engineeringXP;
@@ -63,6 +66,13 @@ namespace IdlePowerGen.Save
         {
             public string upgradeId;
             public int    level;
+        }
+
+        [Serializable]
+        public class ContractManagerEntry
+        {
+            public bool   on;
+            public string contractId;     // "" = the best-paying client it can supply
         }
 
         [Serializable]
@@ -107,6 +117,8 @@ namespace IdlePowerGen.Save
             // supplied in a row towards clearing it.
             public double shortSeconds;
             public double suppliedSeconds;
+            // v10: the contract manager who booked it (1, 2, …), 0 if the player did.
+            public int    managerNumber;
         }
     }
 }

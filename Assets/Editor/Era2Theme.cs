@@ -27,5 +27,15 @@ public static class Era2Theme
     public static readonly Color AlarmPanel  = Hex("#311412");
     public static readonly Color Achievement = Purse;
 
+    // The same, for the pieces Era 2 shares with the later eras' screens (ScreenKit).
+    public static ScreenTheme Screen => new()
+    {
+        Background = Background, Panel = Panel, PanelRaised = PanelRaised, Edge = Brass, Track = Track,
+        Text = Text, TextMuted = TextMuted, Money = Purse, Research = Purse,
+        Healthy = Healthy, Caution = Caution, Alarm = Alarm, AlarmPanel = AlarmPanel, Achievement = Achievement,
+        Overlay = Overlay, Body = Era1FontBuilder.Body, Numerals = Era1FontBuilder.Numeral, Sans = false,
+        PanelSprite = Era1Theme.PanelSprite,
+    };
+
     private static Color Hex(string hex) => ColorUtility.TryParseHtmlString(hex, out var c) ? c : Color.magenta;
 }

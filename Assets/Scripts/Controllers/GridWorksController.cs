@@ -68,6 +68,7 @@ namespace IdlePowerGen.Controllers
             StartDay = day;
             BestDeliveredWatts = 0;
             CapstoneReady = false;
+            ResetManagers();
             foreach (var a in _areas) { a.Connected = false; a.Shed = false; }
             ResetAreaExtras();
             OnEraStart();
@@ -129,6 +130,7 @@ namespace IdlePowerGen.Controllers
             if (applier != null) GM.Ledger.AddResearch(applier.ResearchPerHour * hours);
 
             AfterShare(hours);
+            RunManagers();
 
             BestDeliveredWatts = Math.Max(BestDeliveredWatts, DeliveredWatts);
             if (!CapstoneReady && BestDeliveredWatts >= GoalWatts)
@@ -209,6 +211,7 @@ namespace IdlePowerGen.Controllers
                 WriteArea(a, entry);
                 data.loadAreas.Add(entry);
             }
+            WriteManagers(data);
         }
 
         public virtual void ReadSave(Save.SaveData data)
@@ -218,10 +221,12 @@ namespace IdlePowerGen.Controllers
             BestDeliveredWatts = 0;
             CapstoneReady = false;
             IncomePerHour = 0;
+            ReadManagers(null);
             if ((int)data.currentEra != EraNumber) return;
 
             StartDay = data.eraStartDay;
             CapstoneReady = data.capstoneOffered;
+            ReadManagers(data);
 
             // A save made before the era had begun its own state (an Era 2 save past the
             // Exhibition, from before Era 3 existed) starts the era as if it had just opened.

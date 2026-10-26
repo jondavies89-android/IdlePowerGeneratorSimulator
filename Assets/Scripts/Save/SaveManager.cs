@@ -22,7 +22,9 @@ namespace IdlePowerGen.Save
         // v7 → v8: Eras 3–5 (research points, the era's start day, load areas, units, coal,
         //          the preparedness dashboard). Nobody reached Era 3 before v8.
         // v8 → v9: contracts can be booked at any time, so the day each was last booked is gone.
-        public const int CurrentVersion = 9;
+        // v9 → v10: contract managers (switched on or off, the client each is set to) and the
+        //           manager who booked each running contract.
+        public const int CurrentVersion = 10;
 
         // Tests point this at a scratch file so they never touch a real player's save.
         public static string SaveFileName = "save.json";
@@ -80,6 +82,7 @@ namespace IdlePowerGen.Save
             {
                 data.era2StartDay = works.StartDay;
                 data.coalLevel    = works.Hopper.Level;
+                if (works.IsCurrentEra) works.WriteManagers(data);
             }
 
             // Active contracts
@@ -94,6 +97,7 @@ namespace IdlePowerGen.Save
                     progressSeconds        = contract.ProgressSeconds,
                     shortSeconds           = contract.ShortSeconds,
                     suppliedSeconds        = contract.SuppliedSeconds,
+                    managerNumber          = contract.ManagerNumber,
                 });
             }
 
@@ -190,6 +194,17 @@ namespace IdlePowerGen.Save
             if (data.version < 7) MigrateV6ToV7(data);
             if (data.version < 8) MigrateV7ToV8(data);
             if (data.version < 9) MigrateV8ToV9(data);
+            if (data.version < 10) MigrateV9ToV10(data);
+        }
+
+        // Era 2's clerk was the first contract manager (same upgrade id, now levelled): it
+        // comes back on and choosing for itself, as the clerk did. Contracts running at save
+        // time were the player's, or the clerk's at no charge, so none pays a commission.
+        private static void MigrateV9ToV10(SaveData data)
+        {
+            data.contractManagers = new List<SaveData.ContractManagerEntry>();
+            foreach (var c in data.activeContracts ?? new List<SaveData.ContractEntry>()) c.managerNumber = 0;
+            data.version = 10;
         }
 
         // A v8 save listed the day each client was last booked; JsonUtility drops the old
@@ -316,7 +331,11 @@ namespace IdlePowerGen.Save
             }
 
             var works = FindAnyObjectByType<Controllers.Era2WorksController>();
-            if (works != null) works.LoadFromSave(data.era2StartDay, data.coalLevel);
+            if (works != null)
+            {
+                works.LoadFromSave(data.era2StartDay, data.coalLevel);
+                works.ReadManagers((int)data.currentEra == works.EraNumber ? data : null);
+            }
 
             // Restore contracts
             gm.Contracts.ClearActive();
@@ -330,6 +349,8 @@ namespace IdlePowerGen.Save
                     instance.SetPaidFromSave(paid);
                 instance.SetProgressFromSave(entry.progressSeconds);
                 instance.SetShortfallFromSave(entry.shortSeconds, entry.suppliedSeconds);
+                instance.ManagerNumber = entry.managerNumber;
+                instance.Commission = entry.managerNumber > 0 ? Controllers.ContractDesk.ManagerCommission : 0f;
                 gm.Contracts.AddFromSave(instance);
             }
             gm.SetContractBoostFromSave(data.contractBoostSecondsLeft);

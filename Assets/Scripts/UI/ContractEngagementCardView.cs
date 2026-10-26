@@ -62,7 +62,10 @@ namespace IdlePowerGen.UI
             // The client pays as the power arrives; any premium and the repute wait for the end.
             _payLabel.text = $"paid {Managers.Money.Format(Contract.PaidSoFar, def.minEra)} of " +
                              $"{Managers.Money.Format(Controllers.ContractDesk.Pay(def), def.minEra)} · " +
-                             $"+{def.reputationOnSuccess:0.#} repute on finishing";
+                             $"+{def.reputationOnSuccess:0.#} repute on finishing" +
+                             (Contract.ManagerNumber > 0
+                                 ? $" · booked by Manager {Contract.ManagerNumber}, who keeps {Contract.Commission:0%}"
+                                 : "");
             // The shortfall countdown outranks the running average: it is what can end the job.
             if (Contract.IsShort)
             {

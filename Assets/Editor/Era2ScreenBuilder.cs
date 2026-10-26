@@ -314,9 +314,11 @@ public static class Era2ScreenBuilder
 
     private static void SetObjects(SerializedProperty prop, Object[] items) => SetArray(prop, items);
 
-    // Engagements running now, then the board of clients asking.
+    // The contract managers, the engagements running now, then the board of clients.
     private static void CreateClients(Transform content, Controllers controllers)
     {
+        ScreenKit.Managers(Era2Theme.Screen, content, controllers.Works);
+
         // Engagements running now.
         var engagementsHeader = SectionHeader(content, "EngagementsHeader", "Engagements");
         var engagements = Stack("EngagementPanel", content);

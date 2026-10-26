@@ -8,7 +8,7 @@ using IdlePowerGen.Utils;
 namespace IdlePowerGen.Controllers
 {
     // The running of the Era 2 works: the contract board and its bookings, wages, the coal
-    // hopper, and the clerk and coal merchant once they are hired. Ticks with the sim.
+    // hopper, and the contract managers and coal merchant once they are hired. Ticks with the sim.
     public class Era2WorksController : ContractDesk
     {
         [SerializeField] private Era2GeneratorController _generators;
@@ -52,6 +52,7 @@ namespace IdlePowerGen.Controllers
             GameClock.Instance?.SetGameTime(day * Economy.ContractBoard.SecondsPerDay + Data.Era2Data.StartHour * 3600.0);
             StartDay = day;
             Hopper.Fill(CoalBurnCapacityBasis);
+            ResetManagers();
         }
 
         public DateTime Date =>
@@ -109,7 +110,7 @@ namespace IdlePowerGen.Controllers
 
             PayWages(hours);
             BurnCoal(hours);
-            if (Unlocked(Data.Era2Data.ClerkFeatureId)) ClerkBooks();
+            RunManagers();
 
             if (hours > 0)
             {
@@ -169,17 +170,6 @@ namespace IdlePowerGen.Controllers
             if (Unlocked(Data.Era2Data.CoalMerchantFeatureId) && HasCoalEngines &&
                 Hopper.Fraction(CoalBurnCapacityBasis) < Economy.Era2CoalHopper.LowFraction)
                 OrderCoal();
-        }
-
-        // The clerk only takes work the works can fully supply on top of what it already owes.
-        private void ClerkBooks()
-        {
-            foreach (var def in Era2Contracts.OrderByDescending(Pay))
-            {
-                if (!HasFreeSlot) return;
-                if (!IsOffered(def)) continue;
-                if (CapacityWatts - CommittedWatts >= def.requiredWatts) Book(def);
-            }
         }
 
         private void Restart(Func<Simulation.GeneratorInstance, bool> which)

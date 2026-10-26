@@ -28,9 +28,9 @@ MonoBehaviour:
   secondaryValue: 0
   unlocksId: 
   requiredUpgradeIds:
-  - era5_rd_laboratory
+  - era5_contract_manager
   requiredStoredJoules: 0
   requiredPennies: 0
   treeBranch: 2
-  treeRow: 1
+  treeRow: 2
   icon: {fileID: 0}

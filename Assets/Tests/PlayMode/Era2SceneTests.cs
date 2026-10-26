@@ -339,15 +339,111 @@ namespace IdlePowerGen.Tests
             Assert.That(Works.Slots, Is.EqualTo(BaseContractSlots + 1));
         }
 
-        [UnityTest]
-        public IEnumerator TheClerkBooksWorkTheWorksCanSupply()
+        // --- Contract managers ---
+
+        // 1 kW of apprentices on the old workshop's 1 kW, and this many managers hired.
+        private static Save.SaveData WithManagers(int managers, float repute = 4)
         {
-            var data = Era2Save(10, 4, StartHour, (GeneratorType.SmallDynamo, 20)); // 1 kW and more
-            data.upgradeLevels.Add(new Save.SaveData.UpgradeLevelEntry { upgradeId = ClerkId, level = 1 });
-            yield return Load(data);
+            var data = Era2Save(10, repute, StartHour, (GeneratorType.SmallDynamo, 20));
+            data.upgradeLevels.Add(new Save.SaveData.UpgradeLevelEntry { upgradeId = ContractManagerId, level = managers });
+            return data;
+        }
+
+        [UnityTest]
+        public IEnumerator AManagerBooksWorkTheWorksCanSupply()
+        {
+            yield return Load(WithManagers(1));
             yield return Tick();
             yield return Tick();
             Assert.That(GM.Contracts.ActiveContracts, Is.Not.Empty);
+        }
+
+        [UnityTest]
+        public IEnumerator AManagersBookingPaysItsCommission()
+        {
+            yield return Load(WithManagers(1));
+            yield return Tick();
+            yield return Tick();
+            Assert.That(GM.Contracts.ActiveContracts[0].Commission, Is.EqualTo(Controllers.ContractDesk.ManagerCommission));
+        }
+
+        [UnityTest]
+        public IEnumerator AManagerSwitchedOffBooksNothing()
+        {
+            yield return Load(WithManagers(1));
+            Works.ToggleManager(0);
+            yield return Tick();
+            yield return Tick();
+            Assert.That(GM.Contracts.ActiveContracts, Is.Empty);
+        }
+
+        [UnityTest]
+        public IEnumerator AManagerSetToAClientBooksThatClient()
+        {
+            yield return Load(WithManagers(1));
+            Works.Manager(0).ContractId = "c2_bakery";
+            yield return Tick();
+            yield return Tick();
+            Assert.That(GM.Contracts.ActiveContracts.Select(c => c.Definition.contractId), Does.Contain("c2_bakery"));
+        }
+
+        // The Theatre Royal's 6 kW on a 2 kW works: it waits rather than book a contract to fail.
+        [UnityTest]
+        public IEnumerator AManagerWaitsForPowerToSupplyItsClient()
+        {
+            yield return Load(WithManagers(1, repute: 10));
+            Works.Manager(0).ContractId = "c2_theatre";
+            yield return Tick();
+            yield return Tick();
+            Assert.That(GM.Contracts.ActiveContracts, Is.Empty);
+        }
+
+        [UnityTest]
+        public IEnumerator SwitchedOffAManagersClientCanBeStartedByHand()
+        {
+            yield return Load(WithManagers(1));
+            Works.ToggleManager(0);
+            Works.Manager(0).ContractId = "c2_bakery";
+            Works.StartManually(0);
+            Assert.That(GM.Contracts.ActiveContracts.Select(c => c.Definition.contractId), Does.Contain("c2_bakery"));
+        }
+
+        [UnityTest]
+        public IEnumerator AContractStartedByHandPaysNoCommission()
+        {
+            yield return Load(WithManagers(1));
+            Works.ToggleManager(0);
+            Works.Manager(0).ContractId = "c2_bakery";
+            Works.StartManually(0);
+            Assert.That(GM.Contracts.ActiveContracts[0].Commission, Is.Zero);
+        }
+
+        [UnityTest]
+        public IEnumerator EachManagerFillsItsOwnSlot()
+        {
+            yield return Load(WithManagers(2));
+            yield return Tick();
+            yield return Tick();
+            Assert.That(GM.Contracts.ActiveContracts.Count, Is.EqualTo(2));
+        }
+
+        [UnityTest]
+        public IEnumerator AManagersSettingsSurviveSaveAndLoad()
+        {
+            yield return Load(WithManagers(1));
+            Works.ToggleManager(0);
+            Works.Manager(0).ContractId = "c2_hotel";
+            Save.SaveManager.Instance.Save();
+            yield return Load(JsonUtility.FromJson<Save.SaveData>(File.ReadAllText(SavePath)));
+            Assert.That((Works.Manager(0).On, Works.Manager(0).ContractId), Is.EqualTo((false, "c2_hotel")));
+        }
+
+        [UnityTest]
+        public IEnumerator TheManagersShowOnTheClientsPage()
+        {
+            yield return Load(WithManagers(1));
+            yield return new WaitForSecondsRealtime(0.3f);
+            Assert.That(GameObject.Find("Manager_1"), Is.Not.Null);
         }
 
         [UnityTest]
@@ -436,9 +532,9 @@ namespace IdlePowerGen.Tests
         public IEnumerator TappingALockedNodeDoesNotBuyIt()
         {
             yield return Load(Era2Save(10000, 30));
-            Click("Upgrade_" + ClerkId); // needs the street counter first
+            Click("Upgrade_" + ContractManagerId); // needs the street counter first
             Click("UpgradeDetail");
-            Assert.That(GM.Upgrades.IsPurchased(ClerkId), Is.False);
+            Assert.That(GM.Upgrades.IsPurchased(ContractManagerId), Is.False);
         }
 
         [UnityTest]

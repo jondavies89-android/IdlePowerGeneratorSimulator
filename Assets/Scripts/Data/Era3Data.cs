@@ -177,6 +177,7 @@ namespace IdlePowerGen.Data
         public const string HardCopperId    = "era3_hard_drawn_copper";
         public const string WorkshopId      = "era3_apprentice_workshop";
         public const string FitMetersId     = "era3_fit_meters";
+        public const string ManagerId       = "era3_contract_manager";
         public const string TelephoneId     = "era3_telephone";
         public const string SignsId         = "era3_electric_signs";
 
@@ -209,9 +210,11 @@ namespace IdlePowerGen.Data
                 "A bench, some instruments and a bright apprentice. Makes research."),
             new(FitMetersId,    "Fit Shallenberger meters",   2_000,     1,     1,  0,    UpgradeEffect.MultiplyTariff,          1.25,  null,                                 CustomersBranch,  1,  new[] { WorkshopId, MetersId },
                 "Every house metered: nobody gets light for nothing."),
-            new(TelephoneId,    "Telephone exchange",         5_000,     8,     2,  36,   UpgradeEffect.AddContractSlot,         1,     null,                                 CustomersBranch,  2,  new[] { FitMetersId },
+            new(ManagerId,      "Contract manager",           1_500,     3,     4,  0,    UpgradeEffect.AddContractManager,      0,     null,                                 CustomersBranch,  2,  new[] { FitMetersId },
+                "Books a client for one contract slot, for a cut of the fee. One per slot."),
+            new(TelephoneId,    "Telephone exchange",         5_000,     8,     2,  36,   UpgradeEffect.AddContractSlot,         1,     null,                                 CustomersBranch,  3,  new[] { ManagerId },
                 "Big clients can ring through. One more contract at a time."),
-            new(SignsId,        "Electric signs",             30_000,    1,     1,  44,   UpgradeEffect.MultiplyTariff,          1.2,   null,                                 CustomersBranch,  3,  new[] { TelephoneId },
+            new(SignsId,        "Electric signs",             30_000,    1,     1,  44,   UpgradeEffect.MultiplyTariff,          1.2,   null,                                 CustomersBranch,  4,  new[] { TelephoneId },
                 "Every shop wants its name in lights, and pays for them."),
         };
 

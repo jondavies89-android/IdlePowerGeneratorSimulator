@@ -24,7 +24,8 @@ namespace IdlePowerGen.Economy
         }
 
         public bool TryBook(ContractDefinition def, double gameTime, float reputation,
-                            ContractLedger ledger, int slots) =>
-            IsOffered(def, reputation, ledger.ActiveContracts) && ledger.TryAccept(def, gameTime, slots);
+                            ContractLedger ledger, int slots, int managerNumber = 0, float commission = 0f) =>
+            IsOffered(def, reputation, ledger.ActiveContracts) &&
+            ledger.TryAccept(def, gameTime, slots, managerNumber, commission);
     }
 }

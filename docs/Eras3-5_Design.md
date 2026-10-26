@@ -46,6 +46,12 @@ written into ScriptableObjects by the era asset builders. Tune them there.
   opened can be booked at any time there's a free slot, and again as soon as it finishes. Clients
   used to ask only in their own hours of the day, once a day; that was meant for immersion but
   played as long stretches of watching the clock with nothing to do (2026-10-26).
+* **Contract managers** (Eras 2–5, replacing Era 2's clerk). Each era's tree has a levelled
+  "Contract manager", one per contract slot (up to four). A manager is switched on or off and set
+  to a client, or to "the best paying it can supply". On, it books its client whenever there's a
+  free slot and the works can supply the whole of it, never a contract that would fail, and keeps
+  10 % of every payment from it. Off, its card has a Start button that books the same client by
+  hand at full pay. Managers belong to their era, like the slots.
 * **Research.** `CurrencyLedger.ResearchPoints`; research nodes are `UpgradeDefinition`s with a
   `costResearch` and `isResearch`, shown on a Research tab. R&D buildings are levelled upgrades that
   add RP per game hour.
@@ -122,10 +128,10 @@ aren't perfect, and they're away), so the bot should land at or below the bible'
 
 | Era | Bible (real play) | Bot | Longest wait | Notes |
 |---|---|---|---|---|
-| 2 | 2–8 h | 1.87 h | 4.0 min | contract rate 0.4 → 0.3 when clients became bookable at any hour (1.4 h otherwise) |
-| 3 | 8–24 h | 4.0 h | 21 min | 4.7 h while clients kept their hours |
-| 4 | 1–3 days | 9.4 h | 43 min | one blackout |
-| 5 | 3–10 days | 19.9 h | 64 min | brownouts ~22 % of the time: the bot books every contract it can and overconnects |
+| 2 | 2–8 h | 2.1 h | 4.0 min | contract rate 0.4 → 0.3 when clients became bookable at any hour; the bot hires managers and pays their commission |
+| 3 | 8–24 h | 4.2 h | 22 min | 4.7 h while clients kept their hours |
+| 4 | 1–3 days | 11.0 h | 51 min | |
+| 5 | 3–10 days | 23.9 h | 74 min | brownouts ~20 % of the time: the bot books every contract it can and overconnects |
 
 Tuning that came out of it:
 

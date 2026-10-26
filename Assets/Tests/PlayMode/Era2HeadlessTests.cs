@@ -64,6 +64,17 @@ namespace IdlePowerGen.Tests
             Assert.That(board.IsOffered(lamps, 0, ledger.ActiveContracts), Is.True);
         }
 
+        // A manager's tenth comes off every payment before it reaches the purse.
+        [Test]
+        public void AManagersCommissionComesOffThePay()
+        {
+            var ledger = new ContractLedger();
+            ledger.TryAccept(Contract("lamps", 500, hours: 2), 0, managerNumber: 1, commission: 0.1f);
+            var purse = new CurrencyLedger();
+            ledger.Tick(500, 3600, 3600, purse, 0.4);
+            Assert.That(purse.Pennies, Is.EqualTo(500m * 0.4m * 0.9m).Within(1e-6m));
+        }
+
         [Test]
         public void BookingStopsAtTheSlotLimit()
         {

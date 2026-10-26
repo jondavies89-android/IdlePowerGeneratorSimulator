@@ -39,6 +39,9 @@ namespace IdlePowerGen.Models
         // Era 5 on
         AddCapacitorStrength,    // effectValue = extra share of a city's reactive power each bank supplies
         AddVoltageSupport,       // effectValue = per-unit voltage the tap changers add at every city
+
+        // Era 2 on
+        AddContractManager,      // one contract manager per level, each for one contract slot
     }
 
     [CreateAssetMenu(fileName = "UpgradeDef", menuName = "IdlePowerGen/Upgrade Definition")]

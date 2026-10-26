@@ -57,9 +57,125 @@ namespace IdlePowerGen.Controllers
         public bool IsOffered(ContractDefinition def) =>
             IsCurrentEra && GM != null && Board.IsOffered(def, GM.Ledger.Reputation, GM.Contracts.ActiveContracts);
 
-        public bool Book(ContractDefinition def) =>
+        public bool Book(ContractDefinition def) => Book(def, 0);
+
+        private bool Book(ContractDefinition def, int managerNumber) =>
             IsCurrentEra && GM != null && HasFreeSlot &&
-            Board.TryBook(def, Now, GM.Ledger.Reputation, GM.Contracts, GM.Contracts.ActiveContracts.Count + 1);
+            Board.TryBook(def, Now, GM.Ledger.Reputation, GM.Contracts, GM.Contracts.ActiveContracts.Count + 1,
+                          managerNumber, managerNumber > 0 ? ManagerCommission : 0f);
+
+        // ---- Contract managers ----
+        // One per contract slot, hired a level at a time from the era's tree. Each books its
+        // chosen client (or the best-paying one it can) whenever its slot is free, and only
+        // when the works can supply the whole of it, so it never books a contract to fail.
+
+        // The share of every payment a manager keeps. Contracts the player starts pay in full.
+        public const float ManagerCommission = 0.10f;
+
+        private readonly List<Economy.ContractManager> _managers = new();
+
+        // Managers hired in this era (the era's own upgrades, like its slots).
+        public int ManagersHired
+        {
+            get
+            {
+                var gm = GM;
+                if (gm == null) return 0;
+                int n = 0;
+                foreach (var def in gm.UpgradeCatalogue)
+                    if (def.effect == UpgradeEffect.AddContractManager && def.minEra == EraNumber)
+                        n += gm.Upgrades.Level(def.upgradeId);
+                return n;
+            }
+        }
+
+        public Economy.ContractManager Manager(int index)
+        {
+            while (_managers.Count <= index) _managers.Add(new Economy.ContractManager());
+            return _managers[index];
+        }
+
+        // The clients a manager can be set to: every one the repute has opened.
+        public List<ContractDefinition> ManagerChoices =>
+            GM == null ? new List<ContractDefinition>()
+                       : Contracts.Where(c => GM.Ledger.Reputation >= c.requiredReputation)
+                                  .OrderBy(c => c.requiredReputation).ThenBy(c => c.requiredWatts).ToList();
+
+        // Steps a manager's choice through "best it can supply" and each client.
+        public void CycleManager(int index, int step)
+        {
+            var m = Manager(index);
+            var choices = ManagerChoices;
+            int at = string.IsNullOrEmpty(m.ContractId) ? -1 : choices.FindIndex(c => c.contractId == m.ContractId);
+            int count = choices.Count + 1; // the extra one is "best"
+            int next = ((at + 1 + step) % count + count) % count - 1;
+            m.ContractId = next < 0 ? null : choices[next].contractId;
+        }
+
+        public void ToggleManager(int index) => Manager(index).On = !Manager(index).On;
+
+        // The contract the manager's own booking is running, if any.
+        public Economy.ContractInstance ManagerRunning(int index) =>
+            Engagements.FirstOrDefault(c => c.ManagerNumber == index + 1);
+
+        // What the manager would book next: its chosen client, or the best-paying one the
+        // works can fully supply that no other manager has chosen.
+        public ContractDefinition ManagerTarget(int index)
+        {
+            var m = Manager(index);
+            if (!string.IsNullOrEmpty(m.ContractId))
+                return Contracts.FirstOrDefault(c => c.contractId == m.ContractId);
+            var chosen = new HashSet<string>();
+            for (int i = 0; i < ManagersHired; i++)
+                if (i != index && !string.IsNullOrEmpty(Manager(i).ContractId)) chosen.Add(Manager(i).ContractId);
+            double spare = SpareForContracts;
+            return Contracts.Where(c => !chosen.Contains(c.contractId) && IsOffered(c) && spare >= c.requiredWatts)
+                            .OrderByDescending(Pay).FirstOrDefault();
+        }
+
+        // Called every sim tick by the era's controller.
+        protected void RunManagers()
+        {
+            if (!IsCurrentEra || GM == null) return;
+            int hired = ManagersHired;
+            for (int i = 0; i < hired; i++)
+            {
+                if (!HasFreeSlot) return;
+                var m = Manager(i);
+                if (!m.On || ManagerRunning(i) != null) continue;
+                var def = ManagerTarget(i);
+                if (def == null || !IsOffered(def) || SpareForContracts < def.requiredWatts) continue;
+                Book(def, i + 1);
+            }
+        }
+
+        // A manager switched off: the player starts its chosen client by hand, at full pay.
+        public bool StartManually(int index)
+        {
+            var def = ManagerTarget(index);
+            return def != null && Book(def);
+        }
+
+        // ---- Save ----
+
+        public void WriteManagers(Save.SaveData data)
+        {
+            for (int i = 0; i < ManagersHired; i++)
+                data.contractManagers.Add(new Save.SaveData.ContractManagerEntry
+                    { on = Manager(i).On, contractId = Manager(i).ContractId ?? "" });
+        }
+
+        public void ReadManagers(Save.SaveData data)
+        {
+            _managers.Clear();
+            if (data?.contractManagers == null) return;
+            foreach (var e in data.contractManagers)
+                _managers.Add(new Economy.ContractManager
+                    { On = e.on, ContractId = string.IsNullOrEmpty(e.contractId) ? null : e.contractId });
+        }
+
+        // A new era's desk starts with its managers on and choosing for themselves.
+        protected void ResetManagers() => _managers.Clear();
 
         // The whole fee, premium included, in pennies.
         public static decimal Pay(ContractDefinition def) =>
