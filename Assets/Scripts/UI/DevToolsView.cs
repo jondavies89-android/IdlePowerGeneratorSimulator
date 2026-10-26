@@ -18,6 +18,7 @@ namespace IdlePowerGen.UI
         [SerializeField] private Button _realTime;
         [SerializeField] private TMP_Text _eraLabel;
         [SerializeField] private Button _blackout;        // Eras 4–5: the grid goes dark now
+        [SerializeField] private Button _meetGoal;        // Eras 2–5: the era's goal met, capstone offered
 
         private void Awake()
         {
@@ -37,7 +38,12 @@ namespace IdlePowerGen.UI
             SetSpeed(DevTime.Multiplier);
             if (_blackout != null)
                 _blackout.onClick.AddListener(() => { CurrentGrid?.ForceBlackout(); _panel.SetActive(false); });
+            if (_meetGoal != null)
+                _meetGoal.onClick.AddListener(() => { CurrentDesk?.MeetGoalForDev(); _panel.SetActive(false); });
         }
+
+        private static Controllers.ContractDesk CurrentDesk =>
+            System.Array.Find(FindObjectsByType<Controllers.ContractDesk>(FindObjectsSortMode.None), d => d.IsCurrentEra);
 
         private static Controllers.UnitGridController CurrentGrid =>
             System.Array.Find(FindObjectsByType<Controllers.UnitGridController>(FindObjectsSortMode.None), g => g.IsCurrentEra);
@@ -51,6 +57,11 @@ namespace IdlePowerGen.UI
             {
                 var grid = CurrentGrid;
                 _blackout.interactable = grid != null && grid.BlackStart == null;
+            }
+            if (_meetGoal != null)
+            {
+                var desk = CurrentDesk;
+                _meetGoal.interactable = desk != null && !desk.CapstoneReady;
             }
         }
 

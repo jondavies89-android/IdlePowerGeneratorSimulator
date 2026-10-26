@@ -4,9 +4,9 @@ using IdlePowerGen.Utils;
 namespace IdlePowerGen.Managers
 {
     // Tracks and advances the current era.
-    // Era 1 → 2 transition fires when the player earns their first penny (first customer);
-    // Era 2 → 3 when the Great Exhibition is lit. From Era 3 each era ends on its capstone
-    // (Advance, called by the era's own screen once its output milestone is met).
+    // Era 1 → 2 transition fires when the player earns their first penny (first customer).
+    // From Era 2 each era ends on its capstone, when the player takes it (ContractDesk), once
+    // the era's goal is met: the Great Exhibition lit, then each era's output.
     public class EraManager : MonoBehaviour
     {
         public static EraManager Instance { get; private set; }
@@ -44,12 +44,9 @@ namespace IdlePowerGen.Managers
             // First completed contract (which pays pennies) triggers Era 2.
             if (CurrentEra < 2f && evt.PenniesEarned > 0m)
                 AdvanceTo(2);
-            // Lighting the Great Exhibition closes Era 2.
-            else if (CurrentEra < 3f && evt.Contract.Definition.contractId == Data.Era2Data.ExhibitionContractId)
-                AdvanceTo(3);
         }
 
-        // Public for the era shortcuts and the capstones; Era 1 and 2 reach it through contracts.
+        // Public for the era shortcuts and the capstones; Era 1 reaches it through its contract.
         public void AdvanceTo(int era)
         {
             int from = (int)CurrentEra;

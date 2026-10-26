@@ -79,10 +79,13 @@ public static class DevToolsBuilder
 
         var blackout = MakeDevButton(panel, "Blackout", "Black out the grid (Eras 4–5)");
         Fixed((RectTransform)blackout.transform, 40);
+        var meetGoal = MakeDevButton(panel, "MeetGoal", "Meet this era's goal (Eras 2–5)");
+        Fixed((RectTransform)meetGoal.transform, 40);
 
         var view = root.gameObject.AddComponent<DevToolsView>();
         Wire(view, ("_toggle", toggle), ("_panel", panel.gameObject), ("_speed", slider),
-                   ("_speedLabel", speedLabel), ("_realTime", realTime), ("_eraLabel", eraLabel), ("_blackout", blackout));
+                   ("_speedLabel", speedLabel), ("_realTime", realTime), ("_eraLabel", eraLabel), ("_blackout", blackout),
+                   ("_meetGoal", meetGoal));
         var so = new UnityEditor.SerializedObject(view);
         SetArray(so.FindProperty("_eraButtons"), eraButtons);
         so.ApplyModifiedPropertiesWithoutUndo();

@@ -186,7 +186,7 @@ namespace IdlePowerGen.Tests
                 var works = (Era2WorksController)desk;
                 if (works.HasCoalEngines && works.Hopper.Fraction(works.CoalBurnCapacityBasis) < 0.3f) works.OrderCoal();
             }
-            if (desk is GridWorksController grid && grid.CapstoneReady) { _done = true; grid.TakeCapstone(); return false; }
+            if (desk.CapstoneReady) { _done = true; desk.TakeCapstone(); return false; }
 
             // Research first: it costs no money.
             foreach (var def in gm.UpgradeCatalogue.Where(u => u.isResearch && u.minEra == era))

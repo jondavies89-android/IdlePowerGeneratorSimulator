@@ -33,12 +33,20 @@ namespace IdlePowerGen.Controllers
         {
             EventBus.Subscribe<SimTickEvent>(OnSimTick);
             EventBus.Subscribe<EraAdvancedEvent>(OnEraAdvanced);
+            EventBus.Subscribe<ContractCompletedEvent>(OnContractCompleted);
         }
 
         private void OnDestroy()
         {
             EventBus.Unsubscribe<SimTickEvent>(OnSimTick);
             EventBus.Unsubscribe<EraAdvancedEvent>(OnEraAdvanced);
+            EventBus.Unsubscribe<ContractCompletedEvent>(OnContractCompleted);
+        }
+
+        // Lighting the Great Exhibition is Era 2's goal: the era can close.
+        private void OnContractCompleted(ContractCompletedEvent e)
+        {
+            if (e.Contract.Definition.contractId == Data.Era2Data.ExhibitionContractId) OfferCapstone();
         }
 
         // ---- Era start ----
@@ -53,6 +61,7 @@ namespace IdlePowerGen.Controllers
             StartDay = day;
             Hopper.Fill(CoalBurnCapacityBasis);
             ResetManagers();
+            CapstoneReady = false;
         }
 
         public DateTime Date =>

@@ -58,6 +58,11 @@ public static class Era3ScreenBuilder
         var upgradeTree = Tree(T, upgrades, Era3Data.EraNumber, false,
                                AssetDatabase.LoadAssetAtPath<UpgradeNodeView>(UpgradeNodePrefab));
 
+        Capstone(T, column, root, town, "Era 3 · The War of Currents", "Ten megawatts at once",
+                 "Westgate is lit from end to end, and alternating current has won the war. The town will " +
+                 "celebrate at its own Electrical Exhibition, and its stations will become one Central Electric Station.",
+                 "Begin Era 4 · The Grid Awakens");
+
         var tabs = TabBar(T, column, new[] { "Town", "Clients", "Works", "Research", "Upgrades" },
                           new[] { townPage, clients, works, research, upgrades });
         var badges = tabs.gameObject.AddComponent<GridTabBadgesView>();
@@ -220,24 +225,19 @@ public static class Era3ScreenBuilder
                        ("_deliveredLabel", delivered), ("_hintLabel", distHint));
         SetColours(distView, ("_healthy", T.Healthy), ("_caution", T.Caution), ("_alarm", T.Alarm), ("_muted", T.TextMuted));
 
-        CreateGoal(content, town, "Lit at once", "Open the Westgate Electrical Exhibition");
+        CreateGoal(content, town, "Lit at once");
         CreateResearchSummary(content, Era3Data.EraNumber);
     }
 
     internal static void CreateGoal(Transform content, IdlePowerGen.Controllers.GridWorksController works,
-                                    string goalText, string capstoneText, ScreenTheme theme = null)
+                                    string goalText, ScreenTheme theme = null)
     {
         var T = theme ?? Era3Theme.Theme;
         var goal = Box(T, content, "Goal", 14, 6);
         var label = Text(T, goal, "Label", "", 14, T.Text);
-        var barRow = Stack("BarRow", goal, spacing: 0);
-        var fill = Bar(T, barRow, "Bar", 8, T.Achievement);
-        var capstone = Button(T, goal, "Capstone", capstoneText, 52, T.PanelRaised);
-        capstone.GetComponentInChildren<TextMeshProUGUI>().color = T.Achievement;
-        capstone.gameObject.SetActive(false);
+        var fill = Bar(T, goal, "Bar", 8, T.Achievement);
         var view = goal.gameObject.AddComponent<GoalView>();
-        Wire(view, ("_works", works), ("_label", label), ("_fill", fill), ("_barRow", barRow.gameObject),
-                   ("_capstone", capstone));
+        Wire(view, ("_works", works), ("_label", label), ("_fill", fill));
         SetString(view, "_goalText", goalText);
     }
 

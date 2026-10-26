@@ -19,7 +19,7 @@ written into ScriptableObjects by the era asset builders. Tune them there.
 | Scope | Maintenance & fuel scores (Era 4), automatic under-frequency load shedding / brownouts and the redundancy score (Era 5), the black-start minigame. Prestige (Engineering XP) is deferred. |
 | Income | Both: connected districts / feeders / cities pay a tariff for every unit delivered, and a contract board of bigger clients carries on from Era 2. |
 | Currency | Pounds from Era 3. Money is still held in pennies internally (decimal), so the Era 2 purse converts at 240 d = £1 by construction; only the display changes. |
-| Era end | A goal bar toward the era's end output (10 MW, 1 GW, 50 GW delivered). Reaching it offers a capstone event that closes the era. |
+| Era end | A goal bar toward the era's end output (10 MW, 1 GW, 50 GW delivered); in Era 2, lighting the Great Exhibition. Meeting it pops a panel saying what has been done, with "Begin the next era" and "Not yet"; until the player goes, a gold banner above the tab bar (on every page) begins the transition. The player always chooses when. |
 | Carry-over | The previous era's works become one inherited asset at that era's theoretical maximum output (1 kW into Era 2, 100 kW into Era 3, 10 MW into Era 4, 1 GW into Era 5), whatever the player actually built. It is steady, never trips and isn't touched by upgrade multipliers. Upgrades that multiply output apply only to the era they belong to; research carries forward. |
 
 ## Shared systems

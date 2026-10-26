@@ -82,7 +82,11 @@ namespace IdlePowerGen.Save
             {
                 data.era2StartDay = works.StartDay;
                 data.coalLevel    = works.Hopper.Level;
-                if (works.IsCurrentEra) works.WriteManagers(data);
+                if (works.IsCurrentEra)
+                {
+                    works.WriteManagers(data);
+                    data.capstoneOffered = works.CapstoneReady;
+                }
             }
 
             // Active contracts
@@ -334,7 +338,9 @@ namespace IdlePowerGen.Save
             if (works != null)
             {
                 works.LoadFromSave(data.era2StartDay, data.coalLevel);
-                works.ReadManagers((int)data.currentEra == works.EraNumber ? data : null);
+                bool era2 = (int)data.currentEra == works.EraNumber;
+                works.ReadManagers(era2 ? data : null);
+                works.SetCapstoneFromSave(era2 && data.capstoneOffered);
             }
 
             // Restore contracts

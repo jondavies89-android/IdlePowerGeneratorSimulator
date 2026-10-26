@@ -64,6 +64,33 @@ namespace IdlePowerGen.Controllers
             Board.TryBook(def, Now, GM.Ledger.Reputation, GM.Contracts, GM.Contracts.ActiveContracts.Count + 1,
                           managerNumber, managerNumber > 0 ? ManagerCommission : 0f);
 
+        // ---- The era's capstone ----
+        // Once the era's goal is met the player closes the era when they choose: a panel says
+        // so the moment it happens, and a banner above the tabs waits until they go.
+
+        public bool CapstoneReady { get; protected set; }
+
+        protected void OfferCapstone()
+        {
+            if (CapstoneReady || !IsCurrentEra) return;
+            CapstoneReady = true;
+            EventBus.Publish(new CapstoneReadyEvent(EraNumber));
+        }
+
+        public void SetCapstoneFromSave(bool ready) => CapstoneReady = ready;
+
+        // DEV strip: the era's goal met at once, to test the way out.
+        public void MeetGoalForDev() => OfferCapstone();
+
+        // Closes the era. Past the last era built: the end-of-content card, and the era runs on.
+        public void TakeCapstone()
+        {
+            if (!CapstoneReady || !IsCurrentEra) return;
+            int next = EraNumber + 1;
+            if (next > Managers.EraManager.LastBuiltEra) { EventBus.Publish(new ContentEndEvent(EraNumber)); return; }
+            Managers.EraManager.Instance?.AdvanceTo(next);
+        }
+
         // ---- Contract managers ----
         // One per contract slot, hired a level at a time from the era's tree. Each books its
         // chosen client (or the best-paying one it can) whenever its slot is free, and only

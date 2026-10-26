@@ -860,14 +860,60 @@ namespace IdlePowerGen.Tests
 
         // --- The way out ---
 
+        private static void LightTheExhibition() =>
+            Utils.EventBus.Publish(new ContractCompletedEvent(new Economy.ContractInstance(Contract(ExhibitionContractId), 0), 1m));
+
+        // The era waits for the player: the Exhibition lit, the capstone is offered, not taken.
         [UnityTest]
-        public IEnumerator LightingTheExhibitionEndsEra2()
+        public IEnumerator LightingTheExhibitionOffersTheCapstone()
         {
             yield return Load(Era2Save(0, 30));
-            var expo = Contract(ExhibitionContractId);
-            Utils.EventBus.Publish(new ContractCompletedEvent(new Economy.ContractInstance(expo, 0), 1m));
+            LightTheExhibition();
+            yield return null;
+            Assert.That((Works.CapstoneReady, Managers.EraManager.Instance.Era), Is.EqualTo((true, 2)));
+        }
+
+        [UnityTest]
+        public IEnumerator TheCapstonePanelOpensWhenTheExhibitionIsLit()
+        {
+            yield return Load(Era2Save(0, 30));
+            LightTheExhibition();
+            yield return null;
+            Assert.That(GameObject.Find("Era2Screen").GetComponentInChildren<UI.CapstoneView>().PanelShowing, Is.True);
+        }
+
+        [UnityTest]
+        public IEnumerator NotYetLeavesTheBannerAboveTheTabs()
+        {
+            yield return Load(Era2Save(0, 30));
+            LightTheExhibition();
+            yield return null;
+            Click("Later");
+            yield return null;
+            Assert.That(GameObject.Find("Banner"), Is.Not.Null);
+        }
+
+        [UnityTest]
+        public IEnumerator TheBannerBeginsEra3()
+        {
+            yield return Load(Era2Save(0, 30));
+            LightTheExhibition();
+            yield return null;
+            Click("Later");
+            yield return null;
+            Click("Banner");
             yield return null;
             Assert.That(GameObject.Find("Era3TitleCard").transform.Find("Panel").gameObject.activeSelf, Is.True);
+        }
+
+        [UnityTest]
+        public IEnumerator AnOfferedCapstoneSurvivesSaveAndLoad()
+        {
+            yield return Load(Era2Save(0, 30));
+            LightTheExhibition();
+            Save.SaveManager.Instance.Save();
+            yield return Load(JsonUtility.FromJson<Save.SaveData>(File.ReadAllText(SavePath)));
+            Assert.That(Works.CapstoneReady, Is.True);
         }
 
         // Era 3's town pays a tariff instead: nobody buys spare power off the street.
@@ -876,11 +922,11 @@ namespace IdlePowerGen.Tests
             Assert.That(GM.StreetPricePerWattHour(3f, Day + StartHour * Hour), Is.EqualTo(0));
 
         [UnityTest]
-        public IEnumerator LightingTheExhibitionOpensTheEra3Screen()
+        public IEnumerator TakingTheCapstoneOpensTheEra3Screen()
         {
             yield return Load(Era2Save(0, 30));
-            var expo = Contract(ExhibitionContractId);
-            Utils.EventBus.Publish(new ContractCompletedEvent(new Economy.ContractInstance(expo, 0), 1m));
+            LightTheExhibition();
+            Works.TakeCapstone();
             yield return null;
             Assert.That(GameObject.Find("Era3Screen"), Is.Not.Null);
         }

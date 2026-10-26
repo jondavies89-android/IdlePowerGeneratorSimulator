@@ -599,6 +599,51 @@ public static class ScreenKit
              ("_cardPrefab", AssetDatabase.LoadAssetAtPath<ContractOfferCardView>(offerPrefabPath)), ("_content", offers));
     }
 
+    // ---- The era's capstone ----
+
+    // The capstone (CapstoneView): a gold banner in the column (put it just above the tab
+    // bar) and the panel that opens when the goal is met, over the whole screen.
+    public static void Capstone(ScreenTheme t, Transform column, Transform screenRoot,
+                                IdlePowerGen.Controllers.ContractDesk desk,
+                                string kicker, string title, string story, string goLabel)
+    {
+        var holder = Stack("Capstone", column, spacing: 0);
+        var banner = Button(t, holder, "Banner", goLabel, 52, Color.Lerp(t.PanelRaised, t.Achievement, 0.28f), 16);
+        var bannerLabel = banner.GetComponentInChildren<TextMeshProUGUI>();
+        bannerLabel.color = t.Text;
+        bannerLabel.fontStyle = FontStyles.Bold;
+        var ring = banner.gameObject.AddComponent<Outline>();
+        ring.effectColor = t.Achievement;
+        ring.effectDistance = new Vector2(2, -2);
+
+        var panel = Rect("CapstonePanel", screenRoot);
+        Stretch(panel);
+        AddImage(panel, Era1SpriteFactory.White, t.Overlay);
+        var group = panel.gameObject.AddComponent<CanvasGroup>();
+        var box = Stack("Box", panel, spacing: 12);
+        box.anchorMin = new Vector2(0, 0.5f);
+        box.anchorMax = new Vector2(1, 0.5f);
+        box.pivot = new Vector2(0.5f, 0.5f);
+        box.offsetMin = new Vector2(Gutter, 0);
+        box.offsetMax = new Vector2(-Gutter, 0);
+        box.GetComponent<VerticalLayoutGroup>().padding = new RectOffset(20, 20, 24, 20);
+        box.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        Panel(t, box, t.PanelRaised);
+        Text(t, box, "Kicker", kicker, 14, t.TextMuted, TextAlignmentOptions.Center, FontStyles.Italic);
+        Text(t, box, "Title", title, 24, t.Achievement, TextAlignmentOptions.Center);
+        Text(t, box, "Story", story, 15, t.Text, TextAlignmentOptions.Center);
+        var go = Button(t, box, "Go", goLabel, 52, Color.Lerp(t.PanelRaised, t.Achievement, 0.28f), 16);
+        go.GetComponentInChildren<TextMeshProUGUI>().color = t.Text;
+        var later = Button(t, box, "Later", "Not yet · finish up here first", 44, t.Panel, 14);
+        later.GetComponentInChildren<TextMeshProUGUI>().color = t.TextMuted;
+
+        var view = holder.gameObject.AddComponent<CapstoneView>();
+        Wire(view, ("_desk", desk), ("_panel", panel.gameObject), ("_panelGroup", group), ("_go", go), ("_later", later),
+                   ("_banner", banner.gameObject), ("_bannerButton", banner));
+        panel.gameObject.SetActive(false);
+        banner.gameObject.SetActive(false);
+    }
+
     // ---- Era title card ----
 
     // The card between eras, shown when the era opens (EraTitleCardView).

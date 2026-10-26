@@ -20,7 +20,6 @@ namespace IdlePowerGen.Controllers
 
         // Most delivered at once this era, contracts included: the goal bar's reading.
         public double BestDeliveredWatts { get; private set; }
-        public bool   CapstoneReady { get; private set; }
 
         // ---- The last tick, for the screen ----
         public double GeneratedWatts { get; protected set; } // sent from the station
@@ -133,11 +132,7 @@ namespace IdlePowerGen.Controllers
             RunManagers();
 
             BestDeliveredWatts = Math.Max(BestDeliveredWatts, DeliveredWatts);
-            if (!CapstoneReady && BestDeliveredWatts >= GoalWatts)
-            {
-                CapstoneReady = true;
-                EventBus.Publish(new CapstoneReadyEvent(EraNumber));
-            }
+            if (BestDeliveredWatts >= GoalWatts) OfferCapstone();
         }
 
         // What the station can send this tick. Era 3: everything the machines make.
@@ -181,18 +176,6 @@ namespace IdlePowerGen.Controllers
         // less what the other contracts already take. The towns dim to make room.
         public override double SpareForContracts =>
             StationWatts() * (GM != null ? GM.ContractSupplyFactor : 1) - CommittedWatts;
-
-        // ---- Capstone ----
-
-        // Closes the era (the capstone card's button).
-        public void TakeCapstone()
-        {
-            if (!CapstoneReady) return;
-            int next = EraNumber + 1;
-            // Past the last era built: the end-of-content card, and the grid runs on.
-            if (next > Managers.EraManager.LastBuiltEra) { EventBus.Publish(new ContentEndEvent(EraNumber)); return; }
-            Managers.EraManager.Instance?.AdvanceTo(next);
-        }
 
         // ---- Areas ----
 

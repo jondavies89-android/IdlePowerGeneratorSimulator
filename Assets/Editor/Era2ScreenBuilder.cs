@@ -56,7 +56,7 @@ public static class Era2ScreenBuilder
         CreateStats(column, controllers);
         CreateDayBar(column);
         CreateContractBoost(column);
-        CreatePages(column, controllers, toast);
+        CreatePages(column, root, controllers, toast);
 
         root.gameObject.SetActive(false);
         return root;
@@ -224,7 +224,7 @@ public static class Era2ScreenBuilder
     // Three pages under the fixed header, switched by a tab bar at the foot of the screen:
     // one long scroll held the clients, the machines and the improvements in a list the
     // player had to hunt through.
-    private static void CreatePages(Transform parent, Controllers controllers, ToastView toast)
+    private static void CreatePages(Transform parent, Transform root, Controllers controllers, ToastView toast)
     {
         var pagesRt = Rect("Pages", parent);
         var le = pagesRt.gameObject.AddComponent<LayoutElement>();
@@ -240,6 +240,11 @@ public static class Era2ScreenBuilder
         var improvements = Page(pagesRt, "ImprovementsPage");
         var tree = CreateImprovements(improvements);
 
+        ScreenKit.Capstone(Era2Theme.Screen, parent, root, controllers.Works, "Era 2 · The Demonstration",
+                           "The Crystal Palace is lit",
+                           "All London came to see the Great Exhibition by your light. The demonstration is over: " +
+                           "forty years on, a whole town will want lighting.",
+                           "Begin Era 3 · The War of Currents");
         CreateTabBar(parent, controllers, new[] { clients, works, improvements }, tree);
     }
 

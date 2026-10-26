@@ -46,7 +46,7 @@ public static class Era4ScreenBuilder
         Board(T, deskContent, grid, sync, grouped: false, "Generators on line");
         Dashboard(T, deskContent, root, grid);
         CashRow(T, deskContent, grid, date, "CONTROL DESK", GridHeaderView.DateStyle.ControlDesk);
-        Era3ScreenBuilder.CreateGoal(deskContent, grid, "Carried at once", "Switch on the National Grid", T);
+        Era3ScreenBuilder.CreateGoal(deskContent, grid, "Carried at once", T);
 
         var feeders = Page(pagesRt, "FeedersPage");
         var feederContent = Scroll(feeders);
@@ -64,6 +64,11 @@ public static class Era4ScreenBuilder
 
         var upgrades = Page(pagesRt, "UpgradesPage");
         var upgradeTree = Tree(T, upgrades, Era4Data.EraNumber, false, AssetDatabase.LoadAssetAtPath<UpgradeNodeView>(UpgradeNodePrefab));
+
+        Capstone(T, column, root, grid, "Era 4 · The Grid Awakens", "A gigawatt on one desk",
+                 "Every unit on the board runs in step with the rest. It is time to switch on the National Grid " +
+                 "and run a whole region from Central Dispatch.",
+                 "Begin Era 5 · The Interconnected Grid");
 
         var tabs = TabBar(T, column, new[] { "Desk", "Feeders", "Works", "Research", "Upgrades" },
                           new[] { desk, feeders, works, research, upgrades });

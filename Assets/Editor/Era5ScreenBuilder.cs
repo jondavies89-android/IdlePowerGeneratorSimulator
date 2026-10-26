@@ -58,7 +58,7 @@ public static class Era5ScreenBuilder
         Board(T, boardContent, grid, sync, grouped: true, "Fleet");
         Dashboard(T, boardContent, root, grid);
         CashRow(T, boardContent, grid, date, "midlands region", GridHeaderView.DateStyle.Dispatch);
-        Era3ScreenBuilder.CreateGoal(boardContent, grid, "Carried at once", "Energise the supergrid", T);
+        Era3ScreenBuilder.CreateGoal(boardContent, grid, "Carried at once", T);
 
         var cities = Page(pagesRt, "CitiesPage");
         var cityContent = Scroll(cities);
@@ -76,6 +76,11 @@ public static class Era5ScreenBuilder
 
         var upgrades = Page(pagesRt, "UpgradesPage");
         var upgradeTree = Tree(T, upgrades, Era5Data.EraNumber, false, AssetDatabase.LoadAssetAtPath<UpgradeNodeView>(UpgradeNodePrefab));
+
+        Capstone(T, column, root, grid, "Era 5 · The Interconnected Grid", "Fifty gigawatts",
+                 "The Midlands runs as one machine, and its voltage holds from Birmingham to Manchester. " +
+                 "The 275 kV supergrid is ready to energise.",
+                 "Energise the supergrid");
 
         var tabs = TabBar(T, column, new[] { "Board", "Cities", "Works", "Research", "Upgrades" },
                           new[] { board, cities, works, research, upgrades });

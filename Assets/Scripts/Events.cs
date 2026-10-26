@@ -40,9 +40,10 @@ namespace IdlePowerGen
         public WorksNoticeEvent(string message) { Message = message; }
     }
 
-    // --- Eras 3–5 ---
+    // --- Eras 2–5 ---
 
-    // The era's output goal is reached: its capstone can be taken (and the era closed).
+    // The era's goal is met (Era 2: the Exhibition lit; from Era 3 its output goal): its
+    // capstone can be taken, and the era closed, whenever the player is ready.
     public readonly struct CapstoneReadyEvent
     {
         public readonly int Era;
