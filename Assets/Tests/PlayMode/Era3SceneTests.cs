@@ -225,6 +225,58 @@ namespace IdlePowerGen.Tests
 
         // --- Contracts ---
 
+        // --- Active play ---
+
+        private static void StokeIntoTheGreen()
+        {
+            while (!Town.Boiler.InGreen) Town.Stoke();
+        }
+
+        [UnityTest]
+        public IEnumerator SteamInTheGreenPaysABonus()
+        {
+            yield return StartEra3();
+            Time.timeScale = 0f;
+            StokeIntoTheGreen();
+            yield return null; // a frame of real time in the green
+            Simulation.SimulationTick.Instance.CatchUpOfflineAsIfHere(1);
+            Assert.That(Town.StokeEarned, Is.GreaterThan(0m));
+        }
+
+        [UnityTest]
+        public IEnumerator TimeAwayEarnsNoStokingBonus()
+        {
+            yield return StartEra3();
+            StokeIntoTheGreen();
+            Tick(60);
+            Assert.That(Town.StokeEarned, Is.EqualTo(0m));
+        }
+
+        [UnityTest]
+        public IEnumerator AGoodReadingAddsResearch()
+        {
+            yield return StartEra3();
+            double before = GM.Ledger.ResearchPoints;
+            Town.Galvanometer.AimForTests(intoBand: true);
+            Town.TakeReading();
+            Assert.That(GM.Ledger.ResearchPoints, Is.GreaterThan(before));
+        }
+
+        [UnityTest]
+        public IEnumerator TheStokeButtonRaisesThePressure()
+        {
+            yield return StartEra3();
+            GameObject.Find("Stoke").GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
+            Assert.That(Town.Boiler.Pressure, Is.GreaterThan(0f));
+        }
+
+        [UnityTest]
+        public IEnumerator TheGalvanometerIsOnTheResearchTab()
+        {
+            yield return StartEra3();
+            Assert.That(GameObject.Find("Era3Screen").transform.Find("SafeArea/Column/Pages/ResearchPage/Galvanometer"), Is.Not.Null);
+        }
+
         [UnityTest]
         public IEnumerator TheHeaderShowsTheRepute()
         {

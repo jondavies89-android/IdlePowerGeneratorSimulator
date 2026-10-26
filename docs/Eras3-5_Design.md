@@ -72,6 +72,14 @@ Westgate, 7th April 1893. 100 kW → 10 MW. One new concept: distance has a cost
 * Research: Transformer principles 80 RP (mockup), Steam turbine, Water-tube boilers,
   Electricity meters, High-voltage mains, Condensing turbines.
 * The era ends when 10 MW is delivered at once: the Westgate Electrical Exhibition.
+* Active play, real time and only while the player is here (2026-10-26):
+  * **Stoking the boilers** (Town page): each stoke raises the steam pressure, which falls on its
+    own; held in the green band (60–85 %) the works earns twice as much. Over-stoked, the safety
+    valve lifts and stoking stops for 4 s. Money only.
+  * **The bench galvanometer** (Research tab): a needle swings across a scale; a reading taken
+    with it inside the marked band earns research — 5 % of an hour of the works' R&D, at least
+    1 RP, up to double on a run of good readings. A miss ends the run. It brings the 80 RP to
+    transformers (the gate to AC) within minutes of active play.
 
 ## Era 4 — The Grid Awakens
 

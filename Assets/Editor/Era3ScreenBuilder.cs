@@ -51,6 +51,7 @@ public static class Era3ScreenBuilder
 
         var research = Page(pagesRt, "ResearchPage");
         CreateResearchSummary(research, Era3Data.EraNumber);
+        CreateGalvanometer(research, town);
         var researchTree = Tree(T, research, Era3Data.EraNumber, true,
                                 AssetDatabase.LoadAssetAtPath<UpgradeNodeView>(ResearchNodePrefab));
 
@@ -205,6 +206,8 @@ public static class Era3ScreenBuilder
                         ("_detailLabel", aDetail), ("_button", alertButton));
         alert.gameObject.SetActive(false);
 
+        CreateBoiler(content, town);
+
         // Distribution.
         var dist = Box(T, content, "Distribution", 14, 4);
         Caption(T, dist, "Caption", "Distribution");
@@ -227,6 +230,83 @@ public static class Era3ScreenBuilder
 
         CreateGoal(content, town, "Lit at once");
         CreateResearchSummary(content, Era3Data.EraNumber);
+        SetString(content.GetComponentInChildren<ResearchSummaryView>(true), "_noRateHint",
+                  "take readings on the Research tab, or build an R&D workshop");
+    }
+
+    // The boiler house: a pressure gauge (green band, red where the valve lifts) and the Stoke button.
+    private static void CreateBoiler(Transform content, IdlePowerGen.Controllers.Era3TownController town)
+    {
+        var box = Box(T, content, "Boiler", 14, 6);
+        Caption(T, box, "Caption", "Boiler house");
+        var gauge = Rect("Gauge", box);
+        Fixed(gauge, 22);
+        AddImage(gauge, Era1SpriteFactory.White, T.Track).raycastTarget = false;
+        Zone(gauge, "Green", Era3Data.GreenLow, Era3Data.GreenHigh, T.Healthy * new Color(1, 1, 1, 0.3f));
+        Zone(gauge, "Red", 0.94f, 1f, T.Alarm * new Color(1, 1, 1, 0.35f));
+        var fillRt = Rect("Fill", gauge);
+        Stretch(fillRt);
+        fillRt.offsetMin = new Vector2(0, 6);
+        fillRt.offsetMax = new Vector2(0, -6);
+        var fill = AddImage(fillRt, Era1SpriteFactory.White, T.Money);
+        fill.raycastTarget = false;
+        fill.type = Image.Type.Filled;
+        fill.fillMethod = Image.FillMethod.Horizontal;
+        fill.fillAmount = 0;
+        var status = Text(T, box, "Status", "", 13, T.TextMuted, style: FontStyles.Italic);
+        var stoke = Button(T, box, "Stoke", "Stoke the boilers", 56, T.PanelRaised, 18);
+        var stokeLabel = stoke.GetComponentInChildren<TextMeshProUGUI>();
+        stokeLabel.color = T.Money;
+        var earned = Text(T, box, "Earned", "", 12, T.TextMuted);
+
+        var view = box.gameObject.AddComponent<Era3BoilerView>();
+        Wire(view, ("_town", town), ("_fill", fill), ("_statusLabel", status), ("_earnedLabel", earned),
+                   ("_stoke", stoke), ("_stokeLabel", stokeLabel));
+        SetColours(view, ("_healthy", T.Healthy), ("_caution", T.Caution), ("_alarm", T.Alarm),
+                         ("_muted", T.TextMuted), ("_cold", T.TextMuted));
+    }
+
+    // The bench galvanometer: a scale with the band to catch the needle in, and the button.
+    private static void CreateGalvanometer(Transform page, IdlePowerGen.Controllers.Era3TownController town)
+    {
+        var box = Box(T, page, "Galvanometer", 14, 6);
+        Caption(T, box, "Caption", "Bench galvanometer · take readings");
+        var scale = Rect("Scale", box);
+        Fixed(scale, 40);
+        AddImage(scale, Era1SpriteFactory.White, Era3Theme.MapGround).raycastTarget = false;
+        var band = Zone(scale, "Band", 0.4f, 0.6f, T.Healthy);
+        var mid = Zone(scale, "Zero", 0.499f, 0.501f, T.Edge);
+        mid.GetComponent<Image>().raycastTarget = false;
+        var needle = Rect("Needle", scale);
+        needle.anchorMin = new Vector2(0.5f, 0);
+        needle.anchorMax = new Vector2(0.5f, 1);
+        needle.pivot = new Vector2(0.5f, 0.5f);
+        needle.sizeDelta = new Vector2(4, -6);
+        AddImage(needle, Era1SpriteFactory.White, T.Money).raycastTarget = false;
+        var status = Text(T, box, "Status", "", 13, T.TextMuted, style: FontStyles.Italic);
+        var read = Button(T, box, "TakeReading", "Take a reading", 50, T.PanelRaised, 17);
+        read.GetComponentInChildren<TextMeshProUGUI>().color = T.Research;
+        var earned = Text(T, box, "Earned", "", 12, T.TextMuted);
+
+        var summary = page.GetComponentInChildren<ResearchSummaryView>(true);
+        if (summary != null) SetString(summary, "_noRateHint", "take readings below, or build an R&D workshop");
+
+        var view = box.gameObject.AddComponent<Era3GalvanometerView>();
+        Wire(view, ("_town", town), ("_needle", needle), ("_band", band), ("_bandImage", band.GetComponent<Image>()),
+                   ("_statusLabel", status), ("_earnedLabel", earned), ("_read", read));
+        SetColours(view, ("_healthy", T.Healthy * new Color(1, 1, 1, 0.45f)), ("_caution", T.Caution),
+                         ("_muted", T.TextMuted), ("_money", T.Money * new Color(1, 1, 1, 0.75f)));
+    }
+
+    // A band across a bar, from one fraction of its width to another.
+    private static RectTransform Zone(RectTransform bar, string name, float from, float to, Color colour)
+    {
+        var zone = Rect(name, bar);
+        zone.anchorMin = new Vector2(from, 0);
+        zone.anchorMax = new Vector2(to, 1);
+        zone.offsetMin = zone.offsetMax = Vector2.zero;
+        AddImage(zone, Era1SpriteFactory.White, colour).raycastTarget = false;
+        return zone;
     }
 
     internal static void CreateGoal(Transform content, IdlePowerGen.Controllers.GridWorksController works,

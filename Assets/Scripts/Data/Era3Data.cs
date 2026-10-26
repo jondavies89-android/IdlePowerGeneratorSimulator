@@ -44,6 +44,39 @@ namespace IdlePowerGen.Data
         public const double TypicalStartPounds     = 2_500;
         public const float  TypicalStartReputation = 33f;
 
+        // -------------------------------------------------------------------------------
+        // Active play (real seconds, only while the player is here; nothing happens offline).
+        //
+        // Stoking the boilers (the Town page): each stoke raises the steam pressure, which
+        // falls on its own, so holding it in the green takes a stoke every second or two. In
+        // the green the works earns twice as much: half as much again was +£10 a game hour at
+        // the era's start, twenty minutes' stoking for one Jumbo. Past the top the safety valve lifts:
+        // the pressure drops and the boilers can't be stoked for a few seconds.
+        public const float  StokePerTap           = 0.08f;
+        public const float  PressureFallPerSecond = 0.05f;
+        public const float  GreenLow              = 0.60f;
+        public const float  GreenHigh             = 0.85f;
+        public const float  ValveResetPressure    = 0.30f;
+        public const float  ValveLiftSeconds      = 4f;
+        public const double StokeIncomeBonus      = 1.0;
+
+        // The bench galvanometer (the Research tab): a needle swings across the scale; a
+        // reading taken while it is in the marked band earns research. A reading is worth
+        // 5 % of an hour of the works' R&D (at least 1 RP), and each one in a run adds 15 %
+        // more, up to double. With one workshop that is several times its rate while the
+        // player keeps at it, so the 80 RP to transformers (and AC) comes in minutes.
+        public const double NeedleRadiansPerSecond = 2.2;
+        public const double NeedleSpeedUpPerRun    = 0.06;  // the needle quickens as a run goes on
+        public const double BandHalfWidth          = 0.12;  // of the scale's half-width
+        public const double MinBandHalfWidth       = 0.07;
+        public const double BandNarrowsPerRun      = 0.008;
+        public const float  HitSettleSeconds       = 0.8f;
+        public const float  MissSettleSeconds      = 2.0f;
+        public const double ReadingMinResearch     = 1;
+        public const double ReadingShareOfHour     = 0.05;
+        public const double RunBonusPerReading     = 0.15;
+        public const double MaxRunBonus            = 1.0;
+
         // Same leeway and countdown as Era 2's clients.
         public const float ShortfallLeeway               = 0.1f;
         public const float ShortfallCountdownMinutes     = 30f;

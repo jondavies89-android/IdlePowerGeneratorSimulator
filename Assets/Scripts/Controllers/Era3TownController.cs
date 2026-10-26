@@ -34,6 +34,7 @@ namespace IdlePowerGen.Controllers
         {
             foreach (var s in Era3Data.Districts)
                 if (s.StartsLit) Area(s.Id).Connected = true;
+            Boiler.Reset();
         }
 
         public Era3Data.DistrictSpec Spec(string id) => _specs[id];
@@ -130,6 +131,51 @@ namespace IdlePowerGen.Controllers
         public LoadArea WorstFlicker =>
             _areas.Where(a => a.Supplied && a.LossFraction >= Era3Data.FlickerLoss)
                   .OrderByDescending(a => a.LossFraction).FirstOrDefault();
+
+        // ---- Active play: the boilers and the galvanometer ----
+
+        public Era3Boiler Boiler { get; } = new();
+        public Era3Galvanometer Galvanometer { get; } = new(new SeededRandom(seed: 3301));
+
+        // What stoking has added to the purse this session, and its rate while in the green.
+        public decimal StokeEarned { get; private set; }
+        public double  StokeBonusPerHour => Math.Max(0, IncomePerHour) * Era3Data.StokeIncomeBonus;
+
+        private static double ResearchPerHour =>
+            Managers.UpgradeEffectApplier.Instance != null ? Managers.UpgradeEffectApplier.Instance.ResearchPerHour : 0;
+
+        public bool Stoke() => IsCurrentEra && Boiler.Stoke();
+
+        public double ReadingWorth => Galvanometer.Worth(ResearchPerHour);
+
+        public Era3Galvanometer.Reading TakeReading()
+        {
+            if (!IsCurrentEra || GM == null) return default;
+            var reading = Galvanometer.Take(ResearchPerHour);
+            if (reading.Hit) GM.Ledger.AddResearch(reading.Research);
+            return reading;
+        }
+
+        // Real time, whatever the game clock or the DEV speed: they are played by hand.
+        private void Update()
+        {
+            if (!IsCurrentEra) return;
+            float dt = UnityEngine.Time.unscaledDeltaTime;
+            Boiler.Tick(dt);
+            Galvanometer.Tick(dt);
+        }
+
+        // Steam held in the green: the works earns twice as much, for the share of the
+        // tick it was there.
+        protected override void AfterShare(double gameHours)
+        {
+            double share = Boiler.TakeGreenShare();
+            if (GM.Contracts.ShortfallPaused) return; // catching up on time away: nobody was stoking
+            decimal bonus = (decimal)(StokeBonusPerHour * share * gameHours);
+            if (bonus <= 0) return;
+            GM.Ledger.AddPennies(bonus);
+            StokeEarned += bonus;
+        }
 
         // ---- Save ----
 

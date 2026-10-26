@@ -16,6 +16,8 @@ namespace IdlePowerGen.UI
         [SerializeField] private Image _fill;
         [SerializeField] private TMP_Text _etaLabel;
         [SerializeField] private int _era = 3;
+        // What to say with no R&D running yet (Era 3 also has the galvanometer's readings).
+        [SerializeField] private string _noRateHint = "build an R&D workshop to make research";
 
         private const float RefreshInterval = 0.25f;
         private float _since = RefreshInterval;
@@ -47,7 +49,7 @@ namespace IdlePowerGen.UI
             _pointsLabel.text = $"{System.Math.Min(rp, cost):N0} / {cost:N0} RP";
             _fill.fillAmount = cost > 0 ? Mathf.Clamp01((float)(rp / cost)) : 1f;
             if (rp >= cost) _etaLabel.text = "ready: learn it on the Research tab";
-            else if (rate <= 0) _etaLabel.text = "build an R&D workshop to make research";
+            else if (rate <= 0) _etaLabel.text = _noRateHint;
             else _etaLabel.text = $"≈ {Duration((cost - rp) / rate)} at the current rate";
         }
 
