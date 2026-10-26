@@ -52,11 +52,12 @@ public static class UnitGridScreenKit
         }
         var cash = Box("Cash", "Cash", t.Money, out var income);
         var research = Box("Research", "Research", t.Text, out var rate);
+        var repute = Box("Repute", "Repute", t.Achievement, out var nextClient);
         income.color = t.Healthy;
 
         var view = row.gameObject.AddComponent<GridHeaderView>();
         Wire(view, ("_works", works), ("_dateLabel", date), ("_cashLabel", cash), ("_researchLabel", rate),
-                   ("_incomeLabel", income));
+                   ("_incomeLabel", income), ("_reputeLabel", repute), ("_reputeNoteLabel", nextClient));
         SetString(view, "_place", place);
         var so = new SerializedObject(view);
         so.FindProperty("_style").enumValueIndex = (int)style;

@@ -226,6 +226,15 @@ namespace IdlePowerGen.Tests
         // --- Contracts ---
 
         [UnityTest]
+        public IEnumerator TheHeaderShowsTheRepute()
+        {
+            yield return StartEra3();
+            yield return new WaitForSecondsRealtime(0.2f);
+            var label = GameObject.Find("Era3Screen").transform.Find("SafeArea/Column/Header/Repute/Value");
+            Assert.That(label.GetComponent<TMPro.TMP_Text>().text, Is.EqualTo($"{GM.Ledger.Reputation:0.#}"));
+        }
+
+        [UnityTest]
         public IEnumerator TheTramwaysCanBeBookedAtAnyHour()
         {
             yield return StartEra3();

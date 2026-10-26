@@ -17,6 +17,8 @@ namespace IdlePowerGen.UI
         [SerializeField] private TMP_Text _cashLabel;
         [SerializeField] private TMP_Text _researchLabel;
         [SerializeField] private TMP_Text _incomeLabel;
+        [SerializeField] private TMP_Text _reputeLabel;
+        [SerializeField] private TMP_Text _reputeNoteLabel; // the repute the next client asks for
         [SerializeField] private string _place = "Pearl Street";
         [SerializeField] private DateStyle _style;
 
@@ -52,6 +54,17 @@ namespace IdlePowerGen.UI
 
             if (_incomeLabel != null)
                 _incomeLabel.text = $"+{Managers.Money.Format((decimal)Math.Max(0, _works.IncomePerHour), _works.EraNumber)} an hour";
+
+            // Repute gates the bigger clients (and some upgrades): show it, and how far the next is.
+            float rep = gm.Ledger.Reputation;
+            if (_reputeLabel != null) _reputeLabel.text = $"{rep:0.#}";
+            if (_reputeNoteLabel != null)
+            {
+                float next = float.MaxValue;
+                foreach (var c in _works.Contracts)
+                    if (c.requiredReputation > rep) next = Math.Min(next, c.requiredReputation);
+                _reputeNoteLabel.text = next < float.MaxValue ? $"next client at {next:0.#}" : "every client open";
+            }
         }
 
         private string DateText(DateTime date, float hour)

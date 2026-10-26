@@ -81,22 +81,34 @@ public static class Era3ScreenBuilder
 
         var left = Stack("Names", header, spacing: 2);
         Flexible(left);
-        var title = Text(T, left, "Title", "EDISON ELECTRIC WORKS", 15, T.Money);
-        title.characterSpacing = 14;
+        // Small enough to share the row with the cash and repute boxes on a 380dp screen.
+        var title = Text(T, left, "Title", "EDISON ELECTRIC WORKS", 13, T.Money);
+        title.characterSpacing = 2;
         title.textWrappingMode = TextWrappingModes.NoWrap;
-        var date = Text(T, left, "Date", "", 15, T.TextMuted, style: FontStyles.Italic);
+        title.overflowMode = TextOverflowModes.Ellipsis;
+        var date = Text(T, left, "Date", "", 13, T.TextMuted, style: FontStyles.Italic);
 
         var cashBox = Stack("Cash", header, spacing: 0);
         cashBox.GetComponent<VerticalLayoutGroup>().padding = new RectOffset(10, 10, 4, 4);
         cashBox.GetComponent<VerticalLayoutGroup>().childAlignment = TextAnchor.MiddleCenter;
         Panel(T, cashBox, T.PanelRaised);
         var cashLe = cashBox.gameObject.AddComponent<LayoutElement>();
-        cashLe.minWidth = 112;
+        cashLe.minWidth = 100;
         var cash = Text(T, cashBox, "Value", "£0", 24, T.Money, TextAlignmentOptions.Center, numerals: true);
         var income = Text(T, cashBox, "Income", "", 11, T.Healthy, TextAlignmentOptions.Center, numerals: true);
 
+        var reputeBox = Stack("Repute", header, spacing: 0);
+        reputeBox.GetComponent<VerticalLayoutGroup>().padding = new RectOffset(8, 8, 4, 4);
+        reputeBox.GetComponent<VerticalLayoutGroup>().childAlignment = TextAnchor.MiddleCenter;
+        Panel(T, reputeBox, T.PanelRaised);
+        reputeBox.gameObject.AddComponent<LayoutElement>().minWidth = 60;
+        var repute = Text(T, reputeBox, "Value", "0", 24, T.Achievement, TextAlignmentOptions.Center, numerals: true);
+        repute.textWrappingMode = TextWrappingModes.NoWrap;
+        Text(T, reputeBox, "Caption", "repute", 11, T.TextMuted, TextAlignmentOptions.Center);
+
         var view = header.gameObject.AddComponent<GridHeaderView>();
-        Wire(view, ("_works", town), ("_dateLabel", date), ("_cashLabel", cash), ("_incomeLabel", income));
+        Wire(view, ("_works", town), ("_dateLabel", date), ("_cashLabel", cash), ("_incomeLabel", income),
+                   ("_reputeLabel", repute));
         SetString(view, "_place", "Pearl Street");
     }
 
