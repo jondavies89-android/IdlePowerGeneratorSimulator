@@ -2,11 +2,13 @@ using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using IdlePowerGen.Utils;
 
 namespace IdlePowerGen.UI
 {
     // A temporary message panel. Messages queue so two milestones crossed in one tick
-    // are both read rather than one overwriting the other.
+    // are both read rather than one overwriting the other. One toast serves every era, so a
+    // new era clears it: the old era's news has no place on the new era's screen.
     public class ToastView : MonoBehaviour
     {
         [SerializeField] private CanvasGroup _group;
@@ -24,6 +26,22 @@ namespace IdlePowerGen.UI
         {
             _group.alpha = 0f;
             _group.blocksRaycasts = false;
+            EventBus.Subscribe<EraAdvancedEvent>(OnEraAdvanced);
+        }
+
+        private void OnDestroy() => EventBus.Unsubscribe<EraAdvancedEvent>(OnEraAdvanced);
+
+        private void OnEraAdvanced(EraAdvancedEvent _) => Clear();
+
+        public int Queued => _queue.Count;
+
+        public void Clear()
+        {
+            StopAllCoroutines();
+            _queue.Clear();
+            _showing = false;
+            _label.text = "";
+            _group.alpha = 0f;
         }
 
         public void Show(string message)

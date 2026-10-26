@@ -94,6 +94,42 @@ namespace IdlePowerGen.Tests
             Assert.That(Object.FindAnyObjectByType<Era2GeneratorController>().GetOwned(GeneratorType.SmallDynamo), Is.EqualTo(0));
         }
 
+        private static UI.ToastView Toast => Object.FindAnyObjectByType<UI.ToastView>();
+
+        // Era 2's news, queued and showing, when the Exhibition closes the era.
+        private static IEnumerator Era2NewsThenEra3()
+        {
+            Save.SaveManager.Instance.StartAtEra(2);
+            yield return null;
+            Toast.Show("The coal hopper is empty. The steam engines have stopped.");
+            Toast.Show("The purse is empty. Your apprentices have downed tools.");
+            yield return null;
+            Managers.EraManager.Instance.AdvanceTo(3);
+        }
+
+        [UnityTest]
+        public IEnumerator TheOldErasToastIsHiddenInTheNewEra()
+        {
+            yield return Era2NewsThenEra3();
+            Assert.That(Toast.IsShowing, Is.False);
+        }
+
+        [UnityTest]
+        public IEnumerator TheOldErasQueuedToastsAreDropped()
+        {
+            yield return Era2NewsThenEra3();
+            Assert.That(Toast.Queued, Is.EqualTo(0));
+        }
+
+        [UnityTest]
+        public IEnumerator TheNewErasToastsStillShow()
+        {
+            yield return Era2NewsThenEra3();
+            Toast.Show("Bond St is lit.");
+            yield return null;
+            Assert.That(Toast.CurrentText, Is.EqualTo("Bond St is lit."));
+        }
+
         [UnityTest]
         public IEnumerator Era2MultipliersDoNotReachEra3()
         {
