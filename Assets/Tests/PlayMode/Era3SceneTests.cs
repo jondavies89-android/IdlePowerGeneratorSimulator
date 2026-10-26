@@ -248,7 +248,7 @@ namespace IdlePowerGen.Tests
         {
             yield return StartEra3();
             LightTheWholeTown();
-            Tick();
+            Tick(Controllers.GridWorksController.RampSeconds + 2); // newly lit districts come on over half a minute
             Assert.That(Town.CapstoneReady, Is.True);
         }
 
@@ -257,7 +257,7 @@ namespace IdlePowerGen.Tests
         {
             yield return StartEra3();
             LightTheWholeTown();
-            Tick();
+            Tick(Controllers.GridWorksController.RampSeconds + 2); // newly lit districts come on over half a minute
             Town.TakeCapstone();
             Assert.That(Managers.EraManager.Instance.Era, Is.EqualTo(4));
         }

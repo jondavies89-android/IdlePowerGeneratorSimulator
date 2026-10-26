@@ -23,7 +23,7 @@ MonoBehaviour:
   useReputation: 1
   offlineEraFactor: 0.9
   offlineTauHours: 12
-  contractBaseRate: 0.009
+  contractBaseRate: 0.006
   streetRateFactor: 0
   xpScaleFactor: 5
   upgradeBranchNames:
@@ -34,5 +34,5 @@ MonoBehaviour:
   - Generation
   - Controls
   - Grid
-  tariffPenniesPerWattHour: 0.006
+  tariffPenniesPerWattHour: 0.004
   offlineFlavorText: The night shift kept the units on the bars while you were away.

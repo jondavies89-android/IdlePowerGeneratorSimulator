@@ -70,7 +70,7 @@ namespace IdlePowerGen.UI
 
             _crank.gameObject.SetActive(false);
             _gates.gameObject.SetActive(false);
-            _bar.transform.parent.gameObject.SetActive(false);
+            _bar.transform.parent.parent.gameObject.SetActive(false);
             _primary.gameObject.SetActive(false);
             _secondary.gameObject.SetActive(false);
             _tertiary.gameObject.SetActive(false);
@@ -203,7 +203,7 @@ namespace IdlePowerGen.UI
 
         private void Bar(double fraction, string label)
         {
-            _bar.transform.parent.gameObject.SetActive(true);
+            _bar.transform.parent.parent.gameObject.SetActive(true);
             _bar.fillAmount = Mathf.Clamp01((float)fraction);
             _barLabel.text = label;
         }

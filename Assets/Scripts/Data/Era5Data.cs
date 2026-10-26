@@ -65,29 +65,32 @@ namespace IdlePowerGen.Data
         public const double TargetPowerFactor = 0.95;
 
         // -------------------------------------------------------------------------------
+        // Every city lit draws about 47 GW on average, nearer 60 GW at the evening peak: the
+        // era's 50 GW goal needs most of the region at its busiest.
+        //
         // The two cities lit at the start draw 0.7 GW on average, 1 GW at the evening peak: within
         // the inherited gigawatt once it has made their reactive power too.
         //
         // The region (the bible's mimic board: Central, Birmingham, Coventry, Leicester,
         // Northampton and on). Each city hangs off a parent nearer Central; a city can only
-        // be connected once its parent is. Position is on the board, 0–1 across and down.
+        // be connected once its parent is. Position is on the board's four-by-four grid, 0–1 across and down.
         // -------------------------------------------------------------------------------
 
         public static readonly CitySpec[] Cities =
         {
             //  id               name              parent           GW    PF     length  x     y      starts
-            new("c5_birmingham", "Birmingham",     null,            0.45, 0.93,  1,      0.36, 0.30,  true),
-            new("c5_coventry",   "Coventry",       null,            0.25, 0.92,  1,      0.36, 0.72,  true),
-            new("c5_leicester",  "Leicester",      "c5_birmingham", 1.5,  0.80,  2,      0.62, 0.30,  false),
-            new("c5_northampton","Northampton",    "c5_coventry",   1.2,  0.92,  2,      0.62, 0.72,  false),
-            new("c5_wolverhampton","Wolverhampton","c5_birmingham", 2.5,  0.89,  2,      0.18, 0.10,  false),
-            new("c5_oxford",     "Oxford",         "c5_coventry",   2.0,  0.94,  2,      0.36, 0.95,  false),
-            new("c5_stoke",      "Stoke",          "c5_wolverhampton", 3.0, 0.88, 3,     0.30, 0.04,  false),
-            new("c5_nottingham", "Nottingham",     "c5_leicester",  4.0,  0.90,  3,      0.80, 0.14,  false),
-            new("c5_cambridge",  "Cambridge",      "c5_northampton",2.0,  0.95,  3,      0.86, 0.80,  false),
-            new("c5_derby",      "Derby",          "c5_nottingham", 3.5,  0.89,  3,      0.62, 0.06,  false),
-            new("c5_sheffield",  "Sheffield",      "c5_derby",      8.0,  0.86,  3,      0.74, 0.00,  false),
-            new("c5_manchester", "Manchester",     "c5_stoke",      12.0, 0.85,  3,      0.08, 0.00,  false),
+            new("c5_birmingham", "Birmingham",     null,            0.45, 0.93,  1,      0.0,  0.33,  true),
+            new("c5_coventry",   "Coventry",       null,            0.25, 0.92,  1,      0.0,  0.67,  true),
+            new("c5_leicester",  "Leicester",      "c5_birmingham", 1.5,  0.80,  2,      0.33, 0.33,  false),
+            new("c5_northampton","Northampton",    "c5_coventry",   1.2,  0.92,  2,      0.33, 0.67,  false),
+            new("c5_wolverhampton","Wolverhampton","c5_birmingham", 2.5,  0.89,  2,      0.0,  0.0,  false),
+            new("c5_oxford",     "Oxford",         "c5_coventry",   2.0,  0.94,  2,      0.0,  1.0,  false),
+            new("c5_stoke",      "Stoke",          "c5_wolverhampton", 3.0, 0.88, 3,     0.33, 0.0,  false),
+            new("c5_nottingham", "Nottingham",     "c5_leicester",  5.0,  0.90,  3,      0.67, 0.33,  false),
+            new("c5_cambridge",  "Cambridge",      "c5_northampton",2.0,  0.95,  3,      0.67, 0.67,  false),
+            new("c5_derby",      "Derby",          "c5_nottingham", 3.5,  0.89,  3,      1.0,  0.33,  false),
+            new("c5_sheffield",  "Sheffield",      "c5_derby",      10.0, 0.86,  3,      1.0,  0.67,  false),
+            new("c5_manchester", "Manchester",     "c5_stoke",      16.0, 0.85,  3,      0.67, 0.0,  false),
         };
 
         public const double ConnectPoundsPerGigawatt = 1_500_000;

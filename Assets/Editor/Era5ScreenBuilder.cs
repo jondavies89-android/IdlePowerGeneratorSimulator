@@ -116,7 +116,7 @@ public static class Era5ScreenBuilder
         var box = Box(T, content, "MimicBoard", 12, 6);
         Caption(T, box, "Caption", "Regional mimic board", 13);
         var area = Rect("Board", box);
-        Fixed(area, 210);
+        Fixed(area, 236);
         AddImage(area, Era1SpriteFactory.White, Era5Theme.BoardGround).raycastTarget = false;
 
         var central = Rect("Central", area);

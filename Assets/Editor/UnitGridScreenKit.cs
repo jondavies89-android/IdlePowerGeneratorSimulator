@@ -100,7 +100,8 @@ public static class UnitGridScreenKit
         bandImg.fillMethod = Image.FillMethod.Radial360;
         bandImg.fillOrigin = (int)Image.Origin360.Top;
         bandImg.fillAmount = 0.12f;
-        band.localRotation = Quaternion.Euler(0, 0, -0.06f * 360);
+        // Filled clockwise from twelve; turned back by half its width so it sits round 50 Hz.
+        band.localRotation = Quaternion.Euler(0, 0, 0.06f * 360);
 
         var needle = Rect("Needle", dial);
         needle.anchorMin = needle.anchorMax = new Vector2(0.5f, 0f);
@@ -274,7 +275,7 @@ public static class UnitGridScreenKit
         zoneImg.fillMethod = Image.FillMethod.Radial360;
         zoneImg.fillOrigin = (int)Image.Origin360.Top;
         zoneImg.fillAmount = 30f / 360f;
-        zone.localRotation = Quaternion.Euler(0, 0, -15f);
+        zone.localRotation = Quaternion.Euler(0, 0, 15f);
         var needle = Rect("Needle", dial);
         needle.anchorMin = needle.anchorMax = new Vector2(0.5f, 0.5f);
         needle.pivot = new Vector2(0.5f, 0f);
@@ -293,10 +294,10 @@ public static class UnitGridScreenKit
         hlg.spacing = 8;
         hlg.childControlWidth = hlg.childControlHeight = true;
         hlg.childForceExpandWidth = hlg.childForceExpandHeight = true;
-        var slower = ScreenKit.Button(t, row, "Slower", "Slower", 52);
+        var slower = ScreenKit.Button(t, row, "Slower", "Slower", 52, t.Panel);
         var close = ScreenKit.Button(t, row, "Close", "CLOSE", 52, t.AlarmPanel);
         close.GetComponentInChildren<TextMeshProUGUI>().characterSpacing = 10;
-        var faster = ScreenKit.Button(t, row, "Faster", "Faster", 52);
+        var faster = ScreenKit.Button(t, row, "Faster", "Faster", 52, t.Panel);
         var later = ScreenKit.Button(t, box, "Later", "Not now", 44, t.Panel, 15);
 
         var view = holder.gameObject.AddComponent<SyncOverlayView>();

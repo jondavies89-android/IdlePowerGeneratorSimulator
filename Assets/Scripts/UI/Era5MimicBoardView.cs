@@ -25,7 +25,7 @@ namespace IdlePowerGen.UI
 
         private const float NodeSize = 34f, LineWidth = 4f;
         // Central sits at the left of the board, as in the mockup.
-        public static readonly Vector2 CentralPosition = new(0.08f, 0.52f);
+        public static readonly Vector2 CentralPosition = new(0.08f, 0.49f);
 
         private readonly Dictionary<string, (Image node, TMP_Text name, Outline ring)> _nodes = new();
         private readonly Dictionary<string, Image> _lines = new();
@@ -78,8 +78,7 @@ namespace IdlePowerGen.UI
             if (w > 0 && (!Mathf.Approximately(w, _w) || !Mathf.Approximately(h, _h)))
             {
                 _w = w; _h = h;
-                // Keep the nodes off the edges: positions are in the inner 86 % of the board.
-                Place(_central, Pos(CentralPosition.x, CentralPosition.y), _central.sizeDelta);
+                        Place(_central, Pos(CentralPosition.x, CentralPosition.y), _central.sizeDelta);
                 foreach (var c in Era5Data.Cities)
                 {
                     var p = Inner((float)c.X, (float)c.Y);
@@ -99,7 +98,8 @@ namespace IdlePowerGen.UI
             Refresh();
         }
 
-        private Vector2 Inner(float x, float y) => Pos(0.18f + x * 0.76f, 0.1f + y * 0.78f);
+        // The cities' grid sits right of Central, with room above each ring for its name.
+        private Vector2 Inner(float x, float y) => Pos(0.27f + x * 0.66f, 0.12f + y * 0.76f);
 
         private static void Place(RectTransform rt, Vector2 pos, Vector2 size)
         {

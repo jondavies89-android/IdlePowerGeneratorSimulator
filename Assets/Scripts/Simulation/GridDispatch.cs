@@ -54,6 +54,11 @@ namespace IdlePowerGen.Simulation
         // running, not from a standing start that would crash the frequency in a second.
         private bool _settled;
 
+        // The load asked for on the last step. Changes the operators make or expect (an area
+        // switched in, the evening rise) are scheduled: the units follow them directly, and
+        // the governors (with their lag) only have to answer surprises — a trip, the noise.
+        private double _lastScheduled;
+
         public void Reset()
         {
             _settled = false;
@@ -72,10 +77,20 @@ namespace IdlePowerGen.Simulation
         public bool Dead => Frequency <= 0;
 
         // Steps the grid by dt real seconds against loadAtNominal watts asked for.
+        // In quarter steps: the swing and the governors move within a second, and one Euler
+        // step a second overshoots a sudden change badly.
+        public const int SubSteps = 4;
+
         public void Step(IReadOnlyList<GridUnit> units, PowerGrid grid, double loadAtNominal, double dt)
         {
             LastFrequency = Frequency;
             if (Dead) { foreach (var u in units) u.OutputWatts = 0; return; }
+            for (int i = 0; i < SubSteps; i++) SubStep(units, grid, loadAtNominal, dt / SubSteps);
+        }
+
+        private void SubStep(IReadOnlyList<GridUnit> units, PowerGrid grid, double loadAtNominal, double dt)
+        {
+            if (Dead) return;
 
             _noise += -0.2 * _noise * dt + 0.0015 * (_rng.NextDouble() * 2 - 1) * Math.Sqrt(dt);
             double p0 = Math.Max(0, loadAtNominal) * (1 + _noise);
@@ -102,12 +117,16 @@ namespace IdlePowerGen.Simulation
             double dfPu = (Frequency - Nominal) / Nominal;
             double asked = Math.Clamp(p0 * (1 - FrequencyBias * dfPu), 0, capacity);
 
+            double scheduledChange = _settled ? Math.Max(0, loadAtNominal) - _lastScheduled : 0;
+            _lastScheduled = Math.Max(0, loadAtNominal);
+
             double generation = 0;
             foreach (var u in units)
             {
                 if (!u.IsOnline) continue;
                 double c = u.Capacity(grid) * CapacityFactor;
                 double target = c / capacity * asked;
+                u.OutputWatts += c / capacity * scheduledChange;
                 double tau = Math.Max(0.5, (u.Inherited ? 8.0 : u.Definition.governorSeconds) * GovernorFactor);
                 if (!_settled) u.OutputWatts = target;
                 else u.OutputWatts += (target - u.OutputWatts) * (1 - Math.Exp(-dt / tau));

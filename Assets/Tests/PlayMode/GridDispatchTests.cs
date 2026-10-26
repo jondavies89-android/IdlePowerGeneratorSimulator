@@ -42,23 +42,39 @@ namespace IdlePowerGen.Tests
             Assert.That(grid.Frequency, Is.EqualTo(49.05).Within(0.15));
         }
 
+        // A unit tripping is the surprise the governors have to answer: the needle dips.
         [Test]
-        public void ALoadStepDipsTheFrequency()
+        public void AUnitTrippingDipsTheFrequency()
+        {
+            var lost = Unit(40e6, number: 2);
+            var units = new List<GridUnit> { Unit(100e6), lost };
+            var grid = Run(units, 90e6, 120);
+            lost.SetState(GridUnit.UnitState.Faulted, 1);
+            double lowest = 50;
+            for (int i = 0; i < 20; i++) { grid.Step(units, null, 90e6, 1); lowest = System.Math.Min(lowest, grid.Frequency); }
+            Assert.That(lowest, Is.LessThan(49.8));
+        }
+
+        [Test]
+        public void AfterATripWithReserveTheFrequencyComesBack()
+        {
+            var lost = Unit(40e6, number: 2);
+            var units = new List<GridUnit> { Unit(100e6), lost };
+            var grid = Run(units, 90e6, 120);
+            lost.SetState(GridUnit.UnitState.Faulted, 1);
+            Run(units, 90e6, 180, grid);
+            Assert.That(grid.Frequency, Is.EqualTo(50).Within(0.05));
+        }
+
+        // Load the operators expect (an area switched in, the evening rise) the units follow.
+        [Test]
+        public void AScheduledRiseInLoadBarelyMovesTheNeedle()
         {
             var units = new List<GridUnit> { Unit(100e6) };
             var grid = Run(units, 60e6, 120);
             double lowest = 50;
-            for (int i = 0; i < 20; i++) { grid.Step(units, null, 75e6, 1); lowest = System.Math.Min(lowest, grid.Frequency); }
-            Assert.That(lowest, Is.LessThan(49.95));
-        }
-
-        [Test]
-        public void AfterADipTheFrequencyComesBack()
-        {
-            var units = new List<GridUnit> { Unit(100e6) };
-            var grid = Run(units, 60e6, 120);
-            Run(units, 75e6, 180, grid);
-            Assert.That(grid.Frequency, Is.EqualTo(50).Within(0.05));
+            for (int i = 0; i < 30; i++) { grid.Step(units, null, 60e6 + i * 0.5e6, 1); lowest = System.Math.Min(lowest, grid.Frequency); }
+            Assert.That(lowest, Is.GreaterThan(49.9));
         }
 
         [Test]

@@ -103,7 +103,7 @@ public static class BlackStartTheme
         Alarm       = ScreenTheme.Hex("#E0261E"),
         AlarmPanel  = ScreenTheme.Hex("#2A0C08"),
         Achievement = ScreenTheme.Hex("#F2C46A"),
-        Overlay     = new Color(0.02f, 0.015f, 0.01f, 0.98f),
+        Overlay     = new Color(0.02f, 0.015f, 0.01f, 1f), // the lights are out: nothing shows through
         Body        = Era4Theme.Sans,
         Numerals    = Era4Theme.Sans,
         Sans        = true,

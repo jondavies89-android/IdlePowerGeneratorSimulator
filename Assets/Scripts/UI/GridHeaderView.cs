@@ -48,8 +48,7 @@ namespace IdlePowerGen.UI
             var applier = Managers.UpgradeEffectApplier.Instance;
             double rate = applier != null ? applier.ResearchPerHour : 0;
             if (_researchLabel != null)
-                _researchLabel.text = rate > 0 ? $"{gm.Ledger.ResearchPoints:N0} RP  ·  +{rate:N0} an hour"
-                                               : $"{gm.Ledger.ResearchPoints:N0} RP";
+                _researchLabel.text = rate > 0 ? $"+{rate:N0} an hour" : "no R&D yet";
 
             if (_incomeLabel != null)
                 _incomeLabel.text = $"+{Managers.Money.Format((decimal)Math.Max(0, _works.IncomePerHour), _works.EraNumber)} an hour";

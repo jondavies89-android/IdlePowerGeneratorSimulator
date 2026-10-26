@@ -91,7 +91,10 @@ namespace IdlePowerGen.Controllers
             double hourOfDay = Now / 3600.0 % 24.0;
 
             foreach (var a in _areas)
-                a.DemandWatts = a.Supplied ? a.BaseWatts * AreaShape(a, hourOfDay) : 0;
+            {
+                if (a.Supplied && a.RampIn < 1) a.RampIn = Math.Min(1, a.RampIn + e.DeltaTime / RampSeconds);
+                a.DemandWatts = a.Supplied ? a.BaseWatts * AreaShape(a, hourOfDay) * a.RampIn : 0;
+            }
             UpdateLines();
 
             // Contracts were served in the sim tick from what reaches the far end of a line;
@@ -149,6 +152,9 @@ namespace IdlePowerGen.Controllers
 
         // Share of the tariff an area pays for what reaches it (Era 5: less when its voltage sags).
         protected virtual double PayFactor(LoadArea area) => 1.0;
+
+        // Real seconds a newly connected area takes to come fully on.
+        public const double RampSeconds = 30;
 
         // Era-specific work after the share-out (frequency, fuel, alerts).
         protected virtual void AfterShare(double gameHours) { }
@@ -210,7 +216,7 @@ namespace IdlePowerGen.Controllers
 
         public virtual void ReadSave(Save.SaveData data)
         {
-            foreach (var a in _areas) { a.Connected = false; a.Shed = false; }
+            foreach (var a in _areas) a.SetFromSave(false, false);
             ResetAreaExtras();
             BestDeliveredWatts = 0;
             CapstoneReady = false;
@@ -237,8 +243,7 @@ namespace IdlePowerGen.Controllers
             {
                 var a = Area(entry.id);
                 if (a == null) continue;
-                a.Connected = entry.connected;
-                a.Shed = entry.shed;
+                a.SetFromSave(entry.connected, entry.shed);
                 ReadArea(a, entry);
             }
         }

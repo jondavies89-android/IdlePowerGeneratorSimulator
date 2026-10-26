@@ -354,8 +354,13 @@ namespace IdlePowerGen.Controllers
 
         protected virtual void OnBrownout() { }
 
+        // What led to the last blackout, for the post-mortem and for tuning.
+        public string LastBlackoutCause { get; private set; }
+
         private void Blackout()
         {
+            LastBlackoutCause = $"{Frequency:0.00} Hz, load {Grid.Load / 1e6:0} MW on {Grid.OnlineCapacity / 1e6:0} MW online, " +
+                                $"{(Frequency < CollapseHz ? "fell past 48 Hz" : "the warning ran out")}, last trip: {_lastTrip}";
             var lit = _areas.Where(a => a.Supplied).ToList();
             double lost = lit.Sum(a => a.DemandWatts);
             foreach (var u in _units)
@@ -396,6 +401,7 @@ namespace IdlePowerGen.Controllers
         // ---- The tick ----
 
         private double _lastDt = 1.0;
+        private double _contractRamp;
 
         protected override double Dispatch(double wantedWatts, double dt, double gameHours)
         {
@@ -410,6 +416,12 @@ namespace IdlePowerGen.Controllers
             }
 
             _lastDt = dt;
+            // A contract's load comes on over RampSeconds too, like a feeder's: the ledger
+            // counts it served from the start, but the grid feels it arrive gradually.
+            double contracts = GM.ContractSupplyFactor > 0 ? GM.Contracts.DeliveredWatts / GM.ContractSupplyFactor : 0;
+            double step = Math.Max(Grid.OnlineCapacity, 1e6) / RampSeconds * dt;
+            _contractRamp = contracts > _contractRamp ? Math.Min(contracts, _contractRamp + step) : contracts;
+            wantedWatts += _contractRamp - contracts;
             if (LoadOverrideForTests is double load) wantedWatts = load;
             Grid.GovernorFactor = Effects != null ? Effects.GovernorTimeMultiplier : 1.0;
             Grid.Step(_units, PowerGrid, wantedWatts, dt);
@@ -507,8 +519,11 @@ namespace IdlePowerGen.Controllers
             else if (Frequency >= ClearHz) CascadeSecondsLeft = -1;
         }
 
+        private string _lastTrip = "none";
+
         private void Fail(GridUnit u)
         {
+            _lastTrip = $"Unit {u.Number} {u.ShortName} failed";
             decimal repair = (decimal)(u.Definition.baseCostPennies * Data.Era4Data.RepairCostShare);
             GM.Ledger.DrainPennies(repair);
             u.SetState(UnitState.Faulted, Data.Era4Data.RepairHours * ServiceTime);
@@ -536,5 +551,9 @@ namespace IdlePowerGen.Controllers
 
         // Contracts take from what the online units can make.
         protected override double StandingLossFraction => 0.04;
+
+        // What a new contract could have without starving the grid: the reserve, at the far
+        // end of the lines.
+        public override double SpareForContracts => ReserveWatts * (GM != null ? GM.ContractSupplyFactor : 1);
     }
 }

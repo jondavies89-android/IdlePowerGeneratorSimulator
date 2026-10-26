@@ -20,11 +20,12 @@ namespace IdlePowerGen.Data
         public const double TypicalStartPounds     = 60_000;
         public const float  TypicalStartReputation = 50f;
 
-        // A feeder pays this per watt-hour delivered (£0.025 a unit). Sized with the bible's
+        // A feeder pays this per watt-hour delivered (£0.017 a unit). Sized with the bible's
         // anchors (£15,000 for the first 20 MW coal unit) so a unit pays for itself in about
-        // a day and a half of game time once it has load to carry.
-        public const double TariffPenniesPerWattHour = 0.006;
-        public const double ContractBaseRate         = 0.009;
+        // two game days once it has load to carry. At 0.006 a greedy pacing run finished the
+        // era in 6.2 real hours; the bible asks 1–3 days of play (bible §2.1).
+        public const double TariffPenniesPerWattHour = 0.004;
+        public const double ContractBaseRate         = 0.006;
         public const int    BaseContractSlots        = 2;
 
         public const float  OfflineEraFactor  = 0.9f;

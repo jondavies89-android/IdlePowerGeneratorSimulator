@@ -98,6 +98,32 @@ industrial inrush) → second unit's start sequence (step failures driven by the
 Fuel scores) → synchronise (the synchroscope again) → restoration to 95 % of the load → post-mortem.
 No way out once it starts (bible §15.3); a blackout that would happen offline is never simulated.
 
+## Pacing
+
+`PacingReport` (explicit PlayMode tests, `-testFilter IdlePowerGen.Tests.PacingReport`) plays each
+era from its start with a greedy bot and logs how long it took. Real players take longer (they
+aren't perfect, and they're away), so the bot should land at or below the bible's lower bound.
+
+| Era | Bible (real play) | Bot | Longest wait | Notes |
+|---|---|---|---|---|
+| 2 | 2–8 h | 1.97 h | 3.7 min | the same with the old 1.6 kW start; 1 kW is 8 min slower early on |
+| 3 | 8–24 h | 4.7 h | 23 min | |
+| 4 | 1–3 days | 8.8 h | 52 min | one blackout |
+| 5 | 3–10 days | 25 h | 87 min | brownouts ~7 % of the time (the bot overconnects) |
+
+Tuning that came out of it:
+
+* A newly connected area (and a contract's load) comes on over 30 real seconds: switched in at
+  once, a big works crashed the frequency before a governor could answer.
+* Load the operators expect is scheduled: units follow it directly, and the governors (with their
+  lag) answer only surprises — a unit tripping, the noise. Without that, the evening rise alone
+  outran the governors.
+* A grid that starts (era opening, save loading, black start finished) starts already carrying
+  its load.
+* In a black start each area comes back a substation (a quarter) at a time, and the old station
+  is the first unit brought back in restoration; otherwise the diesel couldn't pick up even the
+  smallest district.
+
 ## Dev tools
 
 A collapsible DEV strip at the top of the screen: jump to the start of any era (replacing the save)

@@ -61,9 +61,12 @@ namespace IdlePowerGen.Tests
         private static IEnumerator WithLeicester()
         {
             yield return StartEra5();
-            Pay(10_000_000);
+            Pay(60_000_000);
+            // Leicester alone draws more than the inherited gigawatt: build to carry it.
+            var coal = GM.GeneratorCatalogue.First(g => g.generatorType == GeneratorType.LargeCoalUnit);
+            for (int i = 0; i < 8; i++) Dispatch.EndSync(Dispatch.BuyUnit(coal), Synchroscope.Close.Clean);
             Dispatch.Connect("c5_leicester");
-            Tick();
+            Tick(GridWorksController.RampSeconds + 2); // a new city's load comes on over half a minute
         }
 
         [UnityTest]
