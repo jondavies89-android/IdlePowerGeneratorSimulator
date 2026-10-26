@@ -24,7 +24,8 @@ namespace IdlePowerGen.UI
         private Color _lastColour;
         private float _lastShown;
 
-        private void Awake() => _read.onClick.AddListener(Read);
+        // On the press, not the release: the reading is about the moment the needle is in the band.
+        private void Awake() => PressButton.On(_read).Pressed += Read;
 
         private void Read()
         {

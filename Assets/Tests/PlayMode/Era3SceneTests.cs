@@ -266,8 +266,22 @@ namespace IdlePowerGen.Tests
         public IEnumerator TheStokeButtonRaisesThePressure()
         {
             yield return StartEra3();
-            GameObject.Find("Stoke").GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
+            var stoke = GameObject.Find("Stoke");
+            stoke.GetComponent<UI.PressButton>().OnPointerDown(
+                new UnityEngine.EventSystems.PointerEventData(UnityEngine.EventSystems.EventSystem.current));
             Assert.That(Town.Boiler.Pressure, Is.GreaterThan(0f));
+        }
+
+        // The reading is taken as the finger goes down, before it lifts.
+        [UnityTest]
+        public IEnumerator AReadingIsTakenOnThePress()
+        {
+            yield return StartEra3();
+            GameObject.Find("Era3Screen").GetComponentInChildren<UI.TabBarView>().Show(3); // Research
+            Town.Galvanometer.AimForTests(intoBand: true);
+            GameObject.Find("TakeReading").GetComponent<UI.PressButton>().OnPointerDown(
+                new UnityEngine.EventSystems.PointerEventData(UnityEngine.EventSystems.EventSystem.current));
+            Assert.That(Town.Galvanometer.Readings, Is.EqualTo(1));
         }
 
         [UnityTest]

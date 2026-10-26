@@ -23,7 +23,8 @@ namespace IdlePowerGen.UI
 
         private Coroutine _punch;
 
-        private void Awake() => _stoke.onClick.AddListener(Stoke);
+        // On the press, so fast stoking keeps up with the finger.
+        private void Awake() => PressButton.On(_stoke).Pressed += Stoke;
 
         private void Stoke()
         {
