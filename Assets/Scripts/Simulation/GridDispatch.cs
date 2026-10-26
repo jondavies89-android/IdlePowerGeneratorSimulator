@@ -31,6 +31,7 @@ namespace IdlePowerGen.Simulation
         public double Generation { get; private set; }   // ΣP sent by the units
         public double Load { get; private set; }         // what the load drew at this frequency
         public double OnlineCapacity { get; private set; }
+        public double Demand { get; private set; }       // what the load asks for at 50 Hz
 
         // Hz per second, last step: the needle's drift (bible §4.2 RoCoF, never shown by name).
         public double Trend => Frequency - LastFrequency;
@@ -84,6 +85,7 @@ namespace IdlePowerGen.Simulation
         public void Step(IReadOnlyList<GridUnit> units, PowerGrid grid, double loadAtNominal, double dt)
         {
             LastFrequency = Frequency;
+            Demand = Math.Max(0, loadAtNominal);
             if (Dead) { foreach (var u in units) u.OutputWatts = 0; return; }
             for (int i = 0; i < SubSteps; i++) SubStep(units, grid, loadAtNominal, dt / SubSteps);
         }

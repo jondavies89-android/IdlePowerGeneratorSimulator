@@ -68,7 +68,9 @@ namespace IdlePowerGen.UI
             _messageLabel.text = _session.LastMessage ?? "";
             _situationLabel.text = _session.Cause;
 
-            _crank.gameObject.SetActive(false);
+            // The crank's holder carries its caption too: hide the whole thing, not just the wheel.
+            var crankHolder = _crank.transform.parent.gameObject;
+            crankHolder.SetActive(false);
             _gates.gameObject.SetActive(false);
             _bar.transform.parent.parent.gameObject.SetActive(false);
             _primary.gameObject.SetActive(false);
@@ -99,7 +101,7 @@ namespace IdlePowerGen.UI
                     else if (_session.Chosen.Crank)
                     {
                         _phaseLabel.text = $"Cranking power · {_session.Chosen.Name}";
-                        _crank.gameObject.SetActive(true);
+                        crankHolder.SetActive(true);
                         _crankLabel.text = $"Turn the crank · {_session.Taps} of {_session.TapsNeeded}";
                     }
                     else
@@ -126,18 +128,27 @@ namespace IdlePowerGen.UI
                         double running = _session.RunningLoadOf(id) / Controllers.BlackStartSession.Chunks;
                         double inrush = running * (industrial ? Controllers.BlackStartSession.IndustrialInrush
                                                               : Controllers.BlackStartSession.HouseholdInrush);
-                        bool fits = _session.IslandLoad + inrush <= _session.IslandCapacity;
+                        bool fits = _session.Fits(id);
                         Item(items++, $"{_grid.AreaName(id)} · substation {_session.ChunksOn(id) + 1} of {Controllers.BlackStartSession.Chunks}",
                              $"{NumberFormatter.FormatWatts(running)} running · {NumberFormatter.FormatWatts(inrush)} to start" +
-                             (industrial ? " · heavy inrush" : ""), fits ? _ready : _caution, () => _session.Energise(area));
+                             (industrial ? " · heavy inrush" : "") +
+                             (fits ? "" : island ? " · too much: the island would go down" : " · needs another unit first"),
+                             fits ? _ready : _caution, () => _session.Energise(area));
                     }
                     if (island)
                     {
-                        Button(_primary, _primaryLabel, "The island is holding · start the next unit", _session.Energised.Count > 0);
+                        Button(_primary, _primaryLabel, _session.Energised.Count > 0 || !_session.CanHold
+                                   ? "The island is holding · start the next unit"
+                                   : "Nothing fits on it yet · start the next unit", _session.CanHold);
                     }
                     else
                     {
-                        Button(_primary, _primaryLabel, "Back to normal · 95% restored", _session.CanFinish);
+                        string finish = _session.Restored >= Controllers.BlackStartSession.RestoreTarget
+                            ? $"Back to normal · {_session.Restored:0%} restored"
+                            : _session.OutOfOptions
+                                ? $"Back to normal · {_session.Restored:0%} restored, the rest stays dark"
+                                : $"Back to normal at 95% · {_session.Restored:0%} so far";
+                        Button(_primary, _primaryLabel, finish, _session.CanFinish);
                         Button(_secondary, _secondaryLabel, _session.OldStationBack ? "Bring on the next unit" : "Bring the old station back", _session.CanBringOn);
                     }
                     break;
@@ -213,6 +224,8 @@ namespace IdlePowerGen.UI
             b.gameObject.SetActive(true);
             label.text = text;
             b.interactable = on;
+            // The button's tint alone hardly shows on the emergency lighting's dark panels.
+            label.alpha = on ? 1f : 0.4f;
         }
 
         private void Primary()

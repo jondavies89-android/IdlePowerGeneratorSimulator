@@ -17,6 +17,7 @@ namespace IdlePowerGen.UI
         [SerializeField] private TMP_Text _speedLabel;
         [SerializeField] private Button _realTime;
         [SerializeField] private TMP_Text _eraLabel;
+        [SerializeField] private Button _blackout;        // Eras 4–5: the grid goes dark now
 
         private void Awake()
         {
@@ -34,13 +35,23 @@ namespace IdlePowerGen.UI
             _speed.onValueChanged.AddListener(v => SetSpeed(FromSlider(v)));
             _realTime.onClick.AddListener(() => { _speed.SetValueWithoutNotify(0f); SetSpeed(1f); });
             SetSpeed(DevTime.Multiplier);
+            if (_blackout != null)
+                _blackout.onClick.AddListener(() => { CurrentGrid?.ForceBlackout(); _panel.SetActive(false); });
         }
+
+        private static Controllers.UnitGridController CurrentGrid =>
+            System.Array.Find(FindObjectsByType<Controllers.UnitGridController>(FindObjectsSortMode.None), g => g.IsCurrentEra);
 
         private void Update()
         {
             if (!_panel.activeSelf) return;
             var era = Managers.EraManager.Instance;
             _eraLabel.text = era != null ? $"Now in Era {era.Era}" : string.Empty;
+            if (_blackout != null)
+            {
+                var grid = CurrentGrid;
+                _blackout.interactable = grid != null && grid.BlackStart == null;
+            }
         }
 
         private void JumpTo(int era)

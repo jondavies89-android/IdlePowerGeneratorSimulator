@@ -19,6 +19,7 @@ namespace IdlePowerGen.UI
         [SerializeField] private Color _muted   = Color.gray;
         [SerializeField] private Color _money   = Color.yellow;
         [SerializeField] private Color _caution = Color.yellow;
+        [SerializeField] private Color _alarm   = Color.red;
 
         private readonly List<(string id, Button button, TMP_Text name, TMP_Text detail, TMP_Text action, CanvasGroup group)> _rows = new();
         private const float RefreshInterval = 0.25f;
@@ -67,6 +68,14 @@ namespace IdlePowerGen.UI
             _since = 0f;
             if (_grid == null) return;
 
+            // Whether the units could carry one more area at the day's peak: the warning comes
+            // before the button, not after the frequency falls.
+            double dayPeak = _grid.PeakAhead(24).Watts;
+            double ready = _grid.ReadyCapacity;
+            double hourNow = Controllers.ContractDesk.Now / 3600.0 % 24.0;
+            double shapeNow = Simulation.DemandModel.DailyShape(hourNow);
+            double spareNow = _grid.Grid.OnlineCapacity - _grid.DemandAt(hourNow);
+
             // Lit first, then the cheapest still to connect; only the next few unlit show.
             int unlitShown = 0;
             foreach (var r in _rows.OrderBy(r => _grid.Area(r.id).Connected ? 0 : 1).ThenBy(r => (double)Cost(r.id)))
@@ -79,8 +88,11 @@ namespace IdlePowerGen.UI
                 r.name.text = _grid.AreaName(r.id) + (_grid.IsIndustrial(r.id) ? "  · works" : "");
                 if (a.Connected)
                 {
-                    r.detail.text = a.Shed ? "dropped to save the grid" : $"drawing {NumberFormatter.FormatWatts(a.DeliveredWatts)}";
-                    r.detail.color = a.Shed ? _caution : _muted;
+                    bool wouldOverload = a.Shed && a.BaseWatts * shapeNow > spareNow;
+                    r.detail.text = !a.Shed ? $"drawing {NumberFormatter.FormatWatts(a.DeliveredWatts)}"
+                                  : wouldOverload ? "dropped · picking it up now would overload the grid"
+                                  : "dropped to save the grid";
+                    r.detail.color = wouldOverload ? _alarm : a.Shed ? _caution : _muted;
                     r.action.text = a.Shed ? "Pick up" : "Drop";
                     r.action.color = a.Shed ? _money : _muted;
                     r.button.interactable = _grid.BlackStart == null;
@@ -88,8 +100,13 @@ namespace IdlePowerGen.UI
                 }
                 else
                 {
-                    r.detail.text = $"about {NumberFormatter.FormatWatts(a.BaseWatts)} · more at the evening peak";
-                    r.detail.color = _muted;
+                    double shortBy = dayPeak + a.BaseWatts * PeakShape - ready;
+                    bool overloadNow = a.BaseWatts * shapeNow > spareNow;
+                    string about = $"about {NumberFormatter.FormatWatts(a.BaseWatts)}";
+                    r.detail.text = overloadNow ? $"{about} · more than the units online can carry now: the grid would go down"
+                                  : shortBy > 0 ? $"{about} · at the evening peak you'd be {NumberFormatter.FormatWatts(shortBy)} short"
+                                  : $"{about} · more at the evening peak";
+                    r.detail.color = overloadNow ? _alarm : shortBy > 0 ? _caution : _muted;
                     r.action.text = $"Connect\n{Managers.Money.Format(Cost(r.id))}";
                     r.action.color = _money;
                     bool can = CanConnect(r.id);
@@ -100,9 +117,13 @@ namespace IdlePowerGen.UI
 
             double lit = _grid.Areas.Where(a => a.Connected).Sum(a => a.BaseWatts);
             double online = _grid.Grid.OnlineCapacity;
-            _summaryLabel.text = $"{NumberFormatter.FormatWatts(lit)} connected · peaks near {NumberFormatter.FormatWatts(lit * 1.42)} · " +
+            _summaryLabel.text = $"{NumberFormatter.FormatWatts(lit)} connected · peaks near {NumberFormatter.FormatWatts(dayPeak)} · " +
                                  $"{NumberFormatter.FormatWatts(online)} online";
-            _summaryLabel.color = online >= lit * 1.45 ? _muted : _caution;
+            _summaryLabel.color = online >= dayPeak * 1.03 ? _muted : _caution;
         }
+
+        // The daily curve's evening peak over its average (bible §3.4).
+        private static readonly double PeakShape =
+            Enumerable.Range(0, 96).Max(i => Simulation.DemandModel.DailyShape(i / 4.0));
     }
 }

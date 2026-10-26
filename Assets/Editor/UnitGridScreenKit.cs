@@ -309,6 +309,38 @@ public static class UnitGridScreenKit
         return view;
     }
 
+    // The status strip above the tabs (GridStatusView); TabBarView is wired once the tabs exist.
+    public static GridStatusView Status(ScreenTheme t, Transform parent, UnitGridController grid, string areaNoun, string areasTab)
+    {
+        var strip = Stack("GridStatus", parent, spacing: 3);
+        strip.GetComponent<VerticalLayoutGroup>().padding = new RectOffset(12, 12, 7, 8);
+        var bg = Panel(t, strip);
+        var button = strip.gameObject.AddComponent<UnityEngine.UI.Button>();
+        button.targetGraphic = bg;
+        var colors = button.colors;
+        colors.pressedColor = new Color(0.85f, 0.85f, 0.85f);
+        button.colors = colors;
+
+        var top = Row(strip, "Top");
+        var freq = Text(t, top, "Frequency", "50.00 Hz", 17, t.Text, numerals: true);
+        freq.textWrappingMode = TextWrappingModes.NoWrap;
+        var load = Text(t, top, "Load", "", 13, t.TextMuted, TextAlignmentOptions.Right, numerals: true);
+        load.textWrappingMode = TextWrappingModes.NoWrap;
+        Flexible(load);
+        var fill = Bar(t, strip, "Bar", 5, t.Healthy);
+        var message = Text(t, strip, "Message", "", 12, t.Healthy);
+
+        var view = strip.gameObject.AddComponent<GridStatusView>();
+        Wire(view, ("_grid", grid), ("_button", button), ("_background", bg), ("_frequencyLabel", freq),
+                   ("_loadLabel", load), ("_fill", fill), ("_messageLabel", message));
+        SetString(view, "_areaNoun", areaNoun);
+        SetString(view, "_areasTab", areasTab);
+        SetColours(view, ("_panel", t.Panel), ("_cautionPanel", Color.Lerp(t.Panel, t.Caution, 0.18f)),
+                         ("_alarmPanel", t.AlarmPanel), ("_healthy", t.Healthy), ("_caution", t.Caution),
+                         ("_alarm", t.Alarm), ("_text", t.Text), ("_muted", t.TextMuted));
+        return view;
+    }
+
     public static void Cascade(ScreenTheme t, Transform parent, UnitGridController grid, SyncOverlayView sync)
     {
         var holder = Stack("Cascade", parent, spacing: 0);
@@ -430,7 +462,7 @@ public static class UnitGridScreenKit
         var template = RowTemplate(t, rows, "AreaTemplate");
         var view = rows.gameObject.AddComponent<AreaListView>();
         Wire(view, ("_grid", grid), ("_rowTemplate", template), ("_content", rows), ("_summaryLabel", summary));
-        SetColours(view, ("_text", t.Text), ("_muted", t.TextMuted), ("_money", t.Money), ("_caution", t.Caution));
+        SetColours(view, ("_text", t.Text), ("_muted", t.TextMuted), ("_money", t.Money), ("_caution", t.Caution), ("_alarm", t.Alarm));
     }
 
     public static void Shop(ScreenTheme t, Transform content, UnitGridController grid)

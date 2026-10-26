@@ -70,9 +70,16 @@ Central Electric Station, 14th June 1928. 10 MW → 1 GW. One new concept: the g
 
 * Control desk: frequency gauge, load, a monospaced unit board (ON / RMP / OFF / SYNC / FAULT),
   reserve. A bought unit has to be synchronised before it carries load.
-* Under 49.5 Hz the board goes amber; under 49.0 Hz for long a cascade warning counts down
-  (bible §10.2) with one-tap remedies (start a reserve unit, shed a feeder). Running out of it, or
-  falling below 48.0 Hz, is a blackout and the black-start minigame.
+* A status strip above the tabs (Eras 4–5) shows the frequency, the load against the units
+  online, and the one thing most worth knowing: short now, the evening peak in the next six game
+  hours outrunning what is online, an overdue unit the rest couldn't cover, coal running out,
+  feeders still dropped. The cascade warning sits under it, so neither is hidden by another tab.
+  The feeder list says when connecting one would overload the grid now or at the evening peak.
+* Under 49.5 Hz the board goes amber; under 49.0 Hz a cascade warning counts down 90 s
+  (bible §10.2) with one-tap remedies (start a reserve unit, drop the biggest feeder). Below
+  48.0 Hz, while the load is still more than the units can carry, the countdown runs six times as
+  fast: a big overload leaves about 15 s to act, never a blackout with no warning. Running out of
+  it is a blackout and the black-start minigame.
 * Maintenance: units run up service hours; past their interval they can fail (online only — never
   offline, CLAUDE.md). The first failure introduces Maintenance Preparedness (bible §14.2.1).
 * Fuel: a coal stockpile burned by coal units. Running dry trips them; the first time introduces
@@ -98,6 +105,12 @@ industrial inrush) → second unit's start sequence (step failures driven by the
 Fuel scores) → synchronise (the synchroscope again) → restoration to 95 % of the load → post-mortem.
 No way out once it starts (bible §15.3); a blackout that would happen offline is never simulated.
 
+A grid that went dark for want of units (or because one failed, or the coal ran out) can't get
+back to 95 %. Once there is no unit left to bring on and no substation that fits, restoration can
+be finished anyway; the grid restarts carrying only what its units can (with a 5 % margin), and the
+rest stays dropped, named in the post-mortem, to be picked up once there's reserve. Without that
+the black start had no end.
+
 ## Pacing
 
 `PacingReport` (explicit PlayMode tests, `-testFilter IdlePowerGen.Tests.PacingReport`) plays each
@@ -108,7 +121,7 @@ aren't perfect, and they're away), so the bot should land at or below the bible'
 |---|---|---|---|---|
 | 2 | 2–8 h | 1.97 h | 3.7 min | the same with the old 1.6 kW start; 1 kW is 8 min slower early on |
 | 3 | 8–24 h | 4.7 h | 23 min | |
-| 4 | 1–3 days | 8.8 h | 52 min | one blackout |
+| 4 | 1–3 days | 8.8 h | 52 min | no blackouts (one before the fast countdown replaced the instant one) |
 | 5 | 3–10 days | 25 h | 87 min | brownouts ~7 % of the time (the bot overconnects) |
 
 Tuning that came out of it:
@@ -127,4 +140,5 @@ Tuning that came out of it:
 ## Dev tools
 
 A collapsible DEV strip at the top of the screen: jump to the start of any era (replacing the save)
-and a time-acceleration slider (1×–1000×) that runs the sim and the clock faster.
+and a time-acceleration slider (1×–1000×) that runs the sim and the clock faster. In Eras 4–5,
+a button blacks the grid out at once, to test the black start.

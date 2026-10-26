@@ -118,6 +118,57 @@ namespace IdlePowerGen.Tests
             Assert.That(Station.BlackStart, Is.Not.Null);
         }
 
+        // A third over: straight past 48 Hz. The countdown runs fast, but it runs.
+        [UnityTest]
+        public IEnumerator AFarOverloadStillGivesAWarning()
+        {
+            yield return StartEra4();
+            Short(0.33);
+            Tick(8);
+            Assert.That(Station.BlackStart, Is.Null);
+        }
+
+        [UnityTest]
+        public IEnumerator PastTheBrinkTheCountdownRunsFast()
+        {
+            yield return StartEra4();
+            Short(0.33);
+            Tick(30);
+            Assert.That(Station.BlackStart, Is.Not.Null);
+        }
+
+        // Load dropped in time: the frequency's slow climb back doesn't burn the fast clock.
+        [UnityTest]
+        public IEnumerator DroppingEnoughPastTheBrinkSavesTheGrid()
+        {
+            yield return StartEra4();
+            Short(0.33);
+            Tick(10);
+            Short(-0.1);
+            Tick(60);
+            Assert.That(Station.BlackStart, Is.Null);
+        }
+
+        [UnityTest]
+        public IEnumerator TheStatusStripCountsDownToTheBlackout()
+        {
+            yield return StartEra4();
+            Short(0.06);
+            Tick(60);
+            yield return new WaitForSecondsRealtime(0.3f);
+            var message = GameObject.Find("Era4Screen").GetComponentInChildren<UI.GridStatusView>()
+                                    .transform.Find("Message").GetComponent<TMPro.TMP_Text>().text;
+            Assert.That(message, Does.Contain("goes dark in"));
+        }
+
+        [UnityTest]
+        public IEnumerator TheCascadeWarningIsOutsideTheTabs()
+        {
+            yield return StartEra4();
+            var banner = GameObject.Find("Era4Screen").GetComponentInChildren<UI.CascadeBannerView>(true);
+            Assert.That(banner.GetComponentsInParent<Transform>(true).Any(t => t.name == "Pages"), Is.False);
+        }
+
         [UnityTest]
         public IEnumerator CatchingUpOnTimeAwayNeverDarkensTheGrid()
         {
@@ -327,6 +378,50 @@ namespace IdlePowerGen.Tests
             float before = GM.Ledger.Reputation;
             Restored().Close();
             Assert.That(GM.Ledger.Reputation, Is.LessThan(before));
+        }
+
+        // A blackout for want of units: every feeder lit on the old station's 10 MW. The black
+        // start can't get back to 95 %, so it plays out everything the island can do.
+        private static BlackStartSession ShortAndPlayedOut()
+        {
+            foreach (var a in Station.Areas) a.Connected = true;
+            var s = Cranked();
+            for (int i = 0; i < 500; i++)
+            {
+                var next = s.LitBefore.FirstOrDefault(s.Fits);
+                if (next != null) s.Energise(next);
+                else if (s.Current == BlackStartSession.Phase.Island) s.IslandHolding();
+                else if (s.CanBringOn) s.BringOnNext();
+                else break;
+            }
+            return s;
+        }
+
+        [UnityTest]
+        public IEnumerator ShortOfUnitsTheBlackStartCanStillBeFinished()
+        {
+            yield return StartEra4();
+            Assert.That(ShortAndPlayedOut().CanFinish, Is.True);
+        }
+
+        [UnityTest]
+        public IEnumerator ShortOfUnitsWhatCantBeCarriedStaysDropped()
+        {
+            yield return StartEra4();
+            var s = ShortAndPlayedOut();
+            s.FinishRestoration();
+            Assert.That(s.LeftDark, Is.Not.Empty);
+        }
+
+        [UnityTest]
+        public IEnumerator AfterAShortBlackStartTheGridStaysUp()
+        {
+            yield return StartEra4();
+            var s = ShortAndPlayedOut();
+            s.FinishRestoration();
+            s.Close();
+            Tick(150);
+            Assert.That(Station.BlackStart, Is.Null);
         }
 
         [UnityTest]

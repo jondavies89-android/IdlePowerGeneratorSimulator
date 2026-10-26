@@ -45,11 +45,13 @@ public static class Era5ScreenBuilder
 
         Stats(column, grid);
         Boost(T, column, ScreenTheme.Hex("#C8DCC0"));
+        // Above the tabs, so the state of the grid and the cascade warning show on every page.
+        var status = Status(T, column, grid, "city", "Cities");
+        Cascade(T, column, grid, sync);
 
         var pagesRt = Pages(column);
         var board = Page(pagesRt, "BoardPage");
         var boardContent = Scroll(board);
-        Cascade(T, boardContent, grid, sync);
         Mimic(boardContent, grid);
         Alert(boardContent, grid);
         SyncPanel(T, boardContent, grid, sync);
@@ -78,6 +80,7 @@ public static class Era5ScreenBuilder
         var tabs = TabBar(T, column, new[] { "Board", "Cities", "Works", "Research", "Upgrades" },
                           new[] { board, cities, works, research, upgrades });
         Era4ScreenBuilder.Badges(tabs, grid, researchTree, upgradeTree, T.Money);
+        Wire(status, ("_tabs", tabs));
 
         BlackStart(root, grid, sync, "Era5BlackStart");
         sync.transform.SetAsLastSibling();

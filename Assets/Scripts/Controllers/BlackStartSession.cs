@@ -95,6 +95,7 @@ namespace IdlePowerGen.Controllers
             LitBefore = litBefore;
             LoadBefore = Math.Max(1, loadBefore);
             Cause = cause;
+            _lossShare = Math.Clamp(grid.LossFraction, 0, 0.5);
 
             // Bible §11.2: 0.5 % (prepared) to 12 % (neglected) per step, from maintenance and fuel.
             double prepared = (grid.MaintenanceScore + grid.FuelScore) / 200.0;
@@ -262,10 +263,23 @@ namespace IdlePowerGen.Controllers
 
         public int ChunksOn(string id) => Energised.TryGetValue(id, out var n) ? n : 0;
 
-        // The island is holding: on to the second unit.
+        // The next substation of an area, inrush included, would fit on the island as it is.
+        public bool Fits(string areaId)
+        {
+            if (ChunksOn(areaId) >= Chunks) return false;
+            double running = RunningLoadOf(areaId) / Chunks;
+            return IslandLoad + running * (IsIndustrial(areaId) ? IndustrialInrush : HouseholdInrush) <= IslandCapacity;
+        }
+
+        public bool AnythingFits => LitBefore.Any(Fits);
+
+        // The island is holding: on to the second unit. A start unit too small for even one
+        // substation can still power the next unit's auxiliaries.
+        public bool CanHold => Current == Phase.Island && (Energised.Count > 0 || !AnythingFits);
+
         public void IslandHolding()
         {
-            if (Current != Phase.Island || Energised.Count == 0) return;
+            if (!CanHold) return;
             SecondUnit = Candidates.OrderByDescending(u => u.Capacity(SimulationTick.Instance?.Grid)).FirstOrDefault();
             if (SecondUnit == null) { Go(Phase.Restore); return; }
             StepIndex = 0;
@@ -368,13 +382,37 @@ namespace IdlePowerGen.Controllers
         public double Restored =>
             Energised.Sum(kv => RunningLoadOf(kv.Key) * kv.Value / Chunks) / Math.Max(1, LitBefore.Sum(RunningLoadOf));
 
-        public bool CanFinish => Current == Phase.Restore && Restored >= RestoreTarget;
+        // Everything the island could still do has been done: no unit left to bring on and no
+        // substation that would fit. A grid that went dark for want of units (or a unit failed,
+        // or the coal ran out) can't get back to 95 %; it comes back with what it can carry.
+        public bool OutOfOptions => Current == Phase.Restore && !CanBringOn && !AnythingFits;
+
+        public bool CanFinish => Current == Phase.Restore && (Restored >= RestoreTarget || OutOfOptions);
+
+        // Areas that stayed dark when the grid came back, for want of units to carry them.
+        public List<string> LeftDark { get; } = new();
+
+        // The losses on the lines just before the blackout, for what the grid can carry after.
+        private readonly double _lossShare;
 
         public void FinishRestoration()
         {
             if (!CanFinish) return;
-            // The old station comes back too, and every customer still dark is picked up.
-            foreach (var a in _grid.Areas) if (a.Connected) a.Shed = false;
+            // Every customer still dark is picked up if the units can carry them, smallest
+            // first; the rest stay dropped, so the grid doesn't restart short and fall again.
+            // The units that will be online when it restarts (the old station always is), with a
+            // margin for the noise and Era 5's reactive share of each unit.
+            double online = _grid.Units.Where(u => u.IsOnline).Sum(u => u.Capacity(SimulationTick.Instance?.Grid));
+            double room = (online * _grid.Grid.CapacityFactor * 0.95 - _grid.ContractSentWatts) / (1 + _lossShare);
+            double carried = 0;
+            foreach (var id in LitBefore.OrderByDescending(ChunksOn).ThenBy(RunningLoadOf))
+            {
+                double load = RunningLoadOf(id);
+                bool keep = ChunksOn(id) >= Chunks || carried + load <= room;
+                _grid.Area(id).Shed = !keep;
+                if (keep) carried += load;
+                else LeftDark.Add(id);
+            }
             double minutes = OutageSeconds; // a real second is a game minute (bible §10.6)
             CustomerMinutes = LoadBefore / 1e6 * minutes;
             TrustLost = (float)Math.Clamp(minutes * 0.05, 1, 12);
@@ -382,6 +420,10 @@ namespace IdlePowerGen.Controllers
             if (_grid.HasCoalUnits && _grid.FuelScore < 60) Factors.Add($"Fuel cover at {_grid.FuelScore:0}: the coal yard was low.");
             if (Collapses > 0) Factors.Add($"The island went down {Collapses} time{(Collapses == 1 ? "" : "s")}: big loads first are the trap.");
             if (StartUnits.Count == 1) Factors.Add("Only the old diesel set could start a dead grid.");
+            if (LeftDark.Count > 0)
+                Factors.Add($"Not enough units to carry {string.Join(", ", LeftDark.Take(3).Select(AreaName))}" +
+                            $"{(LeftDark.Count > 3 ? $" and {LeftDark.Count - 3} more" : "")}: left dropped. " +
+                            "Pick them up once there's reserve for them.");
             if (Factors.Count == 0) Factors.Add("Not enough spare units online when the load rose.");
             Go(Phase.PostMortem);
         }

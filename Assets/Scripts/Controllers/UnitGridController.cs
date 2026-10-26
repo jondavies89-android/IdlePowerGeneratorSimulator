@@ -336,6 +336,11 @@ namespace IdlePowerGen.Controllers
         // Real seconds until the cascade (bible §10.2), or −1 when no warning is running.
         public double CascadeSecondsLeft { get; private set; } = -1;
 
+        // So low that units are tripping on their own protection: the countdown runs fast.
+        // Only while the load is still more than the units can carry: once the player has
+        // dropped enough, the climb back up counts at the normal pace.
+        public bool PastTheBrink => !Grid.Dead && Frequency < CollapseHz && Grid.Demand > Grid.OnlineCapacity;
+
         public BlackStartSession BlackStart { get; private set; }
 
         // Online capacity beyond what is being drawn: the "RESERVE" line on the board.
@@ -360,7 +365,7 @@ namespace IdlePowerGen.Controllers
         private void Blackout()
         {
             LastBlackoutCause = $"{Frequency:0.00} Hz, load {Grid.Load / 1e6:0} MW on {Grid.OnlineCapacity / 1e6:0} MW online, " +
-                                $"{(Frequency < CollapseHz ? "fell past 48 Hz" : "the warning ran out")}, last trip: {_lastTrip}";
+                                $"{(PastTheBrink ? "past the brink" : "the warning ran out")}, last trip: {_lastTrip}";
             var lit = _areas.Where(a => a.Supplied).ToList();
             double lost = lit.Sum(a => a.DemandWatts);
             foreach (var u in _units)
@@ -368,10 +373,17 @@ namespace IdlePowerGen.Controllers
                 if (u.Inherited) continue;
                 if (u.State == UnitState.Online) u.SetState(UnitState.AwaitingSync);
             }
+            string cause = _lastTrip.StartsWith("forced")
+                ? "Switched off from the DEV strip."
+                : Grid.Demand > Grid.OnlineCapacity
+                    ? $"The load ({NumberFormatter.FormatWatts(Grid.Demand)}) outgrew the {NumberFormatter.FormatWatts(Grid.OnlineCapacity)} " +
+                      "online. The frequency fell past recovery and the units tripped one by one."
+                    : "The frequency fell past recovery and the units tripped one by one.";
             Grid.Collapse();
             CascadeSecondsLeft = -1;
             SheddingStage = 0;
-            BlackStart = new BlackStartSession(this, lit.Select(a => a.Id).ToList(), lost, Faults);
+            BlackStart = new BlackStartSession(this, lit.Select(a => a.Id).ToList(), lost, Faults, cause);
+            _lastTrip = "none";
             EventBus.Publish(new BlackoutEvent(EraNumber));
         }
 
@@ -394,9 +406,52 @@ namespace IdlePowerGen.Controllers
             BlackStart = null;
         }
 
-        // Test hooks: a fixed load, whatever the hour; the blackout as if the cascade had run out.
+        // Test and DEV hooks: a fixed load, whatever the hour; the blackout as if the cascade had run out.
         public double? LoadOverrideForTests { get; set; }
-        public void ForceBlackout() { if (IsCurrentEra && BlackStart == null) Blackout(); }
+        public void ForceBlackout()
+        {
+            if (!IsCurrentEra || BlackStart != null) return;
+            _lastTrip = "forced from the DEV strip";
+            Blackout();
+        }
+
+        // ---- Looking ahead ----
+
+        // What the grid would be asked for at an hour of the day with the areas lit now: each
+        // on its daily curve, the lines' losses, and the contracts running.
+        public double DemandAt(double hourOfDay)
+        {
+            double sent = ContractSentWatts;
+            foreach (var a in _areas)
+            {
+                if (!a.Supplied) continue;
+                double d = a.BaseWatts * AreaShape(a, hourOfDay);
+                sent += d + TransmissionNetwork.EffectiveLoss(a) * d * d;
+            }
+            return sent;
+        }
+
+        // What the contracts running take at the station, before the lines' losses.
+        public double ContractSentWatts =>
+            GM != null && GM.ContractSupplyFactor > 0 ? GM.Contracts.DeliveredWatts / GM.ContractSupplyFactor : 0;
+
+        // The highest demand over the next game hours, and how many hours away it is: the
+        // status strip warns with it before the evening rise outruns the units online.
+        public (double Watts, double HoursAhead) PeakAhead(double hours = 6)
+        {
+            double now = Now / 3600.0;
+            double best = 0, at = 0;
+            for (double h = 0; h <= hours; h += 0.25)
+            {
+                double w = DemandAt((now + h) % 24.0);
+                if (w > best) { best = w; at = h; }
+            }
+            return (best, at);
+        }
+
+        // Capacity that could be online: the units online plus those waiting to be synchronised.
+        public double ReadyCapacity =>
+            _units.Where(u => u.IsOnline || u.State == UnitState.AwaitingSync).Sum(u => u.Capacity(PowerGrid)) * Grid.CapacityFactor;
 
         // ---- The tick ----
 
@@ -478,7 +533,8 @@ namespace IdlePowerGen.Controllers
                 }
                 if (u.State != UnitState.Online) continue;
                 u.HoursSinceService += gameHours;
-                if (away || !IsOverdue(u)) continue;
+                // In a black start the start sequence's step failures stand in for wear.
+                if (away || BlackStart != null || !IsOverdue(u)) continue;
                 double overdue = (u.HoursSinceService - u.Definition.serviceIntervalHours) / u.Definition.serviceIntervalHours;
                 double chance = (Data.Era4Data.FailureBasePerHour + Data.Era4Data.FailureSlopePerHour * overdue) * gameHours;
                 if (Faults.NextDouble() < chance) Fail(u);
@@ -509,11 +565,10 @@ namespace IdlePowerGen.Controllers
             }
 
             // The cascade warning (bible §10.2).
-            if (Frequency < CollapseHz) { Blackout(); return; }
             if (Frequency < WarnHz)
             {
                 if (CascadeSecondsLeft < 0) CascadeSecondsLeft = CascadeSeconds;
-                else CascadeSecondsLeft -= dt;
+                else CascadeSecondsLeft -= dt * (PastTheBrink ? Data.Era4Data.BrinkRate : 1);
                 if (CascadeSecondsLeft <= 0) Blackout();
             }
             else if (Frequency >= ClearHz) CascadeSecondsLeft = -1;
@@ -543,8 +598,9 @@ namespace IdlePowerGen.Controllers
             return true;
         }
 
-        // The biggest lit area: the one to drop when the frequency is falling.
-        public LoadArea BiggestLit => _areas.Where(a => a.Supplied).OrderByDescending(a => a.DemandWatts).FirstOrDefault();
+        // The biggest lit area: the one to drop when the frequency is falling. By its full
+        // size, not what it draws this second: one just switched in is still coming on.
+        public LoadArea BiggestLit => _areas.Where(a => a.Supplied).OrderByDescending(a => a.BaseWatts).FirstOrDefault();
 
         protected override double OfflineCapacityWatts() =>
             _units.Where(u => u.IsOnline).Sum(u => u.Capacity(PowerGrid));

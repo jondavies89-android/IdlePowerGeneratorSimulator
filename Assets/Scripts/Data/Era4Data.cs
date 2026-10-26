@@ -46,7 +46,9 @@ namespace IdlePowerGen.Data
         // Frequency (bible §4.4, without the automatic relays: those come in Era 5).
         // Under Amber the desk shows caution; under Warn for long the cascade countdown runs
         // (bible §10.2, T-90 s) with its one-tap remedies; it clears back above Clear.
-        // Under Collapse, or when the countdown runs out, the grid goes dark: black start.
+        // Under Collapse the countdown runs BrinkRate times as fast; when it runs out the grid
+        // goes dark: black start. Even a big overload (a feeder switched in on a grid with no
+        // reserve) leaves 15 s on the clock to drop it again, not a blackout with no warning.
         // -------------------------------------------------------------------------------
 
         public const double AmberHz    = 49.5;
@@ -54,6 +56,7 @@ namespace IdlePowerGen.Data
         public const double ClearHz    = 49.2;
         public const double CollapseHz = 48.0;
         public const double CascadeWarningSeconds = 90;
+        public const double BrinkRate  = 6;
 
         // -------------------------------------------------------------------------------
         // Maintenance (bible §9.4, §14.2.1). A unit runs up game hours while online; past its

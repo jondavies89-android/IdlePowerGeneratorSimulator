@@ -34,11 +34,13 @@ public static class Era4ScreenBuilder
 
         var date = Header(T, column, "CENTRAL ELECTRIC STATION");
         Boost(T, column, ScreenTheme.Hex("#1E2A16"));
+        // Above the tabs, so the state of the grid and the cascade warning show on every page.
+        var status = Status(T, column, grid, "feeder", "Feeders");
+        Cascade(T, column, grid, sync);
 
         var pagesRt = Pages(column);
         var desk = Page(pagesRt, "DeskPage");
         var deskContent = Scroll(desk);
-        Cascade(T, deskContent, grid, sync);
         Gauge(T, deskContent, grid, Era4Theme.GaugeFace, Era4Theme.Needle);
         SyncPanel(T, deskContent, grid, sync);
         Board(T, deskContent, grid, sync, grouped: false, "Generators on line");
@@ -66,6 +68,7 @@ public static class Era4ScreenBuilder
         var tabs = TabBar(T, column, new[] { "Desk", "Feeders", "Works", "Research", "Upgrades" },
                           new[] { desk, feeders, works, research, upgrades });
         Badges(tabs, grid, researchTree, upgradeTree, T.Money);
+        Wire(status, ("_tabs", tabs));
 
         sync.transform.SetAsLastSibling();
         BlackStart(root, grid, sync, "Era4BlackStart");

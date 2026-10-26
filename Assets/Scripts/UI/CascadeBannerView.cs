@@ -37,10 +37,15 @@ namespace IdlePowerGen.UI
             if (_panel.activeSelf != show) _panel.SetActive(show);
             if (!show) return;
 
-            bool late = left < 30;
+            bool brink = _grid.PastTheBrink;
+            bool late = left < 30 || brink;
             _background.color = late ? _alarmPanel : _cautionPanel;
             _titleLabel.text = $"UNDER-FREQUENCY · {Mathf.CeilToInt((float)left)} s to cascade";
-            _detailLabel.text = $"{_grid.Frequency:0.00} Hz and falling. Bring on reserve, or drop load, now.";
+            _detailLabel.text = brink
+                ? $"{_grid.Frequency:0.00} Hz: units are tripping on their own protection and the clock is running fast. Drop load now."
+                : _grid.Grid.Demand <= _grid.Grid.OnlineCapacity
+                    ? $"{_grid.Frequency:0.00} Hz and climbing back. Hold on, and don't pick anything up yet."
+                    : $"{_grid.Frequency:0.00} Hz and falling. Bring on reserve, or drop load, now.";
 
             var unit = _grid.ReserveToSync;
             _syncButton.interactable = unit != null;
