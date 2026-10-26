@@ -383,6 +383,7 @@ namespace IdlePowerGen.Controllers
             CascadeSecondsLeft = -1;
             SheddingStage = 0;
             BlackStart = new BlackStartSession(this, lit.Select(a => a.Id).ToList(), lost, Faults, cause);
+            StopManagers();
             _lastTrip = "none";
             EventBus.Publish(new BlackoutEvent(EraNumber));
         }

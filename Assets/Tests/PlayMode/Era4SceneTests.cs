@@ -291,6 +291,26 @@ namespace IdlePowerGen.Tests
         }
 
         [UnityTest]
+        public IEnumerator ABlackoutSwitchesTheContractManagersOff()
+        {
+            yield return StartEra4();
+            SetLevels((ManagerId, 2));
+            Station.Manager(0).On = Station.Manager(1).On = true;
+            Dark();
+            Assert.That(Station.Manager(0).On || Station.Manager(1).On, Is.False);
+        }
+
+        [UnityTest]
+        public IEnumerator ABlackoutKeepsEachManagersChosenClient()
+        {
+            yield return StartEra4();
+            SetLevels((ManagerId, 1));
+            Station.Manager(0).ContractId = "chosen";
+            Dark();
+            Assert.That(Station.Manager(0).ContractId, Is.EqualTo("chosen"));
+        }
+
+        [UnityTest]
         public IEnumerator ABlackoutOpensTheBlackStart()
         {
             yield return StartEra4();

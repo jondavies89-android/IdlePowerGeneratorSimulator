@@ -79,6 +79,26 @@ namespace IdlePowerGen.Tests
             Assert.That(cash.text, Does.StartWith("£"));
         }
 
+        // A purse far past where it used to wrap, as the header shows it.
+        private static IEnumerator LargePurse(System.Action<TMPro.TMP_Text> check)
+        {
+            yield return StartEra3();
+            Pay(98_765_432);
+            yield return new WaitForSecondsRealtime(0.6f); // the header refreshes a few times a second
+            var cash = GameObject.Find("Era3Screen").GetComponentsInChildren<TMPro.TMP_Text>()
+                                 .First(t => t.name == "Value" && t.transform.parent.name == "Cash");
+            cash.ForceMeshUpdate();
+            check(cash);
+        }
+
+        [UnityTest]
+        public IEnumerator ALargePurseStaysOnOneLine() =>
+            LargePurse(cash => Assert.That(cash.textInfo.lineCount, Is.EqualTo(1)));
+
+        [UnityTest]
+        public IEnumerator ALargePurseShrinksToFitItsBox() =>
+            LargePurse(cash => Assert.That(cash.textBounds.size.x, Is.LessThanOrEqualTo(cash.rectTransform.rect.width + 0.5f)));
+
         [Test]
         public void TheEra2PurseConvertsAtTwoHundredAndFortyPence() =>
             Assert.That(Managers.Money.Format(2400m, 3), Is.EqualTo("£10"));

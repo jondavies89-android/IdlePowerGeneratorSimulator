@@ -201,6 +201,13 @@ namespace IdlePowerGen.Controllers
                     { On = e.on, ContractId = string.IsNullOrEmpty(e.contractId) ? null : e.contractId });
         }
 
+        // The grid has gone dark: every manager is switched off, so none books a client into
+        // the restoration. The player switches them back on when the lights are back.
+        protected void StopManagers()
+        {
+            for (int i = 0; i < ManagersHired; i++) Manager(i).On = false;
+        }
+
         // A new era's desk starts with its managers on and choosing for themselves.
         protected void ResetManagers() => _managers.Clear();
 

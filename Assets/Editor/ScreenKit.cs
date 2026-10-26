@@ -54,6 +54,18 @@ public static class ScreenKit
         return tmp;
     }
 
+    // A figure that keeps to one line however large it grows: it shrinks to fit its box rather
+    // than wrap. The box needs a width of its own (a LayoutElement), since a shrinking text
+    // still asks the layout for room at its full size.
+    public static void OneLine(TextMeshProUGUI tmp, float minSize = 10)
+    {
+        tmp.textWrappingMode = TextWrappingModes.NoWrap;
+        tmp.overflowMode = TextOverflowModes.Overflow;
+        tmp.enableAutoSizing = true;
+        tmp.fontSizeMax = tmp.fontSize;
+        tmp.fontSizeMin = minSize;
+    }
+
     // Spaced capitals, the mockups' panel captions ("TOWN MAP · WESTGATE").
     public static TextMeshProUGUI Caption(ScreenTheme t, Transform parent, string name, string text, float size = 13,
                                           TextAlignmentOptions align = TextAlignmentOptions.Left)

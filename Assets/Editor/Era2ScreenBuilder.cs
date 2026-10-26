@@ -98,8 +98,12 @@ public static class Era2ScreenBuilder
         // The steady income under the purse: what an idle game owes the player at a glance.
         var income = Text(purse.transform.parent, "Income", "", 12, Era2Theme.TextMuted, TextAlignmentOptions.Center,
                           numerals: true);
+        ScreenKit.OneLine(income, 8);
 
         var repute = Stack("Repute", panel, spacing: 2);
+        var reputeLe = repute.gameObject.AddComponent<LayoutElement>();
+        reputeLe.preferredWidth = 1;
+        reputeLe.flexibleWidth = 1;
         repute.GetComponent<VerticalLayoutGroup>().childAlignment = TextAnchor.MiddleCenter;
         Caption(repute, "REPUTE");
         var starsRow = Rect("Stars", repute);
@@ -149,8 +153,14 @@ public static class Era2ScreenBuilder
     {
         var cell = Stack(name, parent, spacing: 2);
         cell.GetComponent<VerticalLayoutGroup>().childAlignment = TextAnchor.MiddleCenter;
+        // Equal shares of the panel, so a growing purse shrinks to fit rather than wrapping.
+        var le = cell.gameObject.AddComponent<LayoutElement>();
+        le.preferredWidth = 1;
+        le.flexibleWidth = 1;
         Caption(cell, caption);
-        return Text(cell, "Value", value, 28, colour, TextAlignmentOptions.Center, numerals: true);
+        var v = Text(cell, "Value", value, 28, colour, TextAlignmentOptions.Center, numerals: true);
+        ScreenKit.OneLine(v, 12);
+        return v;
     }
 
     private static void Caption(Transform parent, string caption)

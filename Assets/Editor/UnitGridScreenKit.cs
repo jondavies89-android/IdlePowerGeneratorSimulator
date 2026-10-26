@@ -44,10 +44,15 @@ public static class UnitGridScreenKit
             b.GetComponent<VerticalLayoutGroup>().childAlignment = TextAnchor.MiddleCenter;
             b.GetComponent<VerticalLayoutGroup>().padding = new RectOffset(6, 6, 4, 4);
             Panel(t, b);
+            // Equal thirds whatever the figures say, so a growing purse shrinks rather than shoves.
+            var le = b.gameObject.AddComponent<LayoutElement>();
+            le.preferredWidth = 1;
+            le.flexibleWidth = 1;
             Caption(t, b, "Caption", caption, 11, TextAlignmentOptions.Center);
             var v = Text(t, b, "Value", "", 20, colour, TextAlignmentOptions.Center, numerals: true);
-            v.textWrappingMode = TextWrappingModes.NoWrap;
+            OneLine(v, 11);
             sub = Text(t, b, "Sub", "", 10, t.TextMuted, TextAlignmentOptions.Center);
+            OneLine(sub, 7);
             return v;
         }
         var cash = Box("Cash", "Cash", t.Money, out var income);

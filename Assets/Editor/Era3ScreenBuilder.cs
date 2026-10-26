@@ -98,18 +98,24 @@ public static class Era3ScreenBuilder
         cashBox.GetComponent<VerticalLayoutGroup>().padding = new RectOffset(10, 10, 4, 4);
         cashBox.GetComponent<VerticalLayoutGroup>().childAlignment = TextAnchor.MiddleCenter;
         Panel(T, cashBox, T.PanelRaised);
+        // A set width, so the purse shrinks to fit as it grows instead of crowding the names.
         var cashLe = cashBox.gameObject.AddComponent<LayoutElement>();
-        cashLe.minWidth = 100;
+        cashLe.minWidth = cashLe.preferredWidth = 112;
+        cashLe.flexibleWidth = 0;
         var cash = Text(T, cashBox, "Value", "£0", 24, T.Money, TextAlignmentOptions.Center, numerals: true);
+        OneLine(cash, 12);
         var income = Text(T, cashBox, "Income", "", 11, T.Healthy, TextAlignmentOptions.Center, numerals: true);
+        OneLine(income, 8);
 
         var reputeBox = Stack("Repute", header, spacing: 0);
         reputeBox.GetComponent<VerticalLayoutGroup>().padding = new RectOffset(8, 8, 4, 4);
         reputeBox.GetComponent<VerticalLayoutGroup>().childAlignment = TextAnchor.MiddleCenter;
         Panel(T, reputeBox, T.PanelRaised);
-        reputeBox.gameObject.AddComponent<LayoutElement>().minWidth = 60;
+        var reputeLe = reputeBox.gameObject.AddComponent<LayoutElement>();
+        reputeLe.minWidth = reputeLe.preferredWidth = 60;
+        reputeLe.flexibleWidth = 0;
         var repute = Text(T, reputeBox, "Value", "0", 24, T.Achievement, TextAlignmentOptions.Center, numerals: true);
-        repute.textWrappingMode = TextWrappingModes.NoWrap;
+        OneLine(repute, 12);
         Text(T, reputeBox, "Caption", "repute", 11, T.TextMuted, TextAlignmentOptions.Center);
 
         var view = header.gameObject.AddComponent<GridHeaderView>();
