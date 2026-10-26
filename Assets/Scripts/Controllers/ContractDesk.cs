@@ -55,7 +55,7 @@ namespace IdlePowerGen.Controllers
         public abstract double SpareForContracts { get; }
 
         public bool IsOffered(ContractDefinition def) =>
-            IsCurrentEra && GM != null && Board.IsOffered(def, Now, GM.Ledger.Reputation, GM.Contracts.ActiveContracts);
+            IsCurrentEra && GM != null && Board.IsOffered(def, GM.Ledger.Reputation, GM.Contracts.ActiveContracts);
 
         public bool Book(ContractDefinition def) =>
             IsCurrentEra && GM != null && HasFreeSlot &&

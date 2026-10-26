@@ -42,7 +42,10 @@ written into ScriptableObjects by the era asset builders. Tune them there.
   frequency-bias term brings it back to 50 Hz when there is reserve. Short of capacity, frequency
   settles where load self-regulation balances the deficit: about −1 Hz for 5 % short.
 * **Contracts.** The Era 2 contract board, generalised (`ContractDesk`). From Era 3 contracts are
-  served first, from what reaches customers after losses.
+  served first, from what reaches customers after losses. Every client the player's repute has
+  opened can be booked at any time there's a free slot, and again as soon as it finishes. Clients
+  used to ask only in their own hours of the day, once a day; that was meant for immersion but
+  played as long stretches of watching the clock with nothing to do (2026-10-26).
 * **Research.** `CurrencyLedger.ResearchPoints`; research nodes are `UpgradeDefinition`s with a
   `costResearch` and `isResearch`, shown on a Research tab. R&D buildings are levelled upgrades that
   add RP per game hour.
@@ -119,10 +122,10 @@ aren't perfect, and they're away), so the bot should land at or below the bible'
 
 | Era | Bible (real play) | Bot | Longest wait | Notes |
 |---|---|---|---|---|
-| 2 | 2–8 h | 1.97 h | 3.7 min | the same with the old 1.6 kW start; 1 kW is 8 min slower early on |
-| 3 | 8–24 h | 4.7 h | 23 min | |
-| 4 | 1–3 days | 8.8 h | 52 min | no blackouts (one before the fast countdown replaced the instant one) |
-| 5 | 3–10 days | 25 h | 87 min | brownouts ~7 % of the time (the bot overconnects) |
+| 2 | 2–8 h | 1.87 h | 4.0 min | contract rate 0.4 → 0.3 when clients became bookable at any hour (1.4 h otherwise) |
+| 3 | 8–24 h | 4.0 h | 21 min | 4.7 h while clients kept their hours |
+| 4 | 1–3 days | 9.4 h | 43 min | one blackout |
+| 5 | 3–10 days | 19.9 h | 64 min | brownouts ~22 % of the time: the bot books every contract it can and overconnects |
 
 Tuning that came out of it:
 

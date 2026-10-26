@@ -313,11 +313,12 @@ namespace IdlePowerGen.Tests
             Assert.That(GameObject.Find("Engagement_0"), Is.Not.Null);
         }
 
+        // The bakery wanted its power before dawn; it can be booked in the evening all the same.
         [UnityTest]
-        public IEnumerator TheBakeryIsNotOfferedInTheEvening()
+        public IEnumerator TheBakeryCanBeBookedInTheEvening()
         {
             yield return Load(Era2Save(0));
-            Assert.That(Works.IsOffered(Contract("c2_bakery")), Is.False);
+            Assert.That(Works.IsOffered(Contract("c2_bakery")), Is.True);
         }
 
         [UnityTest]
@@ -542,15 +543,15 @@ namespace IdlePowerGen.Tests
             Works.Book(Contract("c2_street_lamps"));
             Save.SaveManager.Instance.Save();
             yield return Load(JsonUtility.FromJson<Save.SaveData>(File.ReadAllText(SavePath)));
-            Assert.That(Works.Board.BookedToday(Contract("c2_street_lamps"), Controllers.Era2WorksController.Now), Is.True);
+            Assert.That(GM.Contracts.ActiveContracts.Select(c => c.Definition.contractId), Does.Contain("c2_street_lamps"));
         }
 
         [Test]
-        public void AV3SaveMigratesToV4()
+        public void AnOldSaveMigratesToTheCurrentVersion()
         {
-            var v3 = new Save.SaveData { version = 3, contractBookedDays = null };
+            var v3 = new Save.SaveData { version = 3 };
             Save.SaveManager.Migrate(v3);
-            Assert.That(v3.contractBookedDays, Is.Not.Null);
+            Assert.That(v3.version, Is.EqualTo(Save.SaveManager.CurrentVersion));
         }
 
         // --- 2× contracts boost ---

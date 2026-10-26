@@ -5,9 +5,10 @@ namespace IdlePowerGen.Data
     // Numeric constants for Era 2 — "The Demonstration" (1 kW → 100 kW, London 1851).
     // The source of truth for Era2AssetBuilder, which writes the ScriptableObjects.
     //
-    // The era's one new concept (bible §2.2): demand isn't constant. Customers ask for power
-    // in their own window of the day, so what the works can sell rises and falls with the
-    // clock. Pennies from contracts pay for everything physical (bible §9.2: infrastructure
+    // The era's one new concept (bible §2.2): demand isn't constant. The street buys power on
+    // the daily curve, so what the works can sell rises and falls with the clock; contract
+    // clients can be booked whenever there's a slot (waiting for a client's hour of the day
+    // was dead time). Pennies from contracts pay for everything physical (bible §9.2: infrastructure
     // costs cash); reputation from contracts opens bigger clients and some upgrades.
     public static class Era2Data
     {
@@ -19,8 +20,9 @@ namespace IdlePowerGen.Data
         // The bible's 0.001 was set before running costs and penny-priced machines existed; at
         // that rate an apprentice's 50 W couldn't cover his own 1 d/hr wage. A pacing sim
         // (greedy bookings, best watts per penny) finishes the era in ~4 hours at 0.3 and
-        // ~2 hours at 0.6, inside the bible's 2–8 hour band; 0.4 sits near three.
-        public const double ContractBaseRate = 0.4;
+        // ~2 hours at 0.6, inside the bible's 2–8 hour band; 0.4 sat near three. Since clients
+        // can be booked at any hour the same bot runs 1.4 h at 0.4, under the band.
+        public const double ContractBaseRate = 0.3;
 
         // Spare power sold to the street, as a fraction of ContractBaseRate (then shaped by the
         // hour: dearer at the evening lamp-lighting, cheap before dawn). Without it, between
@@ -91,28 +93,28 @@ namespace IdlePowerGen.Data
 
         public static readonly ContractSpec[] Contracts =
         {
-            //  id                 client                          watts    hours from  to   rep   +rep pay  tier
-            new("c2_street_lamps", "Street Lamp Row",              500,     5,    17,   21,  0,    1,   1.0f, ContractTier.Standard,
+            //  id                 client                          watts    hours rep   +rep pay  tier
+            new("c2_street_lamps", "Street Lamp Row",              500,     5,    0,    1,   1.0f, ContractTier.Standard,
                 "The parish wants Fleet Street lit from dusk."),
-            new("c2_bakery",       "Whitmore's Bakery",            800,     3,    3,    6,   0,    1,   1.0f, ContractTier.Standard,
+            new("c2_bakery",       "Whitmore's Bakery",            800,     3,    0,    1,   1.0f, ContractTier.Standard,
                 "Lamps and a mixer before dawn. The bread won't wait."),
-            new("c2_hotel",        "The Grand Hotel",              1_200,   8,    0,    24,  0,    1,   1.0f, ContractTier.Standard,
+            new("c2_hotel",        "The Grand Hotel",              1_200,   8,    0,    1,   1.0f, ContractTier.Standard,
                 "Lamps in every corridor, day and night."),
-            new("c2_print_works",  "City Print Works",             3_000,   8,    6,    10,  3,    1.5f, 1.0f, ContractTier.Standard,
+            new("c2_print_works",  "City Print Works",             3_000,   8,    3,    1.5f, 1.0f, ContractTier.Standard,
                 "The morning presses need driving."),
-            new("c2_theatre",      "Theatre Royal, Drury Lane",    6_000,   4,    17,   20,  6,    2,   1.0f, ContractTier.Standard,
+            new("c2_theatre",      "Theatre Royal, Drury Lane",    6_000,   4,    6,    2,   1.0f, ContractTier.Standard,
                 "The manager wants electric light for tonight's play."),
             // Bible §5.1.6: reputation-tier contracts pay 1.3–1.6× and add a reputation bonus.
-            new("c2_royal_society","Royal Society demonstration",  10_000,  2,    18,   20,  10,   3,   1.5f, ContractTier.Reputation,
+            new("c2_royal_society","Royal Society demonstration",  10_000,  2,    10,   3,   1.5f, ContractTier.Reputation,
                 "Mr Faraday himself will attend."),
-            new("c2_silk_mill",    "Spitalfields Silk Mill",       20_000,  10,   5,    8,   14,   2,   1.0f, ContractTier.Standard,
+            new("c2_silk_mill",    "Spitalfields Silk Mill",       20_000,  10,   14,   2,   1.0f, ContractTier.Standard,
                 "Looms from first light."),
-            new("c2_station",      "Great Western Railway",        40_000,  12,   0,    24,  18,   3,   1.0f, ContractTier.Standard,
+            new("c2_station",      "Great Western Railway",        40_000,  12,   18,   3,   1.0f, ContractTier.Standard,
                 "The new terminus at Paddington wants its platforms lit."),
-            new("c2_strand",       "Shopfronts of the Strand",     60_000,  5,    16,   19,  22,   3,   1.0f, ContractTier.Standard,
+            new("c2_strand",       "Shopfronts of the Strand",     60_000,  5,    22,   3,   1.0f, ContractTier.Standard,
                 "Every window lit for the evening crowds."),
             // The era's capstone: holding it ends Era 2.
-            new(ExhibitionContractId, "The Great Exhibition",      100_000, 8,    8,    10,  28,   5,   1.6f, ContractTier.Reputation,
+            new(ExhibitionContractId, "The Great Exhibition",      100_000, 8,    28,   5,   1.6f, ContractTier.Reputation,
                 "Light the Crystal Palace for its closing week. All London will see it."),
         };
 
@@ -209,18 +211,16 @@ namespace IdlePowerGen.Data
             public readonly string       Client;
             public readonly double       Watts;
             public readonly float        Hours;
-            public readonly float        FromHour;
-            public readonly float        ToHour;
             public readonly float        RequiredReputation;
             public readonly float        ReputationOnSuccess;
             public readonly float        PayMultiplier;
             public readonly ContractTier Tier;
             public readonly string       Description;
 
-            public ContractSpec(string id, string client, double watts, float hours, float from, float to,
+            public ContractSpec(string id, string client, double watts, float hours,
                                 float rep, float repOnSuccess, float payMult, ContractTier tier, string description)
             {
-                Id = id; Client = client; Watts = watts; Hours = hours; FromHour = from; ToHour = to;
+                Id = id; Client = client; Watts = watts; Hours = hours;
                 RequiredReputation = rep; ReputationOnSuccess = repOnSuccess; PayMultiplier = payMult;
                 Tier = tier; Description = description;
             }

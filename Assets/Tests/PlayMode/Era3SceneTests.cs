@@ -226,10 +226,10 @@ namespace IdlePowerGen.Tests
         // --- Contracts ---
 
         [UnityTest]
-        public IEnumerator TheTramwaysAskInTheMorning()
+        public IEnumerator TheTramwaysCanBeBookedAtAnyHour()
         {
             yield return StartEra3();
-            Utils.GameClock.Instance.SetGameTime(Town.StartDay * 86400.0 + 7 * 3600.0);
+            Utils.GameClock.Instance.SetGameTime(Town.StartDay * 86400.0 + 23 * 3600.0);
             Assert.That(Town.IsOffered(GM.FindContract("c3_tramway")), Is.True);
         }
 

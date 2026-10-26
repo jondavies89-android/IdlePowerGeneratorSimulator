@@ -190,11 +190,10 @@ namespace IdlePowerGen.Controllers
 
         // ---- Save support ----
 
-        public void LoadFromSave(long startDay, double coalLevel, IEnumerable<(string id, long day)> bookedDays)
+        public void LoadFromSave(long startDay, double coalLevel)
         {
             StartDay = startDay;
             Hopper.SetFromSave(coalLevel);
-            Board.LoadFromSave(bookedDays);
             ApprenticesUnpaid = false;
             _toldUnpaid = false;
             EarnedPerHour = NetPerHour = 0;

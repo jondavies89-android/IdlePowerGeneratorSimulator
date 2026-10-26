@@ -121,8 +121,6 @@ public static class Era1AssetBuilder
         def.requiredWatts       = Era1Data.MaxWatts;
         def.durationHours       = Era1Data.FirstCustomerHours;
         def.mustHoldOutput      = true; // "1 kW sustained" (bible §5.1.3), not 1 kW on average
-        def.availableStartHour  = 0f;
-        def.availableEndHour    = 24f;
         def.payRateMultiplier   = Era1Data.FirstCustomerPayMult;
         def.reputationOnSuccess = 0f; // reputation doesn't exist until Era 2
         def.reputationOnFail    = 0f;

@@ -24,8 +24,6 @@ MonoBehaviour:
   shortfallLeeway: 0.1
   shortfallCountdownMinutes: 30
   shortfallForgivenAfterMinutes: 60
-  availableStartHour: 8
-  availableEndHour: 10
   requiredReputation: 28
   payRateMultiplier: 1.6
   reputationOnSuccess: 5

@@ -38,7 +38,6 @@ namespace IdlePowerGen.Save
         // --- Era 2 works (v4) ---
         public long   era2StartDay;        // game day Era 2 began; the shown date counts from it
         public double coalLevel;           // pennies' worth of coal in the hopper
-        public List<BookedDayEntry> contractBookedDays = new();
 
         // --- Boosts (v6) ---
         public double contractBoostSecondsLeft; // real seconds of the 2× contracts boost
@@ -64,13 +63,6 @@ namespace IdlePowerGen.Save
         {
             public string upgradeId;
             public int    level;
-        }
-
-        [Serializable]
-        public class BookedDayEntry
-        {
-            public string contractId;
-            public long   day;
         }
 
         [Serializable]

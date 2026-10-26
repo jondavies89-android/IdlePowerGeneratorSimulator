@@ -216,24 +216,24 @@ namespace IdlePowerGen.Data
         };
 
         // -------------------------------------------------------------------------------
-        // Contracts: the town's big clients, booked by the hour of day as in Era 2.
+        // Contracts: the town's big clients, booked whenever there's a slot, as in Era 2.
         // Reputation carries on from Era 2 (≈33 at the Exhibition), so the gates start there.
         // -------------------------------------------------------------------------------
 
         public static readonly ContractSpec[] Contracts =
         {
-            //  id                   client                          watts    hours from to   rep   +rep pay   tier
-            new("c3_tramway",       "Westgate Tramways",             150e3,   6,    6,   9,   0,    1,   1.0f, ContractTier.Standard,
+            //  id                   client                          watts    hours rep   +rep pay   tier
+            new("c3_tramway",       "Westgate Tramways",             150e3,   6,    0,    1,   1.0f, ContractTier.Standard,
                 "The first electric trams want running for the morning crowds."),
-            new("c3_theatre",       "The Electric Theatre",          300e3,   4,    17,  20,  30,   1,   1.0f, ContractTier.Standard,
+            new("c3_theatre",       "The Electric Theatre",          300e3,   4,    30,   1,   1.0f, ContractTier.Standard,
                 "Footlights, house lights and a lift to the gallery."),
-            new("c3_mill",          "Pennine Cotton Mill",           800e3,   10,   5,   8,   34,   2,   1.0f, ContractTier.Standard,
+            new("c3_mill",          "Pennine Cotton Mill",           800e3,   10,   34,   2,   1.0f, ContractTier.Standard,
                 "Electric motors for the spinning frames, from first light."),
-            new("c3_infirmary",     "Royal Infirmary",               600e3,   24,   0,   24,  38,   3,   1.5f, ContractTier.Reputation,
+            new("c3_infirmary",     "Royal Infirmary",               600e3,   24,   38,   3,   1.5f, ContractTier.Reputation,
                 "Light in every ward, all day and all night. They will not forgive a dark night."),
-            new("c3_alkali",        "Castner Alkali Works",          2.5e6,   12,   0,   24,  42,   3,   1.0f, ContractTier.Standard,
+            new("c3_alkali",        "Castner Alkali Works",          2.5e6,   12,   42,   3,   1.0f, ContractTier.Standard,
                 "Electrolysis cells by the hundred. Hungry, steady work."),
-            new("c3_illuminations", "The Promenade Illuminations",   4e6,     5,    18,  21,  48,   4,   1.5f, ContractTier.Reputation,
+            new("c3_illuminations", "The Promenade Illuminations",   4e6,     5,    48,   4,   1.5f, ContractTier.Reputation,
                 "A mile of coloured lamps along the front. The whole county will come."),
         };
 
@@ -327,17 +327,15 @@ namespace IdlePowerGen.Data
             public readonly string       Client;
             public readonly double       Watts;
             public readonly float        Hours;
-            public readonly float        FromHour;
-            public readonly float        ToHour;
             public readonly float        RequiredReputation;
             public readonly float        ReputationOnSuccess;
             public readonly float        PayMultiplier;
             public readonly ContractTier Tier;
             public readonly string       Description;
-            public ContractSpec(string id, string client, double watts, float hours, float from, float to,
+            public ContractSpec(string id, string client, double watts, float hours,
                                 float rep, float repOnSuccess, float payMult, ContractTier tier, string description)
             {
-                Id = id; Client = client; Watts = watts; Hours = hours; FromHour = from; ToHour = to;
+                Id = id; Client = client; Watts = watts; Hours = hours;
                 RequiredReputation = rep; ReputationOnSuccess = repOnSuccess; PayMultiplier = payMult;
                 Tier = tier; Description = description;
             }

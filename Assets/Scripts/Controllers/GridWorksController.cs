@@ -68,7 +68,6 @@ namespace IdlePowerGen.Controllers
             StartDay = day;
             BestDeliveredWatts = 0;
             CapstoneReady = false;
-            Board.LoadFromSave(null);
             foreach (var a in _areas) { a.Connected = false; a.Shed = false; }
             ResetAreaExtras();
             OnEraStart();
@@ -210,8 +209,6 @@ namespace IdlePowerGen.Controllers
                 WriteArea(a, entry);
                 data.loadAreas.Add(entry);
             }
-            foreach (var (id, day) in Board.BookedDays)
-                data.contractBookedDays.Add(new Save.SaveData.BookedDayEntry { contractId = id, day = day });
         }
 
         public virtual void ReadSave(Save.SaveData data)
@@ -221,15 +218,10 @@ namespace IdlePowerGen.Controllers
             BestDeliveredWatts = 0;
             CapstoneReady = false;
             IncomePerHour = 0;
-            Board.LoadFromSave(null);
             if ((int)data.currentEra != EraNumber) return;
 
             StartDay = data.eraStartDay;
             CapstoneReady = data.capstoneOffered;
-            var booked = new List<(string, long)>();
-            foreach (var e in data.contractBookedDays ?? new List<Save.SaveData.BookedDayEntry>())
-                booked.Add((e.contractId, e.day));
-            Board.LoadFromSave(booked);
 
             // A save made before the era had begun its own state (an Era 2 save past the
             // Exhibition, from before Era 3 existed) starts the era as if it had just opened.

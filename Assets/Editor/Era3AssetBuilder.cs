@@ -99,8 +99,6 @@ public static class Era3AssetBuilder
             def.requiredWatts       = s.Watts;
             def.durationHours       = s.Hours;
             def.mustHoldOutput      = false;
-            def.availableStartHour  = s.FromHour;
-            def.availableEndHour    = s.ToHour;
             def.requiredReputation  = s.RequiredReputation;
             def.payRateMultiplier   = s.PayMultiplier;
             def.reputationOnSuccess = s.ReputationOnSuccess;

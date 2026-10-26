@@ -4,9 +4,9 @@ using UnityEngine;
 
 namespace IdlePowerGen.UI
 {
-    // The contract board: who is asking for power now, then who asks later today, then the
-    // next client the works' repute would open. Clients further up the reputation ladder
-    // stay hidden, so the board never shows the whole era at once.
+    // The contract board: every client the works' repute has opened, then the next one it
+    // would open. Clients further up the reputation ladder stay hidden, so the board never
+    // shows the whole era at once.
     public class ContractOfferListView : MonoBehaviour
     {
         [SerializeField] private Controllers.ContractDesk _works;
@@ -49,7 +49,6 @@ namespace IdlePowerGen.UI
 
             var order = _cards.Where(c => c.Current != ContractOfferCardView.State.Hidden)
                               .OrderBy(c => c.Current)
-                              .ThenBy(c => c.HoursUntilOpen)
                               .ToList();
             foreach (var card in _cards)
             {

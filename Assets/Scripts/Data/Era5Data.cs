@@ -192,15 +192,15 @@ namespace IdlePowerGen.Data
 
         public static readonly ContractSpec[] Contracts =
         {
-            new("c5_tv",         "BBC television transmitters",  1e9,   5,  18, 23, 0,  1, 1.0f, ContractTier.Standard,
+            new("c5_tv",         "BBC television transmitters",  1e9,   5,  0,  1, 1.0f, ContractTier.Standard,
                 "Sutton Coldfield's mast, and every set in the Midlands."),
-            new("c5_motor",      "The motor works",              4e9,   8,  6,  14, 60, 2, 1.0f, ContractTier.Standard,
+            new("c5_motor",      "The motor works",              4e9,   8,  60, 2, 1.0f, ContractTier.Standard,
                 "Longbridge and Cowley, every line running."),
-            new("c5_smelter",    "Aluminium smelter",            2e9,   24, 0,  24, 64, 3, 1.0f, ContractTier.Standard,
+            new("c5_smelter",    "Aluminium smelter",            2e9,   24, 64, 3, 1.0f, ContractTier.Standard,
                 "Pot lines that must never cool."),
-            new("c5_steel",      "Steel strip mill",             6e9,   12, 0,  24, 68, 3, 1.0f, ContractTier.Standard,
+            new("c5_steel",      "Steel strip mill",             6e9,   12, 68, 3, 1.0f, ContractTier.Standard,
                 "Hot strip at a mile a minute."),
-            new("c5_coronation", "Coronation Day",               10e9,  6,  10, 16, 74, 5, 1.6f, ContractTier.Reputation,
+            new("c5_coronation", "Coronation Day",               10e9,  6,  74, 5, 1.6f, ContractTier.Reputation,
                 "Every television in the country switched on at once. Don't let the picture go."),
         };
 
@@ -287,13 +287,13 @@ namespace IdlePowerGen.Data
         {
             public readonly string Id, Client;
             public readonly double Watts;
-            public readonly float Hours, FromHour, ToHour, RequiredReputation, ReputationOnSuccess, PayMultiplier;
+            public readonly float Hours, RequiredReputation, ReputationOnSuccess, PayMultiplier;
             public readonly ContractTier Tier;
             public readonly string Description;
-            public ContractSpec(string id, string client, double watts, float hours, float from, float to,
+            public ContractSpec(string id, string client, double watts, float hours,
                                 float rep, float repOnSuccess, float payMult, ContractTier tier, string description)
             {
-                Id = id; Client = client; Watts = watts; Hours = hours; FromHour = from; ToHour = to;
+                Id = id; Client = client; Watts = watts; Hours = hours;
                 RequiredReputation = rep; ReputationOnSuccess = repOnSuccess; PayMultiplier = payMult;
                 Tier = tier; Description = description;
             }

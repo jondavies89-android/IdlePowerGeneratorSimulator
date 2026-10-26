@@ -23,7 +23,7 @@ MonoBehaviour:
   useReputation: 1
   offlineEraFactor: 1
   offlineTauHours: 4
-  contractBaseRate: 0.4
+  contractBaseRate: 0.3
   streetRateFactor: 0.2
   xpScaleFactor: 5
   upgradeBranchNames:

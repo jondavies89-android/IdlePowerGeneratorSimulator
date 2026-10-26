@@ -463,7 +463,7 @@ public static class Era1SceneBuilder
         Text(box, "Date", "9th October 1851", 18, Era1Theme.Text, TextAlignmentOptions.Center, FontStyles.Italic);
         Text(box, "Body",
              "Your first customer has arrived. Thirty years on, the workshop is a demonstration " +
-             "office, and all London wants electric light, each at its own hour of the day.",
+             "office, and all London wants electric light. Take on as many clients as the works can supply.",
              16, Era1Theme.Text, TextAlignmentOptions.Center);
 
         var open = MakeButton(box, "OpenTheDoors", "Open the doors");

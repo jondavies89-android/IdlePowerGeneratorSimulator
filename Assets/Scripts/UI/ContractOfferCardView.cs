@@ -6,8 +6,8 @@ using IdlePowerGen.Utils;
 
 namespace IdlePowerGen.UI
 {
-    // One client on the board. Tapping the card books it. Clients outside their hours are
-    // shown dimmed with when they'll ask, so the day's shape is visible ahead of time.
+    // One client on the board. Tapping the card books it, whenever the player likes; the next
+    // client up the repute ladder is shown dimmed with what it will take.
     public class ContractOfferCardView : MonoBehaviour
     {
         [SerializeField] private TMP_Text _titleLabel;
@@ -22,12 +22,11 @@ namespace IdlePowerGen.UI
 
         private const float DimmedAlpha = 0.45f;
 
-        public enum State { Hidden, Offered, Later, Locked }
+        public enum State { Hidden, Offered, Locked }
 
         private Controllers.ContractDesk _works;
         public ContractDefinition Definition { get; private set; }
         public State Current { get; private set; }
-        public float HoursUntilOpen { get; private set; }
 
         public void Bind(ContractDefinition def, Controllers.ContractDesk works)
         {
@@ -47,22 +46,10 @@ namespace IdlePowerGen.UI
         public void Evaluate(bool showLocked)
         {
             var gm = Managers.GameManager.Instance;
-            double now = Controllers.ContractDesk.Now;
-            float hour = Economy.ContractBoard.HourOf(now);
-            HoursUntilOpen = Economy.ContractBoard.HoursUntilOpen(Definition, hour);
-
-            bool running = false;
-            foreach (var c in gm.Contracts.ActiveContracts)
-                if (c.Definition == Definition) running = true;
-
-            if (running || _works.Board.BookedToday(Definition, now) && HoursUntilOpen == 0)
-                Current = State.Hidden;
-            else if (gm.Ledger.Reputation < Definition.requiredReputation)
+            if (gm.Ledger.Reputation < Definition.requiredReputation)
                 Current = showLocked ? State.Locked : State.Hidden;
-            else if (_works.IsOffered(Definition))
-                Current = State.Offered;
             else
-                Current = State.Later;
+                Current = _works.IsOffered(Definition) ? State.Offered : State.Hidden; // running now
 
             _statusLabel.color = _statusColour;
             switch (Current)
@@ -83,10 +70,7 @@ namespace IdlePowerGen.UI
                         _statusLabel.color = _cautionColour;
                     }
                     else
-                        _statusLabel.text = $"Book it · asking until {Hour(Definition.availableEndHour)}";
-                    break;
-                case State.Later:
-                    _statusLabel.text = $"Asks from {Hour(Definition.availableStartHour)} to {Hour(Definition.availableEndHour)}";
+                        _statusLabel.text = "Book it";
                     break;
                 case State.Locked:
                     _statusLabel.text = $"Will deal with you at {Definition.requiredReputation:0.#} repute";
@@ -96,7 +80,5 @@ namespace IdlePowerGen.UI
             _button.interactable = Current == State.Offered && _works.HasFreeSlot;
             _group.alpha = _button.interactable ? 1f : DimmedAlpha;
         }
-
-        private static string Hour(float h) => h >= 24f ? "midnight" : $"{Mathf.FloorToInt(h):00}:00";
     }
 }

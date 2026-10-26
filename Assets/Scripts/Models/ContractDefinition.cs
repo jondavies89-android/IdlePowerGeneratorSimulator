@@ -28,10 +28,6 @@ namespace IdlePowerGen.Models
         [Tooltip("Game minutes fully supplied in a row that settle the client and clear the countdown.")]
         public float shortfallForgivenAfterMinutes = 60f;
 
-        [Header("Scheduling  §3.4")]
-        public float availableStartHour; // in-game hour of day contract becomes available
-        public float availableEndHour;   // expires if not accepted before this hour
-
         [Header("Reputation Gate (required, not consumed)")]
         public float requiredReputation;
 

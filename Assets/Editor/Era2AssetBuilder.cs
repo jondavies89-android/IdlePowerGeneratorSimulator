@@ -95,8 +95,6 @@ public static class Era2AssetBuilder
             def.requiredWatts       = s.Watts;
             def.durationHours       = s.Hours;
             def.mustHoldOutput      = false; // bible §5.1.6: judged on average, failing below 50 %
-            def.availableStartHour  = s.FromHour;
-            def.availableEndHour    = s.ToHour;
             def.requiredReputation  = s.RequiredReputation;
             def.payRateMultiplier   = s.PayMultiplier;
             def.reputationOnSuccess = s.ReputationOnSuccess;

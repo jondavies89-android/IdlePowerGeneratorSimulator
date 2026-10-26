@@ -219,18 +219,18 @@ namespace IdlePowerGen.Data
 
         public static readonly ContractSpec[] Contracts =
         {
-            //  id                   client                          watts    hours from to   rep   +rep pay   tier
-            new("c4_railway",       "Southern Electric Railway",     30e6,    6,    6,   10,  0,    1,   1.0f, ContractTier.Standard,
+            //  id                   client                          watts    hours rep   +rep pay   tier
+            new("c4_railway",       "Southern Electric Railway",     30e6,    6,    0,    1,   1.0f, ContractTier.Standard,
                 "The morning commuter trains, every one electric."),
-            new("c4_cinemas",       "The Odeon circuit",             20e6,    5,    18,  23,  50,   1,   1.0f, ContractTier.Standard,
+            new("c4_cinemas",       "The Odeon circuit",             20e6,    5,    50,   1,   1.0f, ContractTier.Standard,
                 "Every picture house in the county, all evening."),
-            new("c4_arc",           "Steel arc furnaces",            80e6,    8,    0,   24,  54,   2,   1.0f, ContractTier.Standard,
+            new("c4_arc",           "Steel arc furnaces",            80e6,    8,    54,   2,   1.0f, ContractTier.Standard,
                 "Furnaces that pull a mighty load the moment they strike."),
-            new("c4_bbc",           "BBC Daventry transmitter",      15e6,    24,   0,   24,  58,   3,   1.5f, ContractTier.Reputation,
+            new("c4_bbc",           "BBC Daventry transmitter",      15e6,    24,   58,   3,   1.5f, ContractTier.Reputation,
                 "The long-wave transmitter must never go off the air."),
-            new("c4_aluminium",     "Aluminium rolling mill",        150e6,   12,   0,   24,  62,   3,   1.0f, ContractTier.Standard,
+            new("c4_aluminium",     "Aluminium rolling mill",        150e6,   12,   62,   3,   1.0f, ContractTier.Standard,
                 "A rolling mill the size of a cathedral."),
-            new("c4_royal_show",    "The Royal Show",                200e6,   6,    10,  16,  68,   4,   1.5f, ContractTier.Reputation,
+            new("c4_royal_show",    "The Royal Show",                200e6,   6,    68,   4,   1.5f, ContractTier.Reputation,
                 "The King opens the show. Every exhibit lit and turning."),
         };
 
@@ -312,13 +312,13 @@ namespace IdlePowerGen.Data
         {
             public readonly string Id, Client;
             public readonly double Watts;
-            public readonly float Hours, FromHour, ToHour, RequiredReputation, ReputationOnSuccess, PayMultiplier;
+            public readonly float Hours, RequiredReputation, ReputationOnSuccess, PayMultiplier;
             public readonly ContractTier Tier;
             public readonly string Description;
-            public ContractSpec(string id, string client, double watts, float hours, float from, float to,
+            public ContractSpec(string id, string client, double watts, float hours,
                                 float rep, float repOnSuccess, float payMult, ContractTier tier, string description)
             {
-                Id = id; Client = client; Watts = watts; Hours = hours; FromHour = from; ToHour = to;
+                Id = id; Client = client; Watts = watts; Hours = hours;
                 RequiredReputation = rep; ReputationOnSuccess = repOnSuccess; PayMultiplier = payMult;
                 Tier = tier; Description = description;
             }

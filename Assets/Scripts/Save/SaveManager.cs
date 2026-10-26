@@ -21,7 +21,8 @@ namespace IdlePowerGen.Save
         // v6 → v7: each engagement's shortfall countdown.
         // v7 → v8: Eras 3–5 (research points, the era's start day, load areas, units, coal,
         //          the preparedness dashboard). Nobody reached Era 3 before v8.
-        public const int CurrentVersion = 8;
+        // v8 → v9: contracts can be booked at any time, so the day each was last booked is gone.
+        public const int CurrentVersion = 9;
 
         // Tests point this at a scratch file so they never touch a real player's save.
         public static string SaveFileName = "save.json";
@@ -79,8 +80,6 @@ namespace IdlePowerGen.Save
             {
                 data.era2StartDay = works.StartDay;
                 data.coalLevel    = works.Hopper.Level;
-                foreach (var (id, day) in works.Board.BookedDays)
-                    data.contractBookedDays.Add(new SaveData.BookedDayEntry { contractId = id, day = day });
             }
 
             // Active contracts
@@ -190,7 +189,12 @@ namespace IdlePowerGen.Save
             if (data.version < 6) MigrateV5ToV6(data);
             if (data.version < 7) MigrateV6ToV7(data);
             if (data.version < 8) MigrateV7ToV8(data);
+            if (data.version < 9) MigrateV8ToV9(data);
         }
+
+        // A v8 save listed the day each client was last booked; JsonUtility drops the old
+        // field on load, and every client is on the board again.
+        private static void MigrateV8ToV9(SaveData data) => data.version = 9;
 
         // A v7 save is in Era 1 or 2 (Era 3 didn't exist), so Eras 3–5 start empty. An Era 2
         // save past the Exhibition (Era 3 in name only) is left there: it opens on Era 3's
@@ -230,11 +234,7 @@ namespace IdlePowerGen.Save
         }
 
         // Nobody reached Era 2 before v4, so its state starts empty.
-        private static void MigrateV3ToV4(SaveData data)
-        {
-            data.contractBookedDays ??= new List<SaveData.BookedDayEntry>();
-            data.version = 4;
-        }
+        private static void MigrateV3ToV4(SaveData data) => data.version = 4;
 
         // v2 upgrade ids that survive into the levelled tree, and what they became.
         // The rest (gear train, belt drive, cam, foreman, the machine patents) and the
@@ -316,13 +316,7 @@ namespace IdlePowerGen.Save
             }
 
             var works = FindAnyObjectByType<Controllers.Era2WorksController>();
-            if (works != null)
-            {
-                var booked = new List<(string, long)>();
-                foreach (var e in data.contractBookedDays ?? new List<SaveData.BookedDayEntry>())
-                    booked.Add((e.contractId, e.day));
-                works.LoadFromSave(data.era2StartDay, data.coalLevel, booked);
-            }
+            if (works != null) works.LoadFromSave(data.era2StartDay, data.coalLevel);
 
             // Restore contracts
             gm.Contracts.ClearActive();

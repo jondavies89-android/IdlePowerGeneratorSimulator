@@ -12,15 +12,12 @@ namespace IdlePowerGen.Tests
         private const double Hour = 3600;
         private const double Day  = 86400;
 
-        private static ContractDefinition Contract(string id, double watts, float from, float to,
-                                                   float hours = 1f, float rep = 0f)
+        private static ContractDefinition Contract(string id, double watts, float hours = 1f, float rep = 0f)
         {
             var def = ScriptableObject.CreateInstance<ContractDefinition>();
             def.contractId         = id;
             def.requiredWatts      = watts;
             def.durationHours      = hours;
-            def.availableStartHour = from;
-            def.availableEndHour   = to;
             def.requiredReputation = rep;
             def.payRateMultiplier  = 1f;
             def.failThreshold      = 0.5f;
@@ -31,57 +28,40 @@ namespace IdlePowerGen.Tests
         // --- Contract board ---
 
         [Test]
-        public void AClientIsOfferedInsideTheirWindow()
+        public void AClientIsOfferedWhenTheReputeIsThere()
         {
             var board = new ContractBoard();
-            var lamps = Contract("lamps", 500, 17, 21);
-            Assert.That(board.IsOffered(lamps, Day + 18 * Hour, 0, new ContractInstance[0]), Is.True);
-        }
-
-        [Test]
-        public void AClientIsNotOfferedOutsideTheirWindow()
-        {
-            var board = new ContractBoard();
-            var lamps = Contract("lamps", 500, 17, 21);
-            Assert.That(board.IsOffered(lamps, Day + 12 * Hour, 0, new ContractInstance[0]), Is.False);
-        }
-
-        [Test]
-        public void AWindowPastMidnightIsOpenAfterMidnight()
-        {
-            var board = new ContractBoard();
-            var late = Contract("late", 500, 22, 2);
-            Assert.That(board.IsOffered(late, Day + 1 * Hour, 0, new ContractInstance[0]), Is.True);
+            Assert.That(board.IsOffered(Contract("lamps", 500), 0, new ContractInstance[0]), Is.True);
         }
 
         [Test]
         public void AClientBelowTheirReputationIsNotOffered()
         {
             var board = new ContractBoard();
-            var royal = Contract("royal", 500, 0, 24, rep: 10);
-            Assert.That(board.IsOffered(royal, Day, 9.9f, new ContractInstance[0]), Is.False);
+            var royal = Contract("royal", 500, rep: 10);
+            Assert.That(board.IsOffered(royal, 9.9f, new ContractInstance[0]), Is.False);
         }
 
         [Test]
-        public void AClientBookedTodayIsNotOfferedAgainToday()
+        public void AClientRunningNowIsNotOfferedTwice()
         {
             var board = new ContractBoard();
             var ledger = new ContractLedger();
-            var lamps = Contract("lamps", 500, 17, 21, hours: 1);
+            var lamps = Contract("lamps", 500);
+            board.TryBook(lamps, Day, 0, ledger, 2);
+            Assert.That(board.IsOffered(lamps, 0, ledger.ActiveContracts), Is.False);
+        }
+
+        // No waiting for tomorrow, or for the client's hour of the day.
+        [Test]
+        public void AFinishedClientIsOfferedAgainStraightAway()
+        {
+            var board = new ContractBoard();
+            var ledger = new ContractLedger();
+            var lamps = Contract("lamps", 500, hours: 1);
             board.TryBook(lamps, Day + 17 * Hour, 0, ledger, 2);
             ledger.Tick(1000, 2 * Hour, Day + 19 * Hour, new CurrencyLedger(), 0.4); // finishes it
-            Assert.That(board.IsOffered(lamps, Day + 20 * Hour, 0, ledger.ActiveContracts), Is.False);
-        }
-
-        [Test]
-        public void AClientBookedTodayIsOfferedAgainTomorrow()
-        {
-            var board = new ContractBoard();
-            var ledger = new ContractLedger();
-            var lamps = Contract("lamps", 500, 17, 21, hours: 1);
-            board.TryBook(lamps, Day + 17 * Hour, 0, ledger, 2);
-            ledger.Tick(1000, 2 * Hour, Day + 19 * Hour, new CurrencyLedger(), 0.4);
-            Assert.That(board.IsOffered(lamps, 2 * Day + 18 * Hour, 0, ledger.ActiveContracts), Is.True);
+            Assert.That(board.IsOffered(lamps, 0, ledger.ActiveContracts), Is.True);
         }
 
         [Test]
@@ -89,9 +69,9 @@ namespace IdlePowerGen.Tests
         {
             var board = new ContractBoard();
             var ledger = new ContractLedger();
-            board.TryBook(Contract("a", 100, 0, 24), Day, 0, ledger, 2);
-            board.TryBook(Contract("b", 100, 0, 24), Day, 0, ledger, 2);
-            Assert.That(board.TryBook(Contract("c", 100, 0, 24), Day, 0, ledger, 2), Is.False);
+            board.TryBook(Contract("a", 100), Day, 0, ledger, 2);
+            board.TryBook(Contract("b", 100), Day, 0, ledger, 2);
+            Assert.That(board.TryBook(Contract("c", 100), Day, 0, ledger, 2), Is.False);
         }
 
         // --- Shared output and pay ---
@@ -100,8 +80,8 @@ namespace IdlePowerGen.Tests
         public void TheLaterContractGetsWhatTheEarlierLeaves()
         {
             var ledger = new ContractLedger();
-            ledger.TryAccept(Contract("first", 800, 0, 24), 0);
-            var second = Contract("second", 800, 0, 24);
+            ledger.TryAccept(Contract("first", 800), 0);
+            var second = Contract("second", 800);
             ledger.TryAccept(second, 0);
             ledger.Tick(1000, 60, 60, new CurrencyLedger(), 0.4);
             Assert.That(ledger.ActiveContracts[1].AccumulatedWattSeconds, Is.EqualTo(200 * 60).Within(1e-6));
@@ -112,7 +92,7 @@ namespace IdlePowerGen.Tests
         {
             var ledger = new ContractLedger();
             var wallet = new CurrencyLedger();
-            ledger.TryAccept(Contract("lamps", 500, 0, 24, hours: 2), 0);
+            ledger.TryAccept(Contract("lamps", 500, hours: 2), 0);
             ledger.Tick(500, 2 * Hour, 2 * Hour, wallet, _ => 0.4);
             Assert.That(wallet.Pennies, Is.EqualTo(400m)); // 2 h × 500 W × 0.4
         }
@@ -122,7 +102,7 @@ namespace IdlePowerGen.Tests
         {
             var ledger = new ContractLedger();
             var wallet = new CurrencyLedger();
-            ledger.TryAccept(Contract("lamps", 500, 0, 24, hours: 2), 0);
+            ledger.TryAccept(Contract("lamps", 500, hours: 2), 0);
             ledger.Tick(5000, 2 * Hour, 2 * Hour, wallet, _ => 0.4);
             Assert.That(wallet.Pennies, Is.EqualTo(400m));
         }
@@ -133,7 +113,7 @@ namespace IdlePowerGen.Tests
             var ledger = new ContractLedger();
             var wallet = new CurrencyLedger();
             wallet.AddReputation(5);
-            var def = Contract("lamps", 500, 0, 24, hours: 2);
+            var def = Contract("lamps", 500, hours: 2);
             def.reputationOnFail = -2f;
             ledger.TryAccept(def, 0);
             ledger.Tick(200, 2 * Hour, 2 * Hour, wallet, _ => 0.4);
@@ -145,7 +125,7 @@ namespace IdlePowerGen.Tests
         {
             var ledger = new ContractLedger();
             var wallet = new CurrencyLedger();
-            ledger.TryAccept(Contract("lamps", 500, 0, 24, hours: 2), 0);
+            ledger.TryAccept(Contract("lamps", 500, hours: 2), 0);
             ledger.Tick(500, Hour, Hour, wallet, _ => 0.4);
             Assert.That(wallet.Pennies, Is.EqualTo(200m)); // one of its two hours
         }
@@ -155,7 +135,7 @@ namespace IdlePowerGen.Tests
         {
             var ledger = new ContractLedger();
             var wallet = new CurrencyLedger();
-            var def = Contract("royal", 500, 0, 24, hours: 2);
+            var def = Contract("royal", 500, hours: 2);
             def.payRateMultiplier = 1.5f;
             ledger.TryAccept(def, 0);
             ledger.Tick(500, Hour, Hour, wallet, _ => 0.4);
@@ -168,7 +148,7 @@ namespace IdlePowerGen.Tests
         {
             var ledger = new ContractLedger();
             var wallet = new CurrencyLedger();
-            ledger.TryAccept(Contract("lamps", 500, 0, 24, hours: 2), 0);
+            ledger.TryAccept(Contract("lamps", 500, hours: 2), 0);
             ledger.Tick(200, 2 * Hour, 2 * Hour, wallet, _ => 0.4);
             Assert.That(wallet.Pennies, Is.EqualTo(160m).Within(0.01m)); // 2 h × 200 W × 0.4; the ratio is a float
         }
@@ -178,7 +158,7 @@ namespace IdlePowerGen.Tests
         {
             var ledger = new ContractLedger();
             var wallet = new CurrencyLedger();
-            var def = Contract("neighbour", 500, 0, 24, hours: 2);
+            var def = Contract("neighbour", 500, hours: 2);
             def.mustHoldOutput = true;
             ledger.TryAccept(def, 0);
             ledger.Tick(500, Hour, Hour, wallet, _ => 0.4);
@@ -211,7 +191,7 @@ namespace IdlePowerGen.Tests
         public void RatioSoFarIsOneWhileFullySupplied()
         {
             var ledger = new ContractLedger();
-            ledger.TryAccept(Contract("hotel", 1000, 0, 24, hours: 8), 0);
+            ledger.TryAccept(Contract("hotel", 1000, hours: 8), 0);
             ledger.Tick(1500, Hour, Hour, new CurrencyLedger(), 0.4);
             Assert.That(ledger.ActiveContracts[0].RatioSoFar(), Is.EqualTo(1f).Within(1e-6));
         }
@@ -221,7 +201,7 @@ namespace IdlePowerGen.Tests
         {
             var ledger = new ContractLedger();
             var wallet = new CurrencyLedger();
-            var def = Contract("hotel", 1200, 0, 24, hours: 2);
+            var def = Contract("hotel", 1200, hours: 2);
             def.reputationOnSuccess = 1f;
             ledger.TryAccept(def, 0);
             ledger.Tick(1100, 2 * Hour, 2 * Hour, wallet, _ => 0.4); // 92 % supplied: kept, a little short
@@ -232,7 +212,7 @@ namespace IdlePowerGen.Tests
         public void TheLastStepDoesNotCreditWattsPastTheEnd()
         {
             var ledger = new ContractLedger();
-            ledger.TryAccept(Contract("lamps", 500, 0, 24, hours: 2), 0);
+            ledger.TryAccept(Contract("lamps", 500, hours: 2), 0);
             var c = ledger.ActiveContracts[0];
             ledger.Tick(500, 3 * Hour, 3 * Hour, new CurrencyLedger(), 0.4);
             Assert.That(c.AccumulatedWattSeconds, Is.EqualTo(500 * 2 * Hour));
@@ -252,7 +232,7 @@ namespace IdlePowerGen.Tests
         private static ContractLedger OneHotel(out ContractInstance hotel)
         {
             var ledger = new ContractLedger();
-            ledger.TryAccept(Contract("hotel", 1000, 0, 24, hours: 8), 0);
+            ledger.TryAccept(Contract("hotel", 1000, hours: 8), 0);
             hotel = ledger.ActiveContracts[0];
             return ledger;
         }
@@ -351,7 +331,7 @@ namespace IdlePowerGen.Tests
         public void AMustHoldContractHasNoCountdown()
         {
             var ledger = new ContractLedger();
-            var def = Contract("neighbour", 500, 0, 24, hours: 2);
+            var def = Contract("neighbour", 500, hours: 2);
             def.mustHoldOutput = true;
             ledger.TryAccept(def, 0);
             // It breaks on the first dip instead (ContractHoldTests).
