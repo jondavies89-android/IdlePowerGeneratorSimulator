@@ -352,8 +352,72 @@ namespace IdlePowerGen.Tests
         {
             yield return StartEra3();
             yield return new WaitForSecondsRealtime(0.2f);
-            var label = GameObject.Find("Era3Screen").transform.Find("SafeArea/Column/Header/Repute/Value");
+            var label = GameObject.Find("Era3Screen").transform.Find("SafeArea/Column/CashRow/Repute/Value");
             Assert.That(label.GetComponent<TMPro.TMP_Text>().text, Is.EqualTo($"{GM.Ledger.Reputation:0.#}"));
+        }
+
+        // --- The balances on every page, and research by choice ---
+
+        [UnityTest]
+        public IEnumerator TheHeaderShowsTheResearchPointsHeld()
+        {
+            yield return StartEra3();
+            GM.Ledger.AddResearch(1234);
+            yield return null;
+            var label = GameObject.Find("Era3Screen").transform.Find("SafeArea/Column/CashRow/Research/Value");
+            Assert.That(label.GetComponent<TMPro.TMP_Text>().text, Is.EqualTo($"{GM.Ledger.ResearchPoints:N0} RP"));
+        }
+
+        [UnityTest]
+        public IEnumerator TheBalancesShowOnTheUpgradesTab()
+        {
+            yield return StartEra3();
+            TabBarView().Show(4);
+            yield return null;
+            var row = GameObject.Find("Era3Screen").transform.Find("SafeArea/Column/CashRow");
+            Assert.That(row.gameObject.activeInHierarchy, Is.True);
+        }
+
+        private static UI.TabBarView TabBarView() =>
+            GameObject.Find("Era3Screen").GetComponentInChildren<UI.TabBarView>();
+
+        private static UI.UpgradeTreeView ResearchTree() =>
+            GameObject.Find("Era3Screen").GetComponentsInChildren<UI.UpgradeTreeView>(true).First(t => t.IsResearch);
+
+        private static TMPro.TMP_Text ResearchSummaryName() =>
+            GameObject.Find("Era3Screen").transform.Find("SafeArea/Column/Pages/ResearchPage")
+                      .GetComponentInChildren<UI.ResearchSummaryView>(true).transform.Find("Top/Name").GetComponent<TMPro.TMP_Text>();
+
+        [UnityTest]
+        public IEnumerator TheResearchSummarySavesForTheTopicPicked()
+        {
+            yield return StartEra3();
+            TabBarView().Show(3);
+            var tree = ResearchTree();
+            var dearest = tree.Nodes.Select(n => n.Definition).OrderByDescending(d => d.costResearch).First();
+            tree.Select(dearest);
+            yield return new WaitForSecondsRealtime(0.3f);
+            Assert.That(ResearchSummaryName().text, Is.EqualTo(dearest.displayName));
+        }
+
+        [UnityTest]
+        public IEnumerator ResearchPointsAreNotSpentUntilThePlayerLearns()
+        {
+            yield return StartEra3();
+            GM.Ledger.AddResearch(100_000);
+            Tick(5);
+            Assert.That(GM.Ledger.ResearchPoints, Is.GreaterThanOrEqualTo(100_000));
+        }
+
+        [UnityTest]
+        public IEnumerator TheResearchSummaryShowsTheWholeBalance()
+        {
+            yield return StartEra3();
+            TabBarView().Show(3);
+            GM.Ledger.AddResearch(100_000);
+            yield return new WaitForSecondsRealtime(0.3f);
+            var points = ResearchSummaryName().transform.parent.Find("Points").GetComponent<TMPro.TMP_Text>();
+            Assert.That(points.text, Does.StartWith($"{GM.Ledger.ResearchPoints:N0} /"));
         }
 
         [UnityTest]

@@ -214,9 +214,9 @@ public static class ScreenKit
     public static TabBarView TabBar(ScreenTheme t, Transform parent, string[] names, RectTransform[] pages)
     {
         var bar = Rect("TabBar", parent);
-        Fixed(bar, 56);
+        Fixed(bar, 52);
         var hlg = bar.gameObject.AddComponent<HorizontalLayoutGroup>();
-        hlg.padding = new RectOffset(0, 0, 4, 8);
+        hlg.padding = new RectOffset(0, 0, 3, 5);
         hlg.spacing = 5;
         hlg.childControlWidth = hlg.childControlHeight = true;
         hlg.childForceExpandWidth = hlg.childForceExpandHeight = true;
@@ -338,12 +338,14 @@ public static class ScreenKit
     public static void Boost(ScreenTheme t, Transform parent, Color activePanel)
     {
         var rt = Rect("ContractBoost", parent);
-        Fixed(rt, 44);
+        // Short of the 44dp tap height, but the full width of the screen: the fixed rows above
+        // the tabs are kept slim so the pages keep their room.
+        Fixed(rt, 36);
         var image = Panel(t, rt, t.PanelRaised);
         var button = rt.gameObject.AddComponent<UnityEngine.UI.Button>();
         button.targetGraphic = image;
         rt.gameObject.AddComponent<PressFeedback>();
-        var label = Text(t, rt, "Label", "Contracts complete 2× faster", 16, t.Money, TextAlignmentOptions.Center);
+        var label = Text(t, rt, "Label", "Contracts complete 2× faster", 14, t.Money, TextAlignmentOptions.Center);
         Stretch(label.rectTransform);
 
         var view = rt.gameObject.AddComponent<Era2ContractBoostView>();

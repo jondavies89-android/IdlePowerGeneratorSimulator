@@ -81,47 +81,17 @@ public static class Era3ScreenBuilder
 
     private static void CreateHeader(Transform parent, IdlePowerGen.Controllers.Era3TownController town)
     {
-        var header = Row(parent, "Header", 10);
-        Fixed(header, 62);
-        header.GetComponent<HorizontalLayoutGroup>().childAlignment = TextAnchor.MiddleLeft;
-
-        var left = Stack("Names", header, spacing: 2);
-        Flexible(left);
-        // Small enough to share the row with the cash and repute boxes on a 380dp screen.
-        var title = Text(T, left, "Title", "EDISON ELECTRIC WORKS", 13, T.Money);
+        var header = Stack("Header", parent, spacing: 1);
+        Fixed(header, 36);
+        header.GetComponent<VerticalLayoutGroup>().childAlignment = TextAnchor.MiddleLeft;
+        var title = Text(T, header, "Title", "EDISON ELECTRIC WORKS", 14, T.Money);
         title.characterSpacing = 2;
-        title.textWrappingMode = TextWrappingModes.NoWrap;
-        title.overflowMode = TextOverflowModes.Ellipsis;
-        var date = Text(T, left, "Date", "", 13, T.TextMuted, style: FontStyles.Italic);
+        OneLine(title, 10);
+        var date = Text(T, header, "Date", "", 12, T.TextMuted, style: FontStyles.Italic);
+        OneLine(date, 9);
 
-        var cashBox = Stack("Cash", header, spacing: 0);
-        cashBox.GetComponent<VerticalLayoutGroup>().padding = new RectOffset(10, 10, 4, 4);
-        cashBox.GetComponent<VerticalLayoutGroup>().childAlignment = TextAnchor.MiddleCenter;
-        Panel(T, cashBox, T.PanelRaised);
-        // A set width, so the purse shrinks to fit as it grows instead of crowding the names.
-        var cashLe = cashBox.gameObject.AddComponent<LayoutElement>();
-        cashLe.minWidth = cashLe.preferredWidth = 112;
-        cashLe.flexibleWidth = 0;
-        var cash = Text(T, cashBox, "Value", "£0", 24, T.Money, TextAlignmentOptions.Center, numerals: true);
-        OneLine(cash, 12);
-        var income = Text(T, cashBox, "Income", "", 11, T.Healthy, TextAlignmentOptions.Center, numerals: true);
-        OneLine(income, 8);
-
-        var reputeBox = Stack("Repute", header, spacing: 0);
-        reputeBox.GetComponent<VerticalLayoutGroup>().padding = new RectOffset(8, 8, 4, 4);
-        reputeBox.GetComponent<VerticalLayoutGroup>().childAlignment = TextAnchor.MiddleCenter;
-        Panel(T, reputeBox, T.PanelRaised);
-        var reputeLe = reputeBox.gameObject.AddComponent<LayoutElement>();
-        reputeLe.minWidth = reputeLe.preferredWidth = 60;
-        reputeLe.flexibleWidth = 0;
-        var repute = Text(T, reputeBox, "Value", "0", 24, T.Achievement, TextAlignmentOptions.Center, numerals: true);
-        OneLine(repute, 12);
-        Text(T, reputeBox, "Caption", "repute", 11, T.TextMuted, TextAlignmentOptions.Center);
-
-        var view = header.gameObject.AddComponent<GridHeaderView>();
-        Wire(view, ("_works", town), ("_dateLabel", date), ("_cashLabel", cash), ("_incomeLabel", income),
-                   ("_reputeLabel", repute));
-        SetString(view, "_place", "Pearl Street");
+        // The cash, the research points and the repute, above the tabs so they show on every page.
+        UnitGridScreenKit.CashRow(T, parent, town, date, "Pearl Street", GridHeaderView.DateStyle.Period);
     }
 
     private static void CreateTown(Transform content, IdlePowerGen.Controllers.Era3TownController town)
@@ -236,8 +206,9 @@ public static class Era3ScreenBuilder
 
         CreateGoal(content, town, "Lit at once");
         CreateResearchSummary(content, Era3Data.EraNumber);
-        SetString(content.GetComponentInChildren<ResearchSummaryView>(true), "_noRateHint",
-                  "take readings on the Research tab, or build an R&D workshop");
+        var worksSummary = content.GetComponentInChildren<ResearchSummaryView>(true);
+        SetString(worksSummary, "_noRateHint", "take readings on the Research tab, or build an R&D workshop");
+        SetString(worksSummary, "_chooseHint", "choose what to save for on the Research tab");
     }
 
     // The boiler house: a pressure gauge (green band, red where the valve lifts) and the Stoke button.
@@ -331,7 +302,7 @@ public static class Era3ScreenBuilder
     {
         var T = theme ?? Era3Theme.Theme;
         var box = Box(T, content, "ResearchSummary", 14, 4);
-        Caption(T, box, "Caption", "Research in progress");
+        Caption(T, box, "Caption", "Research · saving for");
         var top = Row(box, "Top");
         var name = Text(T, top, "Name", "", 17, T.Text);
         Flexible(name);

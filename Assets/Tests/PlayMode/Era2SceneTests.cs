@@ -137,8 +137,10 @@ namespace IdlePowerGen.Tests
         public IEnumerator BuyingAnApprenticeCostsFiftyPence()
         {
             yield return Load(Era2Save(100));
+            // Against the purse just before, as the street's income may have ticked in since loading.
+            decimal before = GM.Ledger.Pennies;
             Click("Generator_SmallDynamo");
-            Assert.That(GM.Ledger.Pennies, Is.EqualTo(50m));
+            Assert.That(before - GM.Ledger.Pennies, Is.EqualTo(50m));
         }
 
         [UnityTest]

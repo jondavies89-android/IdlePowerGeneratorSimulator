@@ -39,6 +39,8 @@ namespace IdlePowerGen.UI
         private float _laidOutWidth = -1f;
 
         public UpgradeDefinition Selected { get; private set; }
+        public int Era => _era;
+        public bool IsResearch => _research;
         public IReadOnlyList<UpgradeNodeView> Nodes => _nodes;
 
         private void Awake()

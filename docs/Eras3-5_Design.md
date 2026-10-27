@@ -54,7 +54,11 @@ written into ScriptableObjects by the era asset builders. Tune them there.
   hand at full pay. Managers belong to their era, like the slots.
 * **Research.** `CurrencyLedger.ResearchPoints`; research nodes are `UpgradeDefinition`s with a
   `costResearch` and `isResearch`, shown on a Research tab. R&D buildings are levelled upgrades that
-  add RP per game hour.
+  add RP per game hour. RP pile up and are spent only when the player learns a topic: the summary
+  card shows the topic picked in the tree as what the points are saving for, with the whole balance
+  against its price, so the player chooses what to learn and when.
+* **Balances on every page.** In Eras 3–5 the Cash · Research · Repute row sits above the tabs
+  (Era 2's purse panel already did), with the fixed rows above the tabs kept slim to make room.
 
 ## Era 3 — The War of Currents
 

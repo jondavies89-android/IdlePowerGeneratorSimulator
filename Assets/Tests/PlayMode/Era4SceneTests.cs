@@ -47,6 +47,16 @@ namespace IdlePowerGen.Tests
         }
 
         [UnityTest]
+        public IEnumerator TheBalancesShowOnTheResearchTab()
+        {
+            yield return StartEra4();
+            GameObject.Find("Era4Screen").GetComponentInChildren<UI.TabBarView>().Show(3);
+            yield return null;
+            var row = GameObject.Find("Era4Screen").transform.Find("SafeArea/Column/CashRow");
+            Assert.That(row.gameObject.activeInHierarchy, Is.True);
+        }
+
+        [UnityTest]
         public IEnumerator Era4InheritsTenMegawatts()
         {
             yield return StartEra4();

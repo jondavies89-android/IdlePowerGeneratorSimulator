@@ -35,14 +35,17 @@ public static class Era5ScreenBuilder
         var sync = SyncOverlay(T, root, grid, "Era5Sync");
 
         var header = Row(column, "Header", 8);
-        Fixed(header, 50);
+        Fixed(header, 38);
         var names = Stack("Names", header, spacing: 0);
         Flexible(names);
-        var title = Text(T, names, "Title", "CENTRAL DISPATCH", 17, T.Text);
+        var title = Text(T, names, "Title", "CENTRAL DISPATCH", 15, T.Text);
         title.characterSpacing = 16;
         title.textWrappingMode = TextWrappingModes.NoWrap;
-        var date = Text(T, names, "Date", "", 13, T.TextMuted);
+        var date = Text(T, names, "Date", "", 12, T.TextMuted);
+        OneLine(date, 9);
 
+        // Above the tabs, so the balances show on every page.
+        CashRow(T, column, grid, date, "midlands region", GridHeaderView.DateStyle.Dispatch);
         Stats(column, grid);
         Boost(T, column, ScreenTheme.Hex("#C8DCC0"));
         // Above the tabs, so the state of the grid and the cascade warning show on every page.
@@ -57,7 +60,6 @@ public static class Era5ScreenBuilder
         SyncPanel(T, boardContent, grid, sync);
         Board(T, boardContent, grid, sync, grouped: true, "Fleet");
         Dashboard(T, boardContent, root, grid);
-        CashRow(T, boardContent, grid, date, "midlands region", GridHeaderView.DateStyle.Dispatch);
         Era3ScreenBuilder.CreateGoal(boardContent, grid, "Carried at once", T);
 
         var cities = Page(pagesRt, "CitiesPage");
@@ -95,7 +97,7 @@ public static class Era5ScreenBuilder
     private static void Stats(Transform parent, IdlePowerGen.Controllers.Era5DispatchController grid)
     {
         var row = Rect("Stats", parent);
-        Fixed(row, 66);
+        Fixed(row, 44);
         var hlg = row.gameObject.AddComponent<HorizontalLayoutGroup>();
         hlg.spacing = 6;
         hlg.childControlWidth = hlg.childControlHeight = true;
@@ -105,9 +107,14 @@ public static class Era5ScreenBuilder
             var cell = Stack(caption, row, spacing: 0);
             cell.GetComponent<VerticalLayoutGroup>().childAlignment = TextAnchor.MiddleCenter;
             Panel(T, cell);
-            Caption(T, cell, "Caption", caption, 11, TextAlignmentOptions.Center);
-            var v = Text(T, cell, "Value", "", 22, T.Text, TextAlignmentOptions.Center, numerals: true);
-            v.textWrappingMode = TextWrappingModes.NoWrap;
+            // Equal quarters, so a long reading shrinks rather than shoves its neighbours.
+            var le = cell.gameObject.AddComponent<LayoutElement>();
+            le.preferredWidth = 1;
+            le.flexibleWidth = 1;
+            var c = Caption(T, cell, "Caption", caption, 9, TextAlignmentOptions.Center);
+            c.characterSpacing = 6;
+            var v = Text(T, cell, "Value", "", 17, T.Text, TextAlignmentOptions.Center, numerals: true);
+            OneLine(v, 10);
             return v;
         }
         var demand = Cell("Demand");

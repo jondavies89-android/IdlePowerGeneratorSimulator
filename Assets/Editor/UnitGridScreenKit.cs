@@ -16,25 +16,28 @@ public static class UnitGridScreenKit
     // Title and date at the top; returns the date label for GridHeaderView.
     public static TextMeshProUGUI Header(ScreenTheme t, Transform parent, string title)
     {
-        var header = Stack("Header", parent, spacing: 2);
-        Fixed(header, 50);
+        var header = Stack("Header", parent, spacing: 1);
+        Fixed(header, 38);
         header.GetComponent<VerticalLayoutGroup>().childAlignment = TextAnchor.MiddleCenter;
-        var name = Text(t, header, "Title", title, 17, t.Text, TextAlignmentOptions.Center);
+        var name = Text(t, header, "Title", title, 15, t.Text, TextAlignmentOptions.Center);
         name.characterSpacing = 18;
         name.textWrappingMode = TextWrappingModes.NoWrap;
-        var date = Text(t, header, "Date", "", 13, t.TextMuted, TextAlignmentOptions.Center);
+        var date = Text(t, header, "Date", "", 12, t.TextMuted, TextAlignmentOptions.Center);
         date.characterSpacing = 6;
+        OneLine(date, 9);
         return date;
     }
 
-    // Two boxes, CASH and RESEARCH (the Era 4 mockup's foot), and the header view that runs them.
+    // Three boxes, CASH, RESEARCH and REPUTE (the Era 4 mockup's foot), and the header view
+    // that runs them. Kept above the tabs, so the balances show on every page; compact, to
+    // leave the pages their room.
     public static void CashRow(ScreenTheme t, Transform parent, GridWorksController works, TextMeshProUGUI date,
                                string place, GridHeaderView.DateStyle style)
     {
         var row = Rect("CashRow", parent);
-        Fixed(row, 58);
+        Fixed(row, 46);
         var hlg = row.gameObject.AddComponent<HorizontalLayoutGroup>();
-        hlg.spacing = 8;
+        hlg.spacing = 6;
         hlg.childControlWidth = hlg.childControlHeight = true;
         hlg.childForceExpandWidth = hlg.childForceExpandHeight = true;
 
@@ -42,16 +45,17 @@ public static class UnitGridScreenKit
         {
             var b = Stack(name, row, spacing: 0);
             b.GetComponent<VerticalLayoutGroup>().childAlignment = TextAnchor.MiddleCenter;
-            b.GetComponent<VerticalLayoutGroup>().padding = new RectOffset(6, 6, 4, 4);
+            b.GetComponent<VerticalLayoutGroup>().padding = new RectOffset(6, 6, 2, 2);
             Panel(t, b);
             // Equal thirds whatever the figures say, so a growing purse shrinks rather than shoves.
             var le = b.gameObject.AddComponent<LayoutElement>();
             le.preferredWidth = 1;
             le.flexibleWidth = 1;
-            Caption(t, b, "Caption", caption, 11, TextAlignmentOptions.Center);
-            var v = Text(t, b, "Value", "", 20, colour, TextAlignmentOptions.Center, numerals: true);
-            OneLine(v, 11);
-            sub = Text(t, b, "Sub", "", 10, t.TextMuted, TextAlignmentOptions.Center);
+            var c = Caption(t, b, "Caption", caption, 9, TextAlignmentOptions.Center);
+            c.characterSpacing = 6;
+            var v = Text(t, b, "Value", "", 17, colour, TextAlignmentOptions.Center, numerals: true);
+            OneLine(v, 10);
+            sub = Text(t, b, "Sub", "", 9, t.TextMuted, TextAlignmentOptions.Center);
             OneLine(sub, 7);
             return v;
         }
@@ -318,8 +322,8 @@ public static class UnitGridScreenKit
     // The status strip above the tabs (GridStatusView); TabBarView is wired once the tabs exist.
     public static GridStatusView Status(ScreenTheme t, Transform parent, UnitGridController grid, string areaNoun, string areasTab)
     {
-        var strip = Stack("GridStatus", parent, spacing: 3);
-        strip.GetComponent<VerticalLayoutGroup>().padding = new RectOffset(12, 12, 7, 8);
+        var strip = Stack("GridStatus", parent, spacing: 2);
+        strip.GetComponent<VerticalLayoutGroup>().padding = new RectOffset(12, 12, 5, 5);
         var bg = Panel(t, strip);
         var button = strip.gameObject.AddComponent<UnityEngine.UI.Button>();
         button.targetGraphic = bg;
@@ -328,13 +332,13 @@ public static class UnitGridScreenKit
         button.colors = colors;
 
         var top = Row(strip, "Top");
-        var freq = Text(t, top, "Frequency", "50.00 Hz", 17, t.Text, numerals: true);
+        var freq = Text(t, top, "Frequency", "50.00 Hz", 15, t.Text, numerals: true);
         freq.textWrappingMode = TextWrappingModes.NoWrap;
         var load = Text(t, top, "Load", "", 13, t.TextMuted, TextAlignmentOptions.Right, numerals: true);
         load.textWrappingMode = TextWrappingModes.NoWrap;
         Flexible(load);
         var fill = Bar(t, strip, "Bar", 5, t.Healthy);
-        var message = Text(t, strip, "Message", "", 12, t.Healthy);
+        var message = Text(t, strip, "Message", "", 11, t.Healthy);
 
         var view = strip.gameObject.AddComponent<GridStatusView>();
         Wire(view, ("_grid", grid), ("_button", button), ("_background", bg), ("_frequencyLabel", freq),

@@ -33,6 +33,8 @@ public static class Era4ScreenBuilder
         var sync = SyncOverlay(T, root, grid, "Era4Sync");
 
         var date = Header(T, column, "CENTRAL ELECTRIC STATION");
+        // Above the tabs, so the balances show on every page.
+        CashRow(T, column, grid, date, "CONTROL DESK", GridHeaderView.DateStyle.ControlDesk);
         Boost(T, column, ScreenTheme.Hex("#1E2A16"));
         // Above the tabs, so the state of the grid and the cascade warning show on every page.
         var status = Status(T, column, grid, "feeder", "Feeders");
@@ -45,7 +47,6 @@ public static class Era4ScreenBuilder
         SyncPanel(T, deskContent, grid, sync);
         Board(T, deskContent, grid, sync, grouped: false, "Generators on line");
         Dashboard(T, deskContent, root, grid);
-        CashRow(T, deskContent, grid, date, "CONTROL DESK", GridHeaderView.DateStyle.ControlDesk);
         Era3ScreenBuilder.CreateGoal(deskContent, grid, "Carried at once", T);
 
         var feeders = Page(pagesRt, "FeedersPage");
