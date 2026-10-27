@@ -171,47 +171,11 @@ namespace IdlePowerGen.Controllers
 
         public bool VoltageTripped(string id) => _tripHours.ContainsKey(id);
 
-        // The first brownout introduces the redundancy score (bible §14.2.3).
-        protected override void OnBrownout() =>
-            Introduce(Era5Data.RedundancyScore, "Redundancy",
-                      "The relays shed load and kept the grid up, but bringing it back showed how few units could start " +
-                      "a dead grid on their own. Fit more units for black start.");
-
-        // ---- Black-start fitting (redundancy) ----
-
-        public bool CanFitBlackStart => IsUnlockedFeature(Era5Data.BlackStartId) || IsIntroduced(Era5Data.RedundancyScore);
-
-        public GridUnit NextToFit =>
-            CanFitBlackStart ? _units.Where(u => !u.Inherited && !u.BlackStartCapable && u.State != UnitState.Faulted)
-                                     .OrderBy(u => u.Definition.baseCostPennies).FirstOrDefault()
-                             : null;
-
-        public decimal FitCost(GridUnit u) => (decimal)(u.Definition.baseCostPennies * Era5Data.BlackStartFitShare);
-
-        public bool FitBlackStart()
-        {
-            var u = NextToFit;
-            if (u == null || !GM.Ledger.SpendPennies(FitCost(u))) return false;
-            u.BlackStartCapable = true;
-            return true;
-        }
-
-        // Bible §11.1: count and diversity of black-start units (the old diesels count once).
-        public double RedundancyScore
-        {
-            get
-            {
-                var capable = _units.Where(u => !u.Inherited && u.BlackStartCapable && u.State != UnitState.Faulted).ToList();
-                int kinds = capable.Select(u => u.Definition.generatorType).Distinct().Count();
-                return Math.Min(100, 20 + 20 * capable.Count + 10 * Math.Max(0, kinds - 1));
-            }
-        }
-
         // ---- Cities ----
 
-        public decimal ConnectCost(string id) => Managers.Money.FromPounds(_specs[id].ConnectPounds);
+        public override decimal ConnectCost(string id) => Managers.Money.FromPounds(_specs[id].ConnectPounds);
 
-        public bool CanConnect(string id)
+        public override bool CanConnect(string id)
         {
             if (!IsCurrentEra || BlackStart != null || Area(id).Connected) return false;
             string parent = _specs[id].Parent;
@@ -219,7 +183,7 @@ namespace IdlePowerGen.Controllers
             return GM.Ledger.Pennies >= ConnectCost(id);
         }
 
-        public bool Connect(string id)
+        public override bool Connect(string id)
         {
             if (!CanConnect(id) || !GM.Ledger.SpendPennies(ConnectCost(id))) return false;
             Area(id).Connected = true;

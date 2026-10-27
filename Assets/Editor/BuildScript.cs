@@ -46,6 +46,7 @@ public static class BuildScript
         Era3AssetBuilder.Build();
         Era4AssetBuilder.Build();
         Era5AssetBuilder.Build();
+        Era6AssetBuilder.Build();
         Era1SceneBuilder.Build();
     }
 

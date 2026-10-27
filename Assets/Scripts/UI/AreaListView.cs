@@ -43,23 +43,9 @@ namespace IdlePowerGen.UI
         private void Act(string id)
         {
             var area = _grid.Area(id);
-            if (!area.Connected) Connect(id);
+            if (!area.Connected) _grid.Connect(id);
             else _grid.SetShed(id, !area.Shed);
         }
-
-        private void Connect(string id)
-        {
-            if (_grid is Controllers.Era4StationController e4) e4.Connect(id);
-            else if (_grid is Controllers.Era5DispatchController e5) e5.Connect(id);
-        }
-
-        private decimal Cost(string id) =>
-            _grid is Controllers.Era4StationController e4 ? e4.ConnectCost(id)
-          : _grid is Controllers.Era5DispatchController e5 ? e5.ConnectCost(id) : 0m;
-
-        private bool CanConnect(string id) =>
-            _grid is Controllers.Era4StationController e4 ? e4.CanConnect(id)
-          : _grid is Controllers.Era5DispatchController e5 && e5.CanConnect(id);
 
         private void Update()
         {
@@ -78,7 +64,7 @@ namespace IdlePowerGen.UI
 
             // Lit first, then the cheapest still to connect; only the next few unlit show.
             int unlitShown = 0;
-            foreach (var r in _rows.OrderBy(r => _grid.Area(r.id).Connected ? 0 : 1).ThenBy(r => (double)Cost(r.id)))
+            foreach (var r in _rows.OrderBy(r => _grid.Area(r.id).Connected ? 0 : 1).ThenBy(r => (double)_grid.ConnectCost(r.id)))
             {
                 var a = _grid.Area(r.id);
                 bool show = a.Connected || unlitShown++ < 4;
@@ -107,9 +93,9 @@ namespace IdlePowerGen.UI
                                   : shortBy > 0 ? $"{about} · at the evening peak you'd be {NumberFormatter.FormatWatts(shortBy)} short"
                                   : $"{about} · more at the evening peak";
                     r.detail.color = overloadNow ? _alarm : shortBy > 0 ? _caution : _muted;
-                    r.action.text = $"Connect\n{Managers.Money.Format(Cost(r.id))}";
+                    r.action.text = $"Connect\n{Managers.Money.Format(_grid.ConnectCost(r.id))}";
                     r.action.color = _money;
-                    bool can = CanConnect(r.id);
+                    bool can = _grid.CanConnect(r.id);
                     r.button.interactable = can;
                     r.group.alpha = can ? 1f : 0.5f;
                 }

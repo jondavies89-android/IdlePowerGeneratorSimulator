@@ -167,6 +167,7 @@ aren't perfect, and they're away), so the bot should land at or below the bible'
 | 3 | 8–24 h | 4.2 h | 22 min | 4.7 h while clients kept their hours |
 | 4 | 1–3 days | 11.0 h | 51 min | |
 | 5 | 3–10 days | 23.9 h | 74 min | brownouts ~20 % of the time: the bot books every contract it can and overconnects |
+| 6 | 1–3 weeks | 55.0 h | 166 min | see `docs/Era6_Design.md`; the long wait is saving for a £4B mega-station |
 
 Tuning that came out of it:
 
@@ -184,5 +185,9 @@ Tuning that came out of it:
 ## Dev tools
 
 A collapsible DEV strip at the top of the screen: jump to the start of any era (replacing the save)
-and a time-acceleration slider (1×–1000×) that runs the sim and the clock faster. In Eras 4–5,
+and a time-acceleration slider (1×–1000×) that runs the sim and the clock faster. In Eras 4–6,
 a button blacks the grid out at once, to test the black start.
+
+Era 6 (The Nuclear Age) is designed in `docs/Era6_Design.md`. Black-start fitting and the
+redundancy score now belong to every unit grid (Era 5 on), so Era 6's dashboard shows MP, FRP,
+RP and OTP, as its mockup does.

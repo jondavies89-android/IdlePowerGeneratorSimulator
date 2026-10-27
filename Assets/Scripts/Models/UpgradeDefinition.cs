@@ -42,6 +42,10 @@ namespace IdlePowerGen.Models
 
         // Era 2 on
         AddContractManager,      // one contract manager per level, each for one contract slot
+
+        // Era 6 on
+        FlattenDemand,           // effectValue = share of the daily swing moved from the peak into the night
+        AddTrainingScore,        // effectValue = operator training points per level (OTP, bible §11.1)
     }
 
     [CreateAssetMenu(fileName = "UpgradeDef", menuName = "IdlePowerGen/Upgrade Definition")]

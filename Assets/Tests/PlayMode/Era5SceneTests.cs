@@ -169,23 +169,22 @@ namespace IdlePowerGen.Tests
         // --- The end ---
 
         [UnityTest]
-        public IEnumerator TheLastCapstoneShowsTheEndCard()
+        public IEnumerator TheCapstoneBeginsEra6()
         {
             yield return StartEra5();
-            foreach (var a in Dispatch.Areas) a.Connected = true;
+            typeof(GridWorksController).GetProperty("CapstoneReady").SetValue(Dispatch, true);
+            Dispatch.TakeCapstone();
+            Assert.That(Managers.EraManager.Instance.Era, Is.EqualTo(6));
+        }
+
+        [UnityTest]
+        public IEnumerator TheCapstoneShowsEra6sTitleCard()
+        {
+            yield return StartEra5();
             typeof(GridWorksController).GetProperty("CapstoneReady").SetValue(Dispatch, true);
             Dispatch.TakeCapstone();
             yield return null;
             Assert.That(GameObject.Find("Era6TitleCard").transform.Find("Panel").gameObject.activeSelf, Is.True);
-        }
-
-        [UnityTest]
-        public IEnumerator TheLastCapstoneKeepsTheEra()
-        {
-            yield return StartEra5();
-            typeof(GridWorksController).GetProperty("CapstoneReady").SetValue(Dispatch, true);
-            Dispatch.TakeCapstone();
-            Assert.That(Managers.EraManager.Instance.Era, Is.EqualTo(5));
         }
     }
 }

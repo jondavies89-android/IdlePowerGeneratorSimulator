@@ -22,6 +22,7 @@ namespace IdlePowerGen.UI
         [SerializeField] private Button _faster;
         [SerializeField] private Button _close;
         [SerializeField] private Button _later;
+        [SerializeField] private Image _zone;   // the clean-close arc round twelve o'clock
         [SerializeField] private Color _healthy = Color.green;
         [SerializeField] private Color _caution = Color.yellow;
         [SerializeField] private Color _alarm   = Color.red;
@@ -66,6 +67,13 @@ namespace IdlePowerGen.UI
         private void Show()
         {
             _resultTimer = 0;
+            // Trained operators (Era 6) close cleanly over a wider arc.
+            if (_zone != null)
+            {
+                float half = (float)(Synchroscope.CleanPhaseDegrees * _scope.Forgiveness);
+                _zone.fillAmount = 2 * half / 360f;
+                _zone.rectTransform.localRotation = Quaternion.Euler(0, 0, half);
+            }
             _hintLabel.text = "Slow the needle, then close as it reaches twelve o'clock.";
             _close.interactable = true;
             _later.gameObject.SetActive(_blackStart == null);

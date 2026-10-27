@@ -31,5 +31,10 @@ MonoBehaviour:
   coalTonnesPerMWh: 0
   blackStartCapable: 1
   maxUnits: 4
+  rampPerMinute: 0
+  canFollow: 1
+  minStableShare: 0
+  startHours: 0
+  fuelPoundsPerMWh: 0
   requiredUpgradeId: res4_hydro
   icon: {fileID: 0}

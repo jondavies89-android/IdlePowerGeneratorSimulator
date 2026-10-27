@@ -76,18 +76,25 @@ namespace IdlePowerGen.UI
                     SetRow(row++, $"{first.Definition.displayName.ToUpperInvariant()}: {g.Count()} ON",
                            $"{Mw(sent)} / {Mw(cap)}", _on, first);
                 }
+            var national = _grid as Controllers.Era6NationalGridController;
             foreach (var u in units)
             {
                 double cap = u.Capacity(grid);
-                string name = u.Inherited ? $"UNIT 0 OLD STATION {Mw(cap)}MW"
-                                          : $"UNIT {u.Number} {Kind(u)} {Mw(cap)}MW";
-                (string state, Color colour) = StateText(u, cap);
+                string name = _grid.BoardName(u) ?? (u.Inherited ? $"UNIT 0 OLD STATION {Mw(cap)}MW"
+                                                                 : $"UNIT {u.Number} {Kind(u)} {Mw(cap)}MW");
+                (string state, Color colour) = national != null ? ModeText(u, cap) : StateText(u, cap);
                 SetRow(row++, name, state, colour, u);
             }
             for (int i = 0; i < _rows.Count; i++)
                 if (_rows[i].button.gameObject.activeSelf != (i < row)) _rows[i].button.gameObject.SetActive(i < row);
 
-            _reserveLabel.text = Mono($"RESERVE {Mw(_grid.ReserveWatts),12} MW");
+            if (national != null)
+            {
+                // Bible Appendix A, Era 6: the reserve against the biggest unit on the bars.
+                _reserveLabel.text = Mono($"RESERVE {Gw(national.TotalReserveWatts)} · MARGIN {Gw(national.MarginWatts)} GW");
+                _reserveLabel.color = national.ReserveLow ? _fault : _text;
+            }
+            else _reserveLabel.text = Mono($"RESERVE {Mw(_grid.ReserveWatts),12} MW");
             if (_selected != null && !_grid.Units.Contains(_selected)) _selected = null;
             if (_card != null) _card.Bind(_selected ?? _grid.NextToSync ?? _grid.Units.FirstOrDefault(u => !u.Inherited));
         }
@@ -121,6 +128,28 @@ namespace IdlePowerGen.UI
             Models.GeneratorType.MagnoxReactor => "NUCLEAR",
             _ => "UNIT",
         };
+
+        public static string Gw(double watts) => $"{watts / 1e9:0.0}";
+
+        // Era 6's dispatch board (bible Appendix A): "660 RMP↑", "1240 BASE", "1680 STBY", "0 HOLD!".
+        private (string, Color) ModeText(GridUnit u, double cap)
+        {
+            switch (u.State)
+            {
+                case UnitState.Online:
+                    // Moving more than half a per cent of its rating a second: still ramping.
+                    bool up = u.Rise > cap * 0.005, down = u.Rise < -cap * 0.005;
+                    string mode = up ? "RMP↑" : down ? "RMP↓" : u.Inherited || u.Following ? "AGC " : "BASE";
+                    return ($"{Gw(u.OutputWatts),6} {mode}", up || down ? _ramp : _on);
+                case UnitState.Standby:
+                    return u.HoursLeft > 0 ? ($"0 HOLD {u.HoursLeft:0}h", _fault) : ($"{Gw(cap),6} STBY", _off);
+                case UnitState.Starting:     return ($"START {Controllers.Era6NationalGridController.Hours(u.HoursLeft)}", _ready);
+                case UnitState.AwaitingSync: return ("  0 SYNC", _ready);
+                case UnitState.InService:    return ($"0 HOLD! SVC {u.HoursLeft:0}h", _fault);
+                case UnitState.Faulted:      return ($"0 TRIP {u.HoursLeft:0}h", _fault);
+                default:                     return ("0 NO COAL", _fault);
+            }
+        }
 
         public static string Mw(double watts)
         {

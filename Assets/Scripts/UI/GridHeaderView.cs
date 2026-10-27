@@ -10,7 +10,7 @@ namespace IdlePowerGen.UI
     // the research points and the steady income. The date reads as each era's mockup does.
     public class GridHeaderView : MonoBehaviour
     {
-        public enum DateStyle { Period, ControlDesk, Dispatch }
+        public enum DateStyle { Period, ControlDesk, Dispatch, National }
 
         [SerializeField] private Controllers.GridWorksController _works;
         [SerializeField] private TMP_Text _dateLabel;
@@ -77,6 +77,9 @@ namespace IdlePowerGen.UI
                     return $"{_place} · {date.Day} {date.ToString("MMMM yyyy", en).ToUpperInvariant()} · {h:00}:{m:00}";
                 case DateStyle.Dispatch:
                     return $"{_place} · {date.Day} {date.ToString("MMM yyyy", en).ToLowerInvariant()} · {h:00}:{m:00}";
+                case DateStyle.National:
+                    // The Era 6 mockup's header bar: "17:42:08   TUE 14 NOV 1978".
+                    return $"{h:00}:{m:00}   {date.ToString("ddd d MMM yyyy", en).ToUpperInvariant()}";
                 default:
                     return $"{_place}, {date.ToString("dddd", en)} {Era2HeaderView.PartOfDay(hour)}, " +
                            $"{Ordinal(date.Day)} {date.ToString("MMMM yyyy", en)}";

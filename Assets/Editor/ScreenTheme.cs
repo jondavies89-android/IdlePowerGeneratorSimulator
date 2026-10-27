@@ -83,6 +83,63 @@ public static class Era5Theme
     public static readonly Color Chip        = ScreenTheme.Hex("#8C907C");
 }
 
+// Era 6 (bible Appendix A): the institutional control room of 1978. Grey-beige walls, cream
+// tiles for what people read, and green-on-black CRTs for what the machine says; alarms are
+// red on dark red. The CRT is a second theme the screen's machine panels are built in.
+public static class Era6Theme
+{
+    public static readonly ScreenTheme Theme = new()
+    {
+        Background  = ScreenTheme.Hex("#C8C2B0"),
+        Panel       = ScreenTheme.Hex("#E8E2D0"),
+        PanelRaised = ScreenTheme.Hex("#F2EDDF"),
+        Edge        = ScreenTheme.Hex("#6E6A5C"),
+        Track       = ScreenTheme.Hex("#B4AE9C"),
+        Text        = ScreenTheme.Hex("#1E1E1A"),
+        TextMuted   = ScreenTheme.Hex("#5A564A"),
+        Money       = ScreenTheme.Hex("#2C5A32"),
+        Research    = ScreenTheme.Hex("#4E3E78"),
+        Healthy     = ScreenTheme.Hex("#2E7A3A"),
+        Caution     = ScreenTheme.Hex("#B5761E"),
+        Alarm       = ScreenTheme.Hex("#B02A22"),
+        AlarmPanel  = ScreenTheme.Hex("#4E1A1A"),
+        Achievement = ScreenTheme.Hex("#8A6A10"),
+        Overlay     = new Color(0.12f, 0.12f, 0.10f, 0.94f),
+        Body        = Era4Theme.Sans,
+        Numerals    = Era4Theme.Sans,
+        Sans        = true,
+        PanelSprite = Era1SpriteFactory.Panel,
+    };
+
+    // The CRT: phosphor green on near-black, amber for caution, a hot red for alarm.
+    public static readonly ScreenTheme Crt = new()
+    {
+        Background  = ScreenTheme.Hex("#141A14"),
+        Panel       = ScreenTheme.Hex("#18281C"),
+        PanelRaised = ScreenTheme.Hex("#20362A"),
+        Edge        = ScreenTheme.Hex("#4CC85A"),
+        Track       = ScreenTheme.Hex("#0C140E"),
+        Text        = ScreenTheme.Hex("#5BE36A"),
+        TextMuted   = ScreenTheme.Hex("#3FA24C"),
+        Money       = ScreenTheme.Hex("#5BE36A"),
+        Research    = ScreenTheme.Hex("#5BE36A"),
+        Healthy     = ScreenTheme.Hex("#5BE36A"),
+        Caution     = ScreenTheme.Hex("#E8B84A"),
+        Alarm       = ScreenTheme.Hex("#FF6B5E"),
+        AlarmPanel  = ScreenTheme.Hex("#4E1A1A"),
+        Achievement = ScreenTheme.Hex("#E8B84A"),
+        Overlay     = new Color(0.05f, 0.08f, 0.05f, 0.95f),
+        Body        = Era4Theme.Sans,
+        Numerals    = Era4Theme.Sans,
+        Sans        = true,
+        PanelSprite = Era1SpriteFactory.Panel,
+    };
+
+    // The header bar's charcoal.
+    public static readonly Color HeaderBar = ScreenTheme.Hex("#2A2A26");
+    public static readonly Color HeaderText = ScreenTheme.Hex("#D8D4C4");
+}
+
 // The black start's emergency lighting (bible §15.2): amber on deep black, one ominous red
 // for the outage timer. The same in every era.
 public static class BlackStartTheme

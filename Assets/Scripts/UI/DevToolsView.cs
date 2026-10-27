@@ -17,8 +17,8 @@ namespace IdlePowerGen.UI
         [SerializeField] private TMP_Text _speedLabel;
         [SerializeField] private Button _realTime;
         [SerializeField] private TMP_Text _eraLabel;
-        [SerializeField] private Button _blackout;        // Eras 4–5: the grid goes dark now
-        [SerializeField] private Button _meetGoal;        // Eras 2–5: the era's goal met, capstone offered
+        [SerializeField] private Button _blackout;        // Eras 4–6: the grid goes dark now
+        [SerializeField] private Button _meetGoal;        // Eras 2–6: the era's goal met, capstone offered
 
         private void Awake()
         {

@@ -24,7 +24,9 @@ namespace IdlePowerGen.Save
         // v8 → v9: contracts can be booked at any time, so the day each was last booked is gone.
         // v9 → v10: contract managers (switched on or off, the client each is set to) and the
         //           manager who booked each running contract.
-        public const int CurrentVersion = 10;
+        // v10 → v11: Era 6 (each unit's BASE / AGC mode and where it goes after a service; the
+        //            last black-start drill). Nobody reached Era 6 before v11.
+        public const int CurrentVersion = 11;
 
         // Tests point this at a scratch file so they never touch a real player's save.
         public static string SaveFileName = "save.json";
@@ -163,7 +165,8 @@ namespace IdlePowerGen.Save
             2 => (12m, 0f, 0),
             3 => (Managers.Money.FromPounds(Data.Era3Data.TypicalStartPounds), Data.Era3Data.TypicalStartReputation, 0),
             4 => (Managers.Money.FromPounds(Data.Era4Data.TypicalStartPounds), Data.Era4Data.TypicalStartReputation, 0),
-            _ => (Managers.Money.FromPounds(Data.Era5Data.TypicalStartPounds), Data.Era5Data.TypicalStartReputation, 0),
+            5 => (Managers.Money.FromPounds(Data.Era5Data.TypicalStartPounds), Data.Era5Data.TypicalStartReputation, 0),
+            _ => (Managers.Money.FromPounds(Data.Era6Data.TypicalStartPounds), Data.Era6Data.TypicalStartReputation, 0),
         };
 
         // ---- Load ----
@@ -199,6 +202,16 @@ namespace IdlePowerGen.Save
             if (data.version < 8) MigrateV7ToV8(data);
             if (data.version < 9) MigrateV8ToV9(data);
             if (data.version < 10) MigrateV9ToV10(data);
+            if (data.version < 11) MigrateV10ToV11(data);
+        }
+
+        // Eras 4–5 units have no mode (JsonUtility leaves it empty, and they never read it), and
+        // nobody had drilled yet.
+        private static void MigrateV10ToV11(SaveData data)
+        {
+            data.drillScore = 0;
+            data.drillGameTime = 0;
+            data.version = 11;
         }
 
         // Era 2's clerk was the first contract manager (same upgrade id, now levelled): it

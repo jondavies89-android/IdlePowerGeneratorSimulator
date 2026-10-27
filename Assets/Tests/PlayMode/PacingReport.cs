@@ -38,6 +38,9 @@ namespace IdlePowerGen.Tests
         [UnityTest]
         public IEnumerator Era5() { yield return Play(5, -1); }
 
+        [UnityTest]
+        public IEnumerator Era6() { yield return Play(6, -1); }
+
         private static int _blackouts, _brownouts;
         private static bool _done;
 
@@ -77,15 +80,20 @@ namespace IdlePowerGen.Tests
             {
                 var worst = e5.WorstCity;
                 if (worst != null && e5.Voltage(worst.Id) < 0.95 && e5.CanAddBank(worst.Id)) { e5.AddBank(worst.Id); _last = "bank " + e5.AreaName(worst.Id); return true; }
-                if (e5.NextToFit != null && e5.RedundancyScore < 70 && gm.Ledger.Pennies > e5.FitCost(e5.NextToFit) * 4) { e5.FitBlackStart(); _last = "fit black start"; return true; }
             }
+            if (g.NextToFit != null && g.RedundancyScore < 70 && gm.Ledger.Pennies > g.FitCost(g.NextToFit) * 4) { g.FitBlackStart(); _last = "fit black start"; return true; }
+            var national = g as Era6NationalGridController;
+            if (national != null) RunNational(national);
 
             var grid = Simulation.SimulationTick.Instance.Grid;
-            double online = g.Units.Where(u => u.IsOnline || u.State == Simulation.GridUnit.UnitState.InService)
+            double online = g.Units.Where(u => u.IsOnline || u.State == Simulation.GridUnit.UnitState.InService ||
+                                               national != null && u.State != Simulation.GridUnit.UnitState.Faulted)
                              .Sum(u => u.Capacity(grid)) * g.Grid.CapacityFactor;
-            double peak = g.Areas.Where(a => a.Connected).Sum(a => a.BaseWatts) * 1.35 * 1.06 + g.CommittedWatts;
+            double peak = national != null ? national.PeakAhead(24).Watts * 1.06
+                                           : g.Areas.Where(a => a.Connected).Sum(a => a.BaseWatts) * 1.35 * 1.06 + g.CommittedWatts;
             var kinds = g.UnitKinds.Where(d => g.IsUnlocked(d) && !g.AtLimit(d)).ToList();
-            var best = kinds.OrderBy(d => (double)g.NextCost(d) / d.basePowerWatts).FirstOrDefault();
+            var best = national != null ? NationalPick(national, kinds)
+                                        : kinds.OrderBy(d => (double)g.NextCost(d) / d.basePowerWatts).FirstOrDefault();
             var target = UI.ResearchSummaryView.Next(gm, g.EraNumber);
             var ups = gm.UpgradeCatalogue.Where(u => !u.isResearch && u.minEra == g.EraNumber && gm.Upgrades.IsAvailable(u) &&
                                                      (u.effect != UpgradeEffect.AddResearchRate ||
@@ -99,13 +107,10 @@ namespace IdlePowerGen.Tests
                 if (best != null && g.CanBuy(best)) { var u = g.BuyUnit(best); g.EndSync(u, Simulation.Synchroscope.Close.Clean); _last = best.displayName; return true; }
                 return false;
             }
-            var next = g.Areas.Where(a => !a.Connected && (!(g is Era5DispatchController d5) || d5.Spec(a.Id).Parent == null ||
-                                                           d5.Area(d5.Spec(a.Id).Parent).Connected))
-                              .OrderBy(a => a.BaseWatts).FirstOrDefault();
+            var next = g.Areas.Where(a => !a.Connected && ParentLit(g, a.Id)).OrderBy(a => a.BaseWatts).FirstOrDefault();
             if (next != null && online > (peak + next.BaseWatts * 1.3) * 1.1)
             {
-                bool done = g is Era4StationController e4 ? e4.Connect(next.Id) : ((Era5DispatchController)g).Connect(next.Id);
-                if (done) { _last = "connect " + g.AreaName(next.Id); return true; }
+                if (g.Connect(next.Id)) { _last = "connect " + g.AreaName(next.Id); return true; }
                 return false;
             }
             // Not room for the next feeder yet: build towards it.
@@ -114,6 +119,43 @@ namespace IdlePowerGen.Tests
             if (up != null && gm.Upgrades.Purchase(up)) { _last = up.displayName; return true; }
             if (best != null && g.CanBuy(best) && next == null) { var u = g.BuyUnit(best); g.EndSync(u, Simulation.Synchroscope.Close.Clean); _last = best.displayName; return true; }
             return false;
+        }
+
+        private static bool ParentLit(UnitGridController g, string id)
+        {
+            string parent = g is Era5DispatchController d5 ? d5.Spec(id).Parent
+                          : g is Era6NationalGridController d6 ? d6.Spec(id).Parent : null;
+            return parent == null || g.Area(parent).Connected;
+        }
+
+        // Era 6: reactors while the night trough has room for them, otherwise the cheapest
+        // flexible kind per watt.
+        private static Models.GeneratorDefinition NationalPick(Era6NationalGridController n, System.Collections.Generic.List<Models.GeneratorDefinition> kinds)
+        {
+            var reactor = kinds.Where(d => !d.canFollow).OrderBy(d => (double)n.NextCost(d) / d.basePowerWatts).FirstOrDefault();
+            double baseNow = n.Units.Where(u => !u.Inherited && !u.CanFollow && u.State != Simulation.GridUnit.UnitState.Faulted)
+                              .Sum(u => u.Capacity(Simulation.SimulationTick.Instance.Grid));
+            if (reactor != null && baseNow + reactor.basePowerWatts < n.TroughAhead(24).Watts * 0.75) return reactor;
+            return kinds.Where(d => d.canFollow && d.generatorType != GeneratorType.GasTurbine || kinds.All(k => k.generatorType == GeneratorType.GasTurbine))
+                        .OrderBy(d => (double)n.NextCost(d) / d.basePowerWatts).FirstOrDefault();
+        }
+
+        // Era 6 by hand, until the computers take over: units on AGC, starts ahead of the peak,
+        // stand-downs ahead of the trough.
+        private static void RunNational(Era6NationalGridController n)
+        {
+            foreach (var u in n.Units.Where(u => u.IsOnline && u.Mode == Simulation.GridUnit.UnitMode.Base).ToList())
+                n.SetMode(u, Simulation.GridUnit.UnitMode.Agc);
+            if (n.IsUnlockedFeature(Data.Era6Data.CommitmentId)) return;
+            var start = n.Units.Where(n.CanStart).OrderBy(n.RunCost).FirstOrDefault();
+            if (start != null && n.PeakAhead(Era6NationalGridController.StartHours(start) + 0.5).Watts + n.MarginWatts > n.ReadyCapacity)
+                n.StartUnit(start);
+            if (n.FloorWatts > n.TroughAhead(1).Watts)
+            {
+                var down = n.Units.Where(u => !u.Inherited && u.IsOnline && u.Following && u.MinStableShare > 0)
+                                  .OrderByDescending(n.RunCost).FirstOrDefault();
+                if (down != null) n.StandDown(down);
+            }
         }
 
         private IEnumerator Play(int era, double inherited)
@@ -128,10 +170,12 @@ namespace IdlePowerGen.Tests
             var sim = Simulation.SimulationTick.Instance;
             var checkpoints = new System.Text.StringBuilder();
             double nextCheckpoint = 0.1 * (era == 2 ? Data.Era2Data.MaxWatts : era == 3 ? Data.Era3Data.MaxWatts
-                                         : era == 4 ? Data.Era4Data.MaxWatts : Data.Era5Data.MaxWatts);
+                                         : era == 4 ? Data.Era4Data.MaxWatts : era == 5 ? Data.Era5Data.MaxWatts : Data.Era6Data.MaxWatts);
             _blackouts = _brownouts = 0;
             _done = false;
-            while (Managers.EraManager.Instance.Era == era && seconds < MaxRealSeconds && !_done)
+            // Era 6 is meant to take one to three weeks (bible §2.1): give the bot ten days.
+            int limit = era >= 6 ? MaxRealSeconds * 10 / 3 : MaxRealSeconds;
+            while (Managers.EraManager.Instance.Era == era && seconds < limit && !_done)
             {
                 sim.CatchUpOfflineAsIfHere(1);
                 seconds++;
@@ -174,10 +218,7 @@ namespace IdlePowerGen.Tests
         private static bool Act(int era)
         {
             var gm = GM;
-            ContractDesk desk = era == 2 ? Object.FindAnyObjectByType<Era2WorksController>()
-                              : era == 3 ? Object.FindAnyObjectByType<Era3TownController>()
-                              : era == 4 ? Object.FindAnyObjectByType<Era4StationController>()
-                                         : (ContractDesk)Object.FindAnyObjectByType<Era5DispatchController>();
+            ContractDesk desk = Object.FindObjectsByType<ContractDesk>(FindObjectsSortMode.None).First(d => d.EraNumber == era);
             foreach (var def in desk.Contracts.OrderByDescending(ContractDesk.Pay))
                 if (desk.HasFreeSlot && desk.IsOffered(def) && desk.SpareForContracts >= def.requiredWatts) desk.Book(def);
 

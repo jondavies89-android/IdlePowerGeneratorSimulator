@@ -87,6 +87,8 @@ namespace IdlePowerGen.UI
             if (_grid.SheddingStage > 0)
                 return (Level.Caution, $"The relays are shedding {Controllers.UnitGridController.ShedFractions[_grid.SheddingStage]:0%} " +
                                        "of the load to hold the grid. More units online gives it back.");
+            // Era 6: too much on the bars, the night trough, starting units in time, the margin.
+            if (_grid.EraAdvice() is { } era) return ((Level)era.Level, era.Message);
 
             var (peak, ahead) = _grid.PeakAhead();
             if (peak > capacity)

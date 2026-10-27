@@ -229,6 +229,11 @@ namespace IdlePowerGen.Economy
         // player wasn't there to fix (bible §10.5), so the countdown neither runs nor clears.
         public bool ShortfallPaused { get; set; }
 
+        // Era 6's black-start drill: the clients were told and the grid is down on purpose, so
+        // every contract waits where it is, neither served, paid nor counted short. Set by the
+        // era each tick from the drill itself, so it can't be left on.
+        public bool Held { get; set; }
+
         // Called every sim tick (1 Hz). outputWatts = total grid output at this moment.
         // Output is shared out oldest contract first, each taking at most what it asked
         // for: two customers can't both be paid for the same watts.
@@ -246,6 +251,7 @@ namespace IdlePowerGen.Economy
             double remaining = Math.Max(0, outputWatts);
             DeliveredWatts = 0;
             PaidLastTick = 0;
+            if (Held) return;
             var ended = new List<ContractInstance>();
 
             // A copy: resolving a contract can end the era, and the era change drops the old

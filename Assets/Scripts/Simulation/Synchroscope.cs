@@ -44,11 +44,14 @@ namespace IdlePowerGen.Simulation
         public void Faster() => UnitFrequency += NudgeHz;
         public void Slower() => UnitFrequency -= NudgeHz;
 
+        // Era 6: trained operators close cleanly over a wider window (bible §11.2, OTP).
+        public double Forgiveness { get; set; } = 1.0;
+
         public Close Judge()
         {
             double phase = Math.Abs(PhaseDegrees), slip = Math.Abs(SlipHz);
-            if (phase <= CleanPhaseDegrees && slip <= CleanSlipHz) return Close.Clean;
-            if (phase <= RoughPhaseDegrees && slip <= RoughSlipHz) return Close.Rough;
+            if (phase <= CleanPhaseDegrees * Forgiveness && slip <= CleanSlipHz * Forgiveness) return Close.Clean;
+            if (phase <= RoughPhaseDegrees * Forgiveness && slip <= RoughSlipHz * Forgiveness) return Close.Rough;
             return Close.Slammed;
         }
 

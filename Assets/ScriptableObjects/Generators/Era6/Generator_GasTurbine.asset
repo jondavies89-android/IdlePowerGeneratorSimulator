@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b1ef69a6463a757468aee85a57370b63, type: 3}
+  m_Name: Generator_GasTurbine
+  m_EditorClassIdentifier: IdlePowerGen.Models::IdlePowerGen.Models.GeneratorDefinition
+  generatorType: 22
+  displayName: Gas turbine peaker
+  description: Jet engines on a slab. Running in three minutes, and dear to keep
+    running. Can start a dead grid.
+  minEra: 6
+  basePowerWatts: 3000000000
+  fuelConsumptionPerSecond: 0
+  wagePenniesPerHour: 0
+  coalPenniesPerHour: 0
+  baseCostJoules: 0
+  baseCostPennies: 10800000000
+  maintenanceBaseRate: 0.03
+  maintenanceAgeRate: 0.005
+  serviceIntervalHours: 300
+  governorSeconds: 1
+  inertiaSeconds: 2
+  coalTonnesPerMWh: 0
+  blackStartCapable: 1
+  maxUnits: 0
+  rampPerMinute: 0.25
+  canFollow: 1
+  minStableShare: 0.1
+  startHours: 0.05
+  fuelPoundsPerMWh: 80
+  requiredUpgradeId: res6_gas_turbines
+  icon: {fileID: 0}

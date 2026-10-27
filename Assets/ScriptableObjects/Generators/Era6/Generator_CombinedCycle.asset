@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b1ef69a6463a757468aee85a57370b63, type: 3}
+  m_Name: Generator_CombinedCycle
+  m_EditorClassIdentifier: IdlePowerGen.Models::IdlePowerGen.Models.GeneratorDefinition
+  generatorType: 24
+  displayName: Combined-cycle station
+  description: Gas turbines with a steam cycle on their exhaust. Cheap to build and
+    quick to follow.
+  minEra: 6
+  basePowerWatts: 20000000000
+  fuelConsumptionPerSecond: 0
+  wagePenniesPerHour: 0
+  coalPenniesPerHour: 0
+  baseCostJoules: 0
+  baseCostPennies: 48000000000
+  maintenanceBaseRate: 0.03
+  maintenanceAgeRate: 0.005
+  serviceIntervalHours: 500
+  governorSeconds: 1
+  inertiaSeconds: 5
+  coalTonnesPerMWh: 0
+  blackStartCapable: 0
+  maxUnits: 0
+  rampPerMinute: 0.05
+  canFollow: 1
+  minStableShare: 0.45
+  startHours: 0.5
+  fuelPoundsPerMWh: 38
+  requiredUpgradeId: res6_combined_cycle
+  icon: {fileID: 0}

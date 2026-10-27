@@ -30,6 +30,13 @@ namespace IdlePowerGen.Models
         OilPeaker,
         HydroScheme,
         MagnoxReactor,
+        // Era 6 units
+        CoalStation6,
+        GasTurbine,
+        PumpedStorage,
+        CombinedCycle,
+        PressurisedWater,
+        MegaStation,
     }
 
     [CreateAssetMenu(fileName = "GeneratorDef", menuName = "IdlePowerGen/Generator Definition")]
@@ -69,6 +76,19 @@ namespace IdlePowerGen.Models
         public bool blackStartCapable;
         // Most that can be built (hydro: the valleys run out). 0 = no limit.
         public int maxUnits;
+
+        [Header("Big machines (Era 6)")]
+        // Share of its rating it can move per game minute (a sim second at the base clock).
+        public float rampPerMinute;
+        // Can follow the load on AGC; a reactor can't, so it only ever runs on BASE.
+        public bool canFollow = true;
+        // The least it can run at while on the bars, as a share of its rating.
+        public float minStableShare;
+        // Game hours from standby to ready to synchronise.
+        public float startHours;
+        // Running cost for fuel bought as it burns (gas, oil, uranium): pounds per MWh sent.
+        // Coal units pay for their coal through the yard instead.
+        public double fuelPoundsPerMWh;
 
         [Header("Unlock Gate")]
         // Empty = always available; otherwise must be purchased before this generator can be built

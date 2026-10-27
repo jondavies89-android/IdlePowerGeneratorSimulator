@@ -97,19 +97,30 @@ namespace IdlePowerGen.Controllers
         public double CustomerMinutes { get; private set; }
         public List<string> Factors { get; } = new();
 
+        // Era 6's planned drill (bible §10.4): customers warned, no repute lost, and tutorial-
+        // grade: no step of the start sequence fails.
+        public bool Drill { get; }
+
+        // Units that can't help, and why (bible §15.1: "SCRAM safe state"), for the triage.
+        public List<(string Name, string Reason)> Unavailable { get; } = new();
+
         public BlackStartSession(UnitGridController grid, List<string> litBefore, double loadBefore, SeededRandom rng,
-                                 string cause = "The frequency fell past recovery and the units tripped one by one.")
+                                 string cause = "The frequency fell past recovery and the units tripped one by one.",
+                                 bool drill = false)
         {
             _grid = grid;
             _rng = rng;
             LitBefore = litBefore;
             LoadBefore = Math.Max(1, loadBefore);
             Cause = cause;
+            Drill = drill;
             _lossShare = Math.Clamp(grid.LossFraction, 0, 0.5);
 
-            // Bible §11.2: 0.5 % (prepared) to 12 % (neglected) per step, from maintenance and fuel.
+            // Bible §11.2: 0.5 % (prepared) to 12 % (neglected) per step, from maintenance and
+            // fuel; trained operators (Era 6's OTP) take up to half of it off.
             double prepared = (grid.MaintenanceScore + grid.FuelScore) / 200.0;
-            StepFailureChance = 0.005 + (1 - Math.Clamp(prepared, 0, 1)) * 0.115;
+            double training = 1 - Data.Era6Data.StepFailureCut * grid.TrainingScore / 100;
+            StepFailureChance = drill ? 0 : (0.005 + (1 - Math.Clamp(prepared, 0, 1)) * 0.115) * training;
 
             // Every area goes dark; the island lights them one at a time.
             foreach (var a in grid.Areas) if (a.Connected) a.Shed = true;
@@ -122,8 +133,7 @@ namespace IdlePowerGen.Controllers
                 Crank = true,
                 Note = "kept for exactly this · crank it into life",
             });
-            foreach (var u in grid.Units.Where(u => !u.Inherited && u.BlackStartCapable && u.State != UnitState.Faulted &&
-                                                    u.State != UnitState.InService))
+            foreach (var u in grid.Units.Where(u => !u.Inherited && u.BlackStartCapable && Usable(u)))
                 StartUnits.Add(new StartUnit
                 {
                     Name = $"Unit {u.Number} {u.ShortName}",
@@ -131,12 +141,21 @@ namespace IdlePowerGen.Controllers
                     Unit = u,
                     Note = "work the gates to run it up to speed",
                 });
+            foreach (var u in grid.Units.Where(u => !u.Inherited && !Usable(u)))
+                Unavailable.Add(($"Unit {u.Number} {u.ShortName}",
+                                 u.State == UnitState.Standby ? $"SCRAM safe state · can't restart for {u.HoursLeft:0} h"
+                               : u.State == UnitState.Faulted ? "under repair"
+                               : u.State == UnitState.InService ? "in for service" : "no coal"));
         }
+
+        // Healthy, and not a reactor holding after its scram.
+        private static bool Usable(GridUnit u) =>
+            u.State != UnitState.Faulted && u.State != UnitState.InService && u.State != UnitState.NoFuel &&
+            !(u.State == UnitState.Standby && u.HoursLeft > 0);
 
         // The units the island could bring on next (healthy, not already on it).
         public IEnumerable<GridUnit> Candidates =>
-            _grid.Units.Where(u => !u.Inherited && !OnIsland.Contains(u) && u != Chosen?.Unit &&
-                                   u.State != UnitState.Faulted && u.State != UnitState.InService && u.State != UnitState.NoFuel);
+            _grid.Units.Where(u => !u.Inherited && !OnIsland.Contains(u) && u != Chosen?.Unit && Usable(u));
 
         // What the island can supply now, for the grid's dispatch.
         public double IslandSupply => Current >= Phase.Island && Current < Phase.Done ? Math.Min(IslandLoad * 1.02, IslandCapacity) : 0;
@@ -409,7 +428,7 @@ namespace IdlePowerGen.Controllers
             LastMessage = null;
             if (StepIndex >= Steps.Count)
             {
-                Scope = new Synchroscope(IslandFrequency, _rng);
+                Scope = new Synchroscope(IslandFrequency, _rng) { Forgiveness = _grid.SyncForgiveness };
                 Go(Phase.Synchronise);
             }
         }
@@ -538,7 +557,8 @@ namespace IdlePowerGen.Controllers
             }
             double minutes = OutageSeconds; // a real second is a game minute (bible §10.6)
             CustomerMinutes = LoadBefore / 1e6 * minutes;
-            TrustLost = (float)Math.Clamp(minutes * 0.05, 1, 12);
+            // A drill was announced: the customers knew, and nobody thinks the worse of the grid.
+            TrustLost = Drill ? 0 : (float)Math.Clamp(minutes * 0.05, 1, 12);
             if (_grid.MaintenanceScore < 60) Factors.Add($"Maintenance at {_grid.MaintenanceScore:0}: units were overdue for service.");
             if (_grid.HasCoalUnits && _grid.FuelScore < 60) Factors.Add($"Fuel cover at {_grid.FuelScore:0}: the coal yard was low.");
             if (Collapses > 0) Factors.Add($"The island went down {Collapses} time{(Collapses == 1 ? "" : "s")}: big loads first, " +
@@ -550,9 +570,13 @@ namespace IdlePowerGen.Controllers
                 Factors.Add($"Not enough units to carry {string.Join(", ", LeftDark.Take(3).Select(AreaName))}" +
                             $"{(LeftDark.Count > 3 ? $" and {LeftDark.Count - 3} more" : "")}: left dropped. " +
                             "Pick them up once there's reserve for them.");
-            if (Factors.Count == 0) Factors.Add("Not enough spare units online when the load rose.");
+            if (Factors.Count == 0) Factors.Add(Drill ? "A clean drill: nothing went wrong." : "Not enough spare units online when the load rose.");
             Go(Phase.PostMortem);
         }
+
+        // How well a drill went, 0.3–1: what it adds to operator training (bible §11.1, drill recency).
+        public double DrillPerformance =>
+            Math.Clamp(1 - 0.2 * Collapses - 0.1 * ReliefTrips - Math.Max(0, OutageSeconds - 600) / 1800, 0.3, 1);
 
         // ---- Phase 6: the post-mortem ----
 
@@ -561,6 +585,7 @@ namespace IdlePowerGen.Controllers
             if (Current != Phase.PostMortem) return;
             Go(Phase.Done);
             _grid.RestartFrequency();
+            _grid.AfterBlackStart(this);
             _grid.EndBlackStart(TrustLost);
         }
     }

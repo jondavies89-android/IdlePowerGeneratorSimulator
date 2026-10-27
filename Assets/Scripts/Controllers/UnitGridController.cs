@@ -35,6 +35,34 @@ namespace IdlePowerGen.Controllers
         // The old station's black-start diesel set, as a share of the inherited output: 5 MW in
         // Era 4, within the bible's 5–40 MW (§10.3.2).
         public virtual double DieselShare => 0.5;
+        protected virtual double StartCoalTonnes => Data.Era4Data.StartCoalTonnes;
+        protected virtual double CoalPoundsPerTonne => Data.Era4Data.CoalPoundsPerTonne;
+
+        // ---- Era 6's hooks: units that start from standby, and trained operators ----
+
+        // A unit just bought: Eras 4–5 run it up at once, waiting to be synchronised.
+        protected virtual void OnUnitBuilt(GridUnit unit) { }
+
+        // A unit back from a service or a repair, or with coal in the yard again.
+        protected virtual void ReturnToService(GridUnit unit) => unit.SetState(UnitState.AwaitingSync);
+
+        // Game hours a service takes this unit.
+        protected virtual double ServiceHoursFor(GridUnit unit) => Data.Era4Data.ServiceHours;
+
+        // Operator training (bible §11.1 OTP), 0–100; it only ever helps (Era 6 on).
+        public virtual double TrainingScore => 0;
+
+        // The board's name for a unit ("NUC-04 HARTLEPOOL"); null for the plain "UNIT 3 COAL".
+        public virtual string BoardName(GridUnit unit) => null;
+
+        // The era's own line for the status strip, worst first (0 healthy … 3 alarm), or null.
+        public virtual (int Level, string Message)? EraAdvice() => null;
+
+        // ---- Connecting load areas (Eras 4–6 each price their own) ----
+
+        public abstract decimal ConnectCost(string id);
+        public abstract bool CanConnect(string id);
+        public abstract bool Connect(string id);
 
         protected override void Awake()
         {
@@ -68,7 +96,7 @@ namespace IdlePowerGen.Controllers
         {
             ClearUnits();
             Grid.Reset();
-            CoalTonnes = Data.Era4Data.StartCoalTonnes;
+            CoalTonnes = StartCoalTonnes;
             CoalTargetDays = 0;
             BlackStart = null;
             CascadeSecondsLeft = -1;
@@ -102,6 +130,7 @@ namespace IdlePowerGen.Controllers
                     // A unit mid-sync or in a dead grid comes back waiting to be synchronised.
                     state = (u.State == UnitState.Online && BlackStart != null ? UnitState.AwaitingSync : u.State).ToString(),
                     hoursSinceService = u.HoursSinceService, hoursLeft = u.HoursLeft, blackStart = u.BlackStartCapable,
+                    mode = u.Mode.ToString(), backToStandby = !u.ResumeOnline,
                 });
         }
 
@@ -130,10 +159,12 @@ namespace IdlePowerGen.Controllers
                     unit.SetState(state, e.hoursLeft);
                     unit.HoursSinceService = e.hoursSinceService;
                     unit.BlackStartCapable = e.blackStart || def.blackStartCapable;
+                    if (Enum.TryParse<GridUnit.UnitMode>(e.mode, out var mode)) unit.Mode = mode;
+                    unit.ResumeOnline = !e.backToStandby;
                 }
                 CoalTonnes = data.coalStockTonnes;
             }
-            else CoalTonnes = data.coalStockTonnes > 0 ? data.coalStockTonnes : Data.Era4Data.StartCoalTonnes;
+            else CoalTonnes = data.coalStockTonnes > 0 ? data.coalStockTonnes : StartCoalTonnes;
             CoalTargetDays = data.coalTargetDays;
         }
 
@@ -171,20 +202,25 @@ namespace IdlePowerGen.Controllers
             if (!CanBuy(def) || !GM.Ledger.SpendPennies(NextCost(def))) return null;
             int number = _units.Count == 0 ? 1 : _units.Max(u => u.Number) + 1;
             var unit = AddUnit(def, number);
-            EventBus.Publish(new WorksNoticeEvent($"Unit {unit.Number} is built and running up. Synchronise it to carry load."));
+            OnUnitBuilt(unit);
+            if (unit.State == UnitState.AwaitingSync)
+                EventBus.Publish(new WorksNoticeEvent($"Unit {unit.Number} is built and running up. Synchronise it to carry load."));
             return unit;
         }
 
         public IEnumerable<GridUnit> AwaitingSync => _units.Where(u => u.State == UnitState.AwaitingSync);
         public GridUnit NextToSync => AwaitingSync.OrderBy(u => u.Number).FirstOrDefault();
 
-        public bool AutoSync => IsUnlockedFeature(Data.Era4Data.AutoSyncFeatureId);
+        public virtual bool AutoSync => IsUnlockedFeature(Data.Era4Data.AutoSyncFeatureId);
+
+        // Trained operators get a wider clean close (bible §11.2); untrained, the Era 4 window.
+        public double SyncForgiveness => 1 + Data.Era6Data.SyncForgiveness * TrainingScore / 100;
 
         // Opens the synchroscope on a unit waiting for it.
         public Synchroscope BeginSync(GridUnit unit)
         {
             if (unit == null || unit.State != UnitState.AwaitingSync || Grid.Dead) return null;
-            return new Synchroscope(Grid.Frequency, SyncRandom);
+            return new Synchroscope(Grid.Frequency, SyncRandom) { Forgiveness = SyncForgiveness };
         }
 
         // The breaker is closed: clean, with a jolt, or slammed out of phase.
@@ -221,14 +257,16 @@ namespace IdlePowerGen.Controllers
         public decimal ServiceCost(GridUnit u) =>
             (decimal)(u.Definition.baseCostPennies * Data.Era4Data.ServiceCostShare);
 
+        // Era 6: a unit on standby can be serviced too (the best time for it).
         public bool CanService(GridUnit u) =>
-            !u.Inherited && (u.State == UnitState.Online || u.State == UnitState.AwaitingSync) &&
+            !u.Inherited && (u.State == UnitState.Online || u.State == UnitState.AwaitingSync || u.State == UnitState.Standby) &&
             BlackStart == null && GM.Ledger.Pennies >= ServiceCost(u);
 
         public bool Service(GridUnit u)
         {
             if (!CanService(u) || !GM.Ledger.SpendPennies(ServiceCost(u))) return false;
-            u.SetState(UnitState.InService, Data.Era4Data.ServiceHours * ServiceTime);
+            u.ResumeOnline = u.State != UnitState.Standby;
+            u.SetState(UnitState.InService, ServiceHoursFor(u) * ServiceTime);
             return true;
         }
 
@@ -275,8 +313,8 @@ namespace IdlePowerGen.Controllers
         public bool HasCoalUnits => _units.Any(u => u.BurnsCoal);
 
         // Pennies a tonne.
-        private static double CoalPrice =>
-            (double)Managers.Money.PenniesPerPound * Data.Era4Data.CoalPoundsPerTonne * (Effects != null ? Effects.FuelPriceMultiplier : 1.0);
+        protected double CoalPrice =>
+            (double)Managers.Money.PenniesPerPound * CoalPoundsPerTonne * (Effects != null ? Effects.FuelPriceMultiplier : 1.0);
 
         public decimal ManualOrderCost => (decimal)(ManualOrderTonnes * CoalPrice);
         private double ManualOrderTonnes => Math.Max(200, Math.Max(CoalBurnPerHour, EstimatedBurnPerHour) * 24 * Data.Era4Data.ManualOrderDays);
@@ -303,10 +341,42 @@ namespace IdlePowerGen.Controllers
         private void ReceiveCoal(double tonnes)
         {
             CoalTonnes += tonnes;
-            foreach (var u in _units.Where(u => u.State == UnitState.NoFuel)) u.SetState(UnitState.AwaitingSync);
+            foreach (var u in _units.Where(u => u.State == UnitState.NoFuel).ToList()) ReturnToService(u);
         }
 
         public double FuelScore => 100 * Math.Clamp(CoalDaysOfCover / Data.Era4Data.RecommendedCoverDays, 0, 1);
+
+        // ---- Black-start fitting (redundancy, Era 5 on) ----
+
+        public bool CanFitBlackStart =>
+            IsUnlockedFeature(Data.Era5Data.BlackStartId) || IsIntroduced(Data.Era5Data.RedundancyScore);
+
+        // A unit that can't follow the load (a reactor) can't start a dead grid either.
+        public GridUnit NextToFit =>
+            CanFitBlackStart ? _units.Where(u => !u.Inherited && !u.BlackStartCapable && u.CanFollow && u.State != UnitState.Faulted)
+                                     .OrderBy(u => u.Definition.baseCostPennies).FirstOrDefault()
+                             : null;
+
+        public decimal FitCost(GridUnit u) => (decimal)(u.Definition.baseCostPennies * Data.Era5Data.BlackStartFitShare);
+
+        public bool FitBlackStart()
+        {
+            var u = NextToFit;
+            if (u == null || !GM.Ledger.SpendPennies(FitCost(u))) return false;
+            u.BlackStartCapable = true;
+            return true;
+        }
+
+        // Bible §11.1: count and diversity of black-start units (the old diesels count once).
+        public double RedundancyScore
+        {
+            get
+            {
+                var capable = _units.Where(u => !u.Inherited && u.BlackStartCapable && u.State != UnitState.Faulted).ToList();
+                int kinds = capable.Select(u => u.Definition.generatorType).Distinct().Count();
+                return Math.Min(100, 20 + 20 * capable.Count + 10 * Math.Max(0, kinds - 1));
+            }
+        }
 
         // ---- Preparedness dashboard ----
 
@@ -357,12 +427,16 @@ namespace IdlePowerGen.Controllers
         protected override double AreaShape(LoadArea area, double hourOfDay) =>
             base.AreaShape(area, hourOfDay) * (1 - ShedFractions[SheddingStage]);
 
-        protected virtual void OnBrownout() { }
+        // The first brownout introduces the redundancy score (bible §14.2.3).
+        private void OnBrownout() =>
+            Introduce(Data.Era5Data.RedundancyScore, "Redundancy",
+                      "The relays shed load and kept the grid up, but bringing it back showed how few units could start " +
+                      "a dead grid on their own. Fit more units for black start.");
 
         // What led to the last blackout, for the post-mortem and for tuning.
         public string LastBlackoutCause { get; private set; }
 
-        private void Blackout()
+        protected void Blackout(bool drill = false)
         {
             LastBlackoutCause = $"{Frequency:0.00} Hz, load {Grid.Load / 1e6:0} MW on {Grid.OnlineCapacity / 1e6:0} MW online, " +
                                 $"{(PastTheBrink ? "past the brink" : "the warning ran out")}, last trip: {_lastTrip}";
@@ -373,7 +447,10 @@ namespace IdlePowerGen.Controllers
                 if (u.Inherited) continue;
                 if (u.State == UnitState.Online) u.SetState(UnitState.AwaitingSync);
             }
-            string cause = _lastTrip.StartsWith("forced")
+            AfterBlackout();
+            string cause = drill
+                ? "A planned drill: the grid is down on purpose, every customer warned and every contract waiting."
+                : _lastTrip.StartsWith("forced")
                 ? "Switched off from the DEV strip."
                 : Grid.Demand > Grid.OnlineCapacity
                     ? $"The load ({NumberFormatter.FormatWatts(Grid.Demand)}) outgrew the {NumberFormatter.FormatWatts(Grid.OnlineCapacity)} " +
@@ -382,11 +459,17 @@ namespace IdlePowerGen.Controllers
             Grid.Collapse();
             CascadeSecondsLeft = -1;
             SheddingStage = 0;
-            BlackStart = new BlackStartSession(this, lit.Select(a => a.Id).ToList(), lost, Faults, cause);
-            StopManagers();
+            BlackStart = new BlackStartSession(this, lit.Select(a => a.Id).ToList(), lost, Faults, cause, drill);
+            if (!drill) StopManagers();
             _lastTrip = "none";
             EventBus.Publish(new BlackoutEvent(EraNumber));
         }
+
+        // Era 6: what a dark grid does to its units beyond tripping them (reactors scram).
+        protected virtual void AfterBlackout() { }
+
+        // Era 6: the drill's score, once its post-mortem is closed.
+        protected internal virtual void AfterBlackStart(BlackStartSession session) { }
 
         // The black start's clock is real time, whatever the game clock or the DEV speed.
         private void Update()
@@ -450,9 +533,11 @@ namespace IdlePowerGen.Controllers
             return (best, at);
         }
 
-        // Capacity that could be online: the units online plus those waiting to be synchronised.
+        // Capacity that could be online: the units online plus those waiting to be synchronised
+        // (and, in Era 6, those already starting).
         public double ReadyCapacity =>
-            _units.Where(u => u.IsOnline || u.State == UnitState.AwaitingSync).Sum(u => u.Capacity(PowerGrid)) * Grid.CapacityFactor;
+            _units.Where(u => u.IsOnline || u.State == UnitState.AwaitingSync || u.State == UnitState.Starting)
+                  .Sum(u => u.Capacity(PowerGrid)) * Grid.CapacityFactor;
 
         // ---- The tick ----
 
@@ -528,8 +613,21 @@ namespace IdlePowerGen.Controllers
                     if (u.HoursLeft <= 0)
                     {
                         u.HoursSinceService = 0;
-                        u.SetState(UnitState.AwaitingSync);
+                        ReturnToService(u);
                     }
+                    continue;
+                }
+                // Era 6: a start running up, or a tripped reactor's hold running down. In a black
+                // start, units come back through the minigame instead.
+                if (u.State == UnitState.Starting && BlackStart == null)
+                {
+                    u.HoursLeft -= gameHours;
+                    if (u.HoursLeft <= 0) u.SetState(UnitState.AwaitingSync);
+                    continue;
+                }
+                if (u.State == UnitState.Standby)
+                {
+                    u.HoursLeft = Math.Max(0, u.HoursLeft - gameHours);
                     continue;
                 }
                 if (u.State != UnitState.Online) continue;
@@ -582,6 +680,7 @@ namespace IdlePowerGen.Controllers
             _lastTrip = $"Unit {u.Number} {u.ShortName} failed";
             decimal repair = (decimal)(u.Definition.baseCostPennies * Data.Era4Data.RepairCostShare);
             GM.Ledger.DrainPennies(repair);
+            u.ResumeOnline = true;
             u.SetState(UnitState.Faulted, Data.Era4Data.RepairHours * ServiceTime);
             EventBus.Publish(new WorksNoticeEvent($"Unit {u.Number} {u.ShortName} has tripped: overdue for service. Repairs under way."));
             Introduce(Data.Era4Data.MaintenanceScore, "Maintenance",

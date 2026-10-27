@@ -55,6 +55,10 @@ namespace IdlePowerGen.Save
         // --- Contract managers (v10), the current era's ---
         public List<ContractManagerEntry> contractManagers = new();
 
+        // --- Era 6 (v11): the last black-start drill, for operator training (OTP) ---
+        public double drillScore;          // points the drill earned, before it fades
+        public double drillGameTime;       // game seconds when it ended
+
         // --- Lifetime stats (prestige §12) ---
         public double lifetimeMWh;
         public int    engineeringXP;
@@ -101,6 +105,9 @@ namespace IdlePowerGen.Save
             public double hoursSinceService;
             public double hoursLeft;      // in service or under repair
             public bool   blackStart;     // fitted with black-start capability (Era 5)
+            // v11, Era 6:
+            public string mode;           // GridUnit.UnitMode name (BASE or AGC)
+            public bool   backToStandby;  // in service from standby: returns there, not to the bars
         }
 
         [Serializable]

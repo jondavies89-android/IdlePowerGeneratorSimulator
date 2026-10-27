@@ -27,8 +27,11 @@ namespace IdlePowerGen.UI
         [SerializeField] private Color _caution = Color.yellow;
         [SerializeField] private Color _alarm   = Color.red;
 
-        public static readonly string[] Scores = { Data.Era4Data.MaintenanceScore, Data.Era4Data.FuelScore, Data.Era5Data.RedundancyScore };
+        public static readonly string[] Scores =
+            { Data.Era4Data.MaintenanceScore, Data.Era4Data.FuelScore, Data.Era5Data.RedundancyScore, Data.Era6Data.TrainingScore };
         private readonly Dictionary<string, float> _pulse = new();
+
+        private Controllers.Era6NationalGridController National => _grid as Controllers.Era6NationalGridController;
 
         private void Awake()
         {
@@ -37,7 +40,8 @@ namespace IdlePowerGen.UI
             _introButton.onClick.AddListener(() => _introPanel.SetActive(false));
             _actions[0].onClick.AddListener(() => _grid.ServiceOverdue());
             _actions[1].onClick.AddListener(() => _grid.OrderCoal());
-            _actions[2].onClick.AddListener(() => (_grid as Controllers.Era5DispatchController)?.FitBlackStart());
+            _actions[2].onClick.AddListener(() => _grid.FitBlackStart());
+            if (_actions.Length > 3) _actions[3].onClick.AddListener(() => National?.StartDrill());
         }
 
         private void OnDestroy() => EventBus.Unsubscribe<ScoreIntroducedEvent>(OnIntroduced);
@@ -57,12 +61,13 @@ namespace IdlePowerGen.UI
             bool any = false;
             for (int i = 0; i < Scores.Length && i < _rows.Length; i++)
             {
-                bool on = Controllers.UnitGridController.IsIntroduced(Scores[i]);
+                // Training belongs to Era 6's drills: it shows only on the screen that can act on it.
+                bool on = Controllers.UnitGridController.IsIntroduced(Scores[i]) && (i != 3 || National != null);
                 any |= on;
                 if (_rows[i].activeSelf != on) _rows[i].SetActive(on);
                 if (!on) continue;
                 double score = i == 0 ? _grid.MaintenanceScore : i == 1 ? _grid.FuelScore
-                             : (_grid as Controllers.Era5DispatchController)?.RedundancyScore ?? 0;
+                             : i == 2 ? _grid.RedundancyScore : _grid.TrainingScore;
                 _values[i].text = $"{score:0}";
                 _fills[i].fillAmount = (float)(score / 100);
                 Color c = score >= 70 ? _healthy : score >= 40 ? _caution : _alarm;
@@ -88,12 +93,15 @@ namespace IdlePowerGen.UI
                         _actions[1].interactable = _grid.HasCoalUnits;
                         break;
                     case 2:
-                        var era5 = _grid as Controllers.Era5DispatchController;
-                        var next = era5?.NextToFit;
+                        var next = _grid.NextToFit;
                         _actionLabels[2].text = next != null
-                            ? $"Fit Unit {next.Number} for black start · {Managers.Money.Format(era5.FitCost(next))}"
+                            ? $"Fit {_grid.BoardName(next) ?? $"Unit {next.Number}"} for black start · {Managers.Money.Format(_grid.FitCost(next))}"
                             : "Every unit that can be is fitted";
                         _actions[2].interactable = next != null;
+                        break;
+                    case 3:
+                        _actionLabels[3].text = $"Schedule a black-start drill · {Managers.Money.Format(National.DrillCost)}";
+                        _actions[3].interactable = National.CanDrill;
                         break;
                 }
             }

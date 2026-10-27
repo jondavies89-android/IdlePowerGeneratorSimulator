@@ -73,7 +73,7 @@ public static class Era5ScreenBuilder
         Shop(T, worksContent, grid);
 
         var research = Page(pagesRt, "ResearchPage");
-        Era3ScreenBuilder.CreateResearchSummary(research, Era5Data.EraNumber, T);
+        Era3ScreenBuilder.CreateResearchSummary(research, Era5Data.EraNumber, T, "build an R&D laboratory to make research");
         var researchTree = Tree(T, research, Era5Data.EraNumber, true, AssetDatabase.LoadAssetAtPath<UpgradeNodeView>(ResearchNodePrefab));
 
         var upgrades = Page(pagesRt, "UpgradesPage");
@@ -81,8 +81,8 @@ public static class Era5ScreenBuilder
 
         Capstone(T, column, root, grid, "Era 5 · The Interconnected Grid", "Fifty gigawatts",
                  "The Midlands runs as one machine, and its voltage holds from Birmingham to Manchester. " +
-                 "The 275 kV supergrid is ready to energise.",
-                 "Energise the supergrid");
+                 "The 275 kV supergrid is ready to energise, and the whole country with it.",
+                 "Begin Era 6 · The Nuclear Age");
 
         var tabs = TabBar(T, column, new[] { "Board", "Cities", "Works", "Research", "Upgrades" },
                           new[] { board, cities, works, research, upgrades });
@@ -217,15 +217,4 @@ public static class Era5ScreenBuilder
                   "and mills draw more than real power: watch each city's power factor and voltage, and put " +
                   "capacitor banks where they sag. The relays will shed load to save the grid if they must.",
                   "Into Central Dispatch");
-
-    public static void CreateEndCard(Transform canvas)
-    {
-        TitleCard(T, canvas, 6, "End of Era 5  ·  The supergrid is energised",
-                  "The Nuclear Age", "Coming soon",
-                  "Fifty gigawatts on one grid, and the Midlands never dark. Era 6, The Nuclear Age, is still being " +
-                  "built. Your grid runs on: keep connecting, keep it steady.",
-                  "Keep running the grid");
-        var card = GameObject.Find("Era6TitleCard").GetComponent<EraTitleCardView>();
-        SetBool(card, "_contentEnd", true);
-    }
 }

@@ -12,7 +12,7 @@ namespace IdlePowerGen.Managers
         public static EraManager Instance { get; private set; }
 
         // The last era with a screen; a capstone past it leaves the player in this era.
-        public const int LastBuiltEra = 5;
+        public const int LastBuiltEra = 6;
 
         public float CurrentEra { get; private set; } = 1f;
         public int   Era => Mathf.FloorToInt(CurrentEra);

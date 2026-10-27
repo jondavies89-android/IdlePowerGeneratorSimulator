@@ -60,7 +60,7 @@ public static class Era4ScreenBuilder
         Shop(T, worksContent, grid);
 
         var research = Page(pagesRt, "ResearchPage");
-        Era3ScreenBuilder.CreateResearchSummary(research, Era4Data.EraNumber, T);
+        Era3ScreenBuilder.CreateResearchSummary(research, Era4Data.EraNumber, T, "build an engineering office to make research");
         var researchTree = Tree(T, research, Era4Data.EraNumber, true, AssetDatabase.LoadAssetAtPath<UpgradeNodeView>(ResearchNodePrefab));
 
         var upgrades = Page(pagesRt, "UpgradesPage");

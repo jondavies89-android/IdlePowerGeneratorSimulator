@@ -53,6 +53,13 @@ namespace IdlePowerGen.UI
                 int owned = _grid.Owned(r.def.generatorType);
                 r.name.text = owned > 0 ? $"{r.def.displayName}  ×{owned}" : r.def.displayName;
                 string extra = r.def.coalTonnesPerMWh > 0 ? "burns coal" : "no coal";
+                if (_grid is Controllers.Era6NationalGridController)
+                {
+                    // Era 6: what it costs to run, how quick it is, and the reactor's catch.
+                    double run = r.def.fuelPoundsPerMWh + r.def.coalTonnesPerMWh * Data.Era6Data.CoalPoundsPerTonne;
+                    extra = $"£{run:0}/MWh · starts in {Controllers.Era6NationalGridController.Hours(r.def.startHours)} · " +
+                            (r.def.canFollow ? $"ramps {r.def.rampPerMinute:0.#%}/min" : "BASE only: the night's load must take it all");
+                }
                 if (r.def.blackStartCapable) extra += " · can black-start";
                 if (r.def.maxUnits > 0) extra += $" · {r.def.maxUnits - owned} sites left";
                 r.detail.text = $"{NumberFormatter.FormatWatts(grid != null ? grid.UnitOutputWatts(r.def) : r.def.basePowerWatts)} each · {extra}";

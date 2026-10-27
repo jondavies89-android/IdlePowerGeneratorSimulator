@@ -175,8 +175,9 @@ public static class UnitGridScreenKit
         return button;
     }
 
+    // modes: Era 6's BASE · AGC · STBY buttons on the unit card.
     public static UnitCardView Board(ScreenTheme t, Transform parent, UnitGridController grid, SyncOverlayView sync,
-                                     bool grouped, string caption)
+                                     bool grouped, string caption, bool modes = false)
     {
         var box = Box(t, parent, "UnitBoard", 12, 2);
         Caption(t, box, "Caption", caption, 13);
@@ -220,6 +221,20 @@ public static class UnitGridScreenKit
         Wire(card, ("_grid", grid), ("_titleLabel", title), ("_detailLabel", detail), ("_actionLabel", action),
                    ("_button", cardButton), ("_group", cardGroup), ("_sync", sync));
         SetColours(card, ("_text", t.Text), ("_muted", t.TextMuted), ("_caution", t.Caution), ("_alarm", t.Alarm));
+        if (modes)
+        {
+            // Below the card rather than in it: the card is itself a button (the action).
+            var row = Rect("Modes", box);
+            Fixed(row, 44);
+            var modesLayout = row.gameObject.AddComponent<HorizontalLayoutGroup>();
+            modesLayout.spacing = 6;
+            modesLayout.childControlWidth = modesLayout.childControlHeight = true;
+            modesLayout.childForceExpandWidth = modesLayout.childForceExpandHeight = true;
+            var baseButton = ScreenKit.Button(t, row, "Base", "BASE", 44, t.PanelRaised, 15);
+            var agcButton = ScreenKit.Button(t, row, "Agc", "AGC", 44, t.PanelRaised, 15);
+            var standbyButton = ScreenKit.Button(t, row, "Standby", "STBY", 44, t.PanelRaised, 15);
+            Wire(card, ("_modes", row.gameObject), ("_base", baseButton), ("_agc", agcButton), ("_standby", standbyButton));
+        }
 
         var view = box.gameObject.AddComponent<UnitBoardView>();
         Wire(view, ("_grid", grid), ("_rowTemplate", button), ("_content", rows), ("_reserveLabel", reserve), ("_card", card));
@@ -313,7 +328,7 @@ public static class UnitGridScreenKit
         var view = holder.gameObject.AddComponent<SyncOverlayView>();
         Wire(view, ("_grid", grid), ("_panel", panel.gameObject), ("_titleLabel", title), ("_needle", needle),
                    ("_slipLabel", slip), ("_hintLabel", hint), ("_slower", slower), ("_faster", faster),
-                   ("_close", close), ("_later", later));
+                   ("_close", close), ("_later", later), ("_zone", zoneImg));
         SetColours(view, ("_healthy", t.Healthy), ("_caution", t.Caution), ("_alarm", t.Alarm));
         panel.gameObject.SetActive(false);
         return view;
@@ -381,9 +396,10 @@ public static class UnitGridScreenKit
         var holder = Stack("Preparedness", parent, spacing: 0);
         var panel = Box(t, holder, "Panel", 12, 6);
         Caption(t, panel, "Caption", "Preparedness", 13);
-        string[] names = { "Maintenance", "Fuel reserve", "Redundancy" };
-        var rows = new Object[3]; var values = new Object[3]; var fills = new Object[3]; var actions = new Object[3]; var labels = new Object[3];
-        for (int i = 0; i < 3; i++)
+        string[] names = { "Maintenance", "Fuel reserve", "Redundancy", "Operator training" };
+        int n = names.Length;
+        var rows = new Object[n]; var values = new Object[n]; var fills = new Object[n]; var actions = new Object[n]; var labels = new Object[n];
+        for (int i = 0; i < n; i++)
         {
             var r = Stack(names[i], panel, spacing: 2);
             var top = Row(r, "Top");

@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1c6c43ca333bc2c4993a73e352ede6b8, type: 3}
+  m_Name: Upgrade_era6_gas_uprates
+  m_EditorClassIdentifier: IdlePowerGen.Models::IdlePowerGen.Models.UpgradeDefinition
+  upgradeId: era6_gas_uprates
+  displayName: Uprated gas turbines
+  description: 'Hotter blades, more air: a quarter more from every combined-cycle
+    station.'
+  minEra: 6
+  costJoules: 0
+  costPennies: 144000000000
+  costResearch: 0
+  costGrowth: 1
+  isResearch: 0
+  maxLevel: 1
+  requiredReputation: 0
+  effect: 11
+  effectValue: 1.25
+  secondaryValue: 0
+  unlocksId: CombinedCycle
+  requiredUpgradeIds:
+  - era6_supercritical
+  - res6_combined_cycle
+  requiredStoredJoules: 0
+  requiredPennies: 0
+  treeBranch: 0
+  treeRow: 2
+  icon: {fileID: 0}

@@ -23,9 +23,17 @@ namespace IdlePowerGen.UI
         [SerializeField] private Color _cautionPanel = new(0.3f, 0.2f, 0.05f);
         [SerializeField] private Color _alarmPanel   = new(0.35f, 0.08f, 0.06f);
 
+        // Era 6's units synchronise themselves: the remedy there is to start the quickest on standby.
+        private Controllers.Era6NationalGridController National => _grid as Controllers.Era6NationalGridController;
+
         private void Awake()
         {
-            _syncButton.onClick.AddListener(() => { var u = _grid.ReserveToSync; if (u != null) _sync.Open(u); });
+            _syncButton.onClick.AddListener(() =>
+            {
+                if (National != null) { National.StartUnit(National.FastestStandby); return; }
+                var u = _grid.ReserveToSync;
+                if (u != null) _sync.Open(u);
+            });
             _shedButton.onClick.AddListener(() => { var a = _grid.BiggestLit; if (a != null) _grid.SetShed(a.Id, true); });
         }
 
@@ -47,9 +55,20 @@ namespace IdlePowerGen.UI
                     ? $"{_grid.Frequency:0.00} Hz and climbing back. Hold on, and don't pick anything up yet."
                     : $"{_grid.Frequency:0.00} Hz and falling. Bring on reserve, or drop load, now.";
 
-            var unit = _grid.ReserveToSync;
-            _syncButton.interactable = unit != null;
-            _syncLabel.text = unit != null ? $"Sync Unit {unit.Number}" : "No unit waiting";
+            if (National != null)
+            {
+                var fast = National.FastestStandby;
+                _syncButton.interactable = fast != null;
+                _syncLabel.text = fast != null
+                    ? $"Start {National.BoardName(fast)} · {Controllers.Era6NationalGridController.Hours(fast.Definition.startHours)}"
+                    : "Nothing on standby";
+            }
+            else
+            {
+                var unit = _grid.ReserveToSync;
+                _syncButton.interactable = unit != null;
+                _syncLabel.text = unit != null ? $"Sync Unit {unit.Number}" : "No unit waiting";
+            }
             var biggest = _grid.BiggestLit;
             _shedButton.interactable = biggest != null;
             _shedLabel.text = biggest != null ? $"Drop {_grid.AreaName(biggest.Id)}" : "Nothing to drop";

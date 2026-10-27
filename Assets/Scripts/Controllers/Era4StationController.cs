@@ -46,13 +46,13 @@ namespace IdlePowerGen.Controllers
 
         // ---- Feeders ----
 
-        public decimal ConnectCost(string id) => Managers.Money.FromPounds(_specs[id].ConnectPounds);
+        public override decimal ConnectCost(string id) => Managers.Money.FromPounds(_specs[id].ConnectPounds);
 
-        public bool CanConnect(string id) =>
+        public override bool CanConnect(string id) =>
             IsCurrentEra && BlackStart == null && !Area(id).Connected && GM.Ledger.Pennies >= ConnectCost(id);
 
         // The feeder is switched in: its whole load arrives at once, and the needle dips.
-        public bool Connect(string id)
+        public override bool Connect(string id)
         {
             if (!CanConnect(id) || !GM.Ledger.SpendPennies(ConnectCost(id))) return false;
             Area(id).Connected = true;

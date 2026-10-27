@@ -58,7 +58,7 @@ public static class DevToolsBuilder
         hlg.spacing = 6;
         hlg.childControlWidth = hlg.childControlHeight = true;
         hlg.childForceExpandWidth = hlg.childForceExpandHeight = true;
-        var eraButtons = new UnityEngine.UI.Button[5];
+        var eraButtons = new UnityEngine.UI.Button[6];
         for (int i = 0; i < eraButtons.Length; i++)
             eraButtons[i] = MakeDevButton(eras, $"Era{i + 1}", $"Era {i + 1}");
 
@@ -77,9 +77,9 @@ public static class DevToolsBuilder
         var realTime = MakeDevButton(speedRow, "RealTime", "1×");
         realTime.gameObject.AddComponent<LayoutElement>().preferredWidth = 52;
 
-        var blackout = MakeDevButton(panel, "Blackout", "Black out the grid (Eras 4–5)");
+        var blackout = MakeDevButton(panel, "Blackout", "Black out the grid (Eras 4–6)");
         Fixed((RectTransform)blackout.transform, 40);
-        var meetGoal = MakeDevButton(panel, "MeetGoal", "Meet this era's goal (Eras 2–5)");
+        var meetGoal = MakeDevButton(panel, "MeetGoal", "Meet this era's goal (Eras 2–6)");
         Fixed((RectTransform)meetGoal.transform, 40);
 
         var view = root.gameObject.AddComponent<DevToolsView>();

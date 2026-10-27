@@ -16,7 +16,23 @@ namespace IdlePowerGen.Simulation
             InService,    // off for maintenance
             Faulted,      // tripped by a failure or a slammed breaker; under repair
             NoFuel,       // a coal unit with the stockpile empty
+            // Era 6 (saved by name, so append only):
+            Standby,      // cold and off the bars; HoursLeft > 0 means it can't be started yet
+            Starting,     // running up from standby; HoursLeft until it can be synchronised
         }
+
+        // Era 6: what an online unit is told to do (bible Appendix A, Era 6: BASE and AGC).
+        public enum UnitMode
+        {
+            Agc,  // follows the load, within its ramp rate, cheapest to run first
+            Base, // held at full output, whatever the load does
+        }
+
+        public UnitMode Mode { get; set; } = UnitMode.Agc;
+
+        // Era 6: pounds per MWh to run it now, fuel included. The dispatch loads the units on
+        // AGC cheapest first (the merit order); set by the era each tick.
+        public double MeritCost { get; set; }
 
         public GeneratorInstance Instance { get; }
         public GeneratorDefinition Definition => Instance.Definition;
@@ -27,6 +43,11 @@ namespace IdlePowerGen.Simulation
         // Watts the unit is sending now (the dispatch's share), at most Capacity.
         public double OutputWatts { get; set; }
 
+        // Era 6: where the dispatch has it, before its primary response to the frequency, and
+        // watts a second that moved on the last step (RMP↑ / RMP↓ on the board).
+        public double Scheduled { get; set; }
+        public double Rise { get; set; }
+
         // Game hours since its last service; past the interval it may fail (online only).
         public double HoursSinceService { get; set; }
 
@@ -35,6 +56,10 @@ namespace IdlePowerGen.Simulation
 
         // Era 5: fitted to start a dead grid on its own.
         public bool BlackStartCapable { get; set; }
+
+        // Era 6: back from a service or repair, it starts up again (it was running) rather
+        // than going back to standby (it was serviced there).
+        public bool ResumeOnline { get; set; } = true;
 
         // Never trips, needs no service or fuel: the inherited station (UNIT 0).
         public bool Inherited { get; }
@@ -58,6 +83,15 @@ namespace IdlePowerGen.Simulation
 
         public bool IsOnline => State == UnitState.Online;
 
+        // Era 6: the inherited fleet follows the load like a unit on AGC, a little faster than coal.
+        public const float InheritedRampPerMinute = 0.03f;
+
+        public double RampPerMinute => Inherited ? InheritedRampPerMinute : Definition.rampPerMinute;
+        public double MinStableShare => Inherited ? 0 : Definition.minStableShare;
+        public bool CanFollow => Inherited || Definition.canFollow;
+        // On AGC (and able to follow): the dispatch may move it.
+        public bool Following => CanFollow && Mode == UnitMode.Agc;
+
         // What it can send, upgrades included (multiplier from the grid).
         public double Capacity(PowerGrid grid) =>
             Inherited ? InheritedWatts : grid != null ? grid.UnitOutputWatts(Definition) : Definition.basePowerWatts;
@@ -70,7 +104,7 @@ namespace IdlePowerGen.Simulation
             State = state;
             HoursLeft = Math.Max(0, hoursLeft);
             Instance.SetOnline(state == UnitState.Online);
-            if (state != UnitState.Online) OutputWatts = 0;
+            if (state != UnitState.Online) OutputWatts = Scheduled = 0;
         }
 
         // The breaker closes: the unit picks up load from nothing.

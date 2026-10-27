@@ -104,9 +104,12 @@ namespace IdlePowerGen.UI
             switch (_session.Current)
             {
                 case Phase.Triage:
-                    _phaseLabel.text = "Triage · what survived";
+                    _phaseLabel.text = _session.Drill ? "Drill · triage · what survived" : "Triage · what survived";
                     foreach (var u in _session.StartUnits)
                         Item(items++, u.Name, $"{NumberFormatter.FormatWatts(u.Watts)} · {u.Note}", _ready, null);
+                    // Bible §15.3: what was lost is shown too, with the reason.
+                    foreach (var (name, reason) in _session.Unavailable.Take(4))
+                        Item(items++, name, reason, _muted, null);
                     Bar(_session.PhaseSeconds / BlackStartSession.TriageSeconds, "the control room is taking stock");
                     break;
 
@@ -150,11 +153,14 @@ namespace IdlePowerGen.UI
                     break;
 
                 case Phase.PostMortem:
-                    _phaseLabel.text = "Post-mortem";
+                    _phaseLabel.text = _session.Drill ? "Drill · post-mortem" : "Post-mortem";
                     int mins = (int)_session.OutageSeconds;
                     Item(items++, "Outage", $"{mins} minutes dark", _caution, null);
                     Item(items++, "Customer-minutes lost", $"{_session.CustomerMinutes:N0} MW-minutes", _caution, null);
-                    Item(items++, "Trust", $"{_session.TrustLost:0.#} repute lost", _caution, null);
+                    if (_session.Drill)
+                        Item(items++, "Training", $"a drill, announced: no repute lost · {_session.DrillPerformance:0%} of the training a drill can give",
+                             _ready, null);
+                    else Item(items++, "Trust", $"{_session.TrustLost:0.#} repute lost", _caution, null);
                     foreach (var f in _session.Factors) Item(items++, "What went wrong", f, _muted, null);
                     Button(_primary, _primaryLabel, "Back to the desk", true);
                     break;

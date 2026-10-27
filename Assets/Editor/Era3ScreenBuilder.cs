@@ -298,7 +298,8 @@ public static class Era3ScreenBuilder
         SetString(view, "_goalText", goalText);
     }
 
-    internal static void CreateResearchSummary(Transform content, int era, ScreenTheme theme = null)
+    // noRateHint: what to build for research in this era, said while there is none.
+    internal static void CreateResearchSummary(Transform content, int era, ScreenTheme theme = null, string noRateHint = null)
     {
         var T = theme ?? Era3Theme.Theme;
         var box = Box(T, content, "ResearchSummary", 14, 4);
@@ -312,6 +313,7 @@ public static class Era3ScreenBuilder
         var view = box.gameObject.AddComponent<ResearchSummaryView>();
         Wire(view, ("_nameLabel", name), ("_pointsLabel", points), ("_fill", fill), ("_etaLabel", eta));
         SetInt(view, "_era", era);
+        if (noRateHint != null) SetString(view, "_noRateHint", noRateHint);
     }
 
     private static void CreateWorks(Transform content, Controllers c)

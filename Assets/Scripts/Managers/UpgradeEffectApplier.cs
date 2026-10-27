@@ -147,6 +147,8 @@ namespace IdlePowerGen.Managers
                 case UpgradeEffect.MultiplyGovernorTime: GovernorTimeMultiplier *= def.effectValue; break;
                 case UpgradeEffect.AddCapacitorStrength: CapacitorStrengthBonus += def.effectValue; break;
                 case UpgradeEffect.AddVoltageSupport:    VoltageSupport         += def.effectValue; break;
+                case UpgradeEffect.FlattenDemand:        DemandFlattening       += def.effectValue; break;
+                case UpgradeEffect.AddTrainingScore:     TrainingBonus          += def.effectValue; break;
             }
         }
 
@@ -176,6 +178,7 @@ namespace IdlePowerGen.Managers
             MainsTier             = 0;
             FuelBurnMultiplier = ServiceTimeMultiplier = FuelPriceMultiplier = GovernorTimeMultiplier = 1.0;
             CapacitorStrengthBonus = VoltageSupport = 0.0;
+            DemandFlattening = TrainingBonus = 0.0;
 
             foreach (var def in gm.UpgradeCatalogue)
             {
@@ -213,5 +216,10 @@ namespace IdlePowerGen.Managers
         // Era 5: reactive power.
         public double CapacitorStrengthBonus { get; private set; }
         public double VoltageSupport         { get; private set; }
+
+        // Era 6: Economy 7's share of the daily swing moved into the night, and the simulator's
+        // operator-training points.
+        public double DemandFlattening { get; private set; }
+        public double TrainingBonus    { get; private set; }
     }
 }
