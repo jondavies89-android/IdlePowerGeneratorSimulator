@@ -19,14 +19,14 @@ namespace IdlePowerGen.Controllers
             public string Name;
             public double Watts;
             public GridUnit Unit;     // null for the old station's diesel set
-            public bool Crank;        // tapped up like Era 1's crank; otherwise the gates are held open
+            public bool Crank;        // cranked like Era 1's crank; otherwise run up on its gates
             public string Note;
         }
 
         public sealed class Step
         {
             public string Name;
-            public double Seconds;
+            public BlackStartSequence.Kind Kind;
         }
 
         public Phase Current { get; private set; } = Phase.Triage;
@@ -43,10 +43,9 @@ namespace IdlePowerGen.Controllers
         public const double TriageSeconds = 10;
         public List<StartUnit> StartUnits { get; } = new();
         public StartUnit Chosen { get; private set; }
-        public int TapsNeeded { get; private set; }
-        public int Taps { get; private set; }
-        public double HeldSeconds { get; private set; }
-        public const double HydroHoldSeconds = 6;
+        // The chosen unit's start: the diesel's crank, or a hydro unit's gates.
+        public BlackStartCrank Diesel { get; private set; }
+        public BlackStartGates Hydro { get; private set; }
 
         // ---- The island ----
         public double IslandCapacity { get; private set; }
@@ -59,17 +58,28 @@ namespace IdlePowerGen.Controllers
         public int Collapses { get; private set; }
         // Industrial loads draw three times their running load as they start (bible §10.3.3).
         public const double IndustrialInrush = 3.0, HouseholdInrush = 1.3;
+        // A pickup's inrush, above its running load, dies away over a few seconds, and the
+        // island's frequency dips with it. Pick up the next before it has recovered and the
+        // dips stack: past the island's capacity, the frequency is past saving.
+        public double Transient { get; private set; }
+        public const double RecoverSeconds = 2.0;
+        // How far the frequency dips with the island's headroom all taken by inrush.
+        public const double DipHz = 1.5;
+        // Pickups the under-frequency relays threw back off in restoration.
+        public int ReliefTrips { get; private set; }
+        private readonly Stack<(string id, double running)> _picked = new();
 
         // ---- The second unit ----
         public GridUnit SecondUnit { get; private set; }
         public List<Step> Steps { get; } = new()
         {
-            new Step { Name = "Auxiliaries powered from the island", Seconds = 5 },
-            new Step { Name = "Lube oil circulating", Seconds = 3 },
-            new Step { Name = "Turbine pre-warming", Seconds = 10 },
+            new Step { Name = "Auxiliaries powered from the island", Kind = BlackStartSequence.Kind.Breakers },
+            new Step { Name = "Lube oil circulating", Kind = BlackStartSequence.Kind.OilPump },
+            new Step { Name = "Turbine pre-warming", Kind = BlackStartSequence.Kind.Warming },
         };
         public int StepIndex { get; private set; }
-        public double StepElapsed { get; private set; }
+        public BlackStartSequence Sequence { get; private set; }
+        public Step CurrentStep => StepIndex < Steps.Count ? Steps[StepIndex] : null;
         public bool StepFailed { get; private set; }
         public double StepFailureChance { get; }
         private bool _bypassed;
@@ -119,7 +129,7 @@ namespace IdlePowerGen.Controllers
                     Name = $"Unit {u.Number} {u.ShortName}",
                     Watts = u.Capacity(SimulationTick.Instance?.Grid),
                     Unit = u,
-                    Note = "hold the gates open to spin it up",
+                    Note = "work the gates to run it up to speed",
                 });
         }
 
@@ -138,31 +148,30 @@ namespace IdlePowerGen.Controllers
             if (Current == Phase.Done) return;
             if (Current != Phase.PostMortem) OutageSeconds += dt;
             PhaseSeconds += dt;
+            Transient *= Math.Exp(-dt / RecoverSeconds);
             switch (Current)
             {
                 case Phase.Triage:
                     if (PhaseSeconds >= TriageSeconds) Go(Phase.Cranking);
                     break;
-                case Phase.SecondUnit:
-                    if (StepFailed || StepIndex >= Steps.Count) break;
-                    StepElapsed += dt;
-                    if (StepElapsed >= Steps[StepIndex].Seconds)
+                case Phase.Cranking:
+                    Diesel?.Tick(dt);
+                    if (Hydro != null)
                     {
-                        if (!_bypassed && _rng.NextDouble() < StepFailureChance)
-                        {
-                            StepFailed = true;
-                            LastMessage = $"{Steps[StepIndex].Name}: it didn't take.";
-                            break;
-                        }
-                        _bypassed = false;
-                        StepIndex++;
-                        StepElapsed = 0;
-                        if (StepIndex >= Steps.Count)
-                        {
-                            Scope = new Synchroscope(IslandFrequency, _rng);
-                            Go(Phase.Synchronise);
-                        }
+                        Hydro.Tick(dt);
+                        if (Hydro.Running) Started();
                     }
+                    break;
+                case Phase.SecondUnit:
+                    var step = CurrentStep;
+                    if (StepFailed || step == null || Sequence == null) break;
+                    Sequence.Tick(step.Kind, dt);
+                    if (Sequence.Failed)
+                    {
+                        StepFailed = true;
+                        LastMessage = Sequence.Message;
+                    }
+                    else if (Sequence.Done(step.Kind)) FinishStep();
                     break;
                 case Phase.Synchronise:
                     // An island wanders more than a grid does.
@@ -184,22 +193,28 @@ namespace IdlePowerGen.Controllers
         {
             if (Current != Phase.Cranking || index < 0 || index >= StartUnits.Count) return;
             Chosen = StartUnits[index];
-            TapsNeeded = _rng.NextInt(8, 13); // 8–12 turns (bible §10.3.2)
-            Taps = 0;
-            HeldSeconds = 0;
+            Diesel = Chosen.Crank ? new BlackStartCrank() : null;
+            Hydro = Chosen.Crank ? null : new BlackStartGates();
         }
 
+        // A turn of the diesel's crank.
         public void Crank()
         {
-            if (Current != Phase.Cranking || Chosen == null || !Chosen.Crank) return;
-            if (++Taps >= TapsNeeded) Started();
+            if (Current == Phase.Cranking) Diesel?.Turn();
         }
 
-        public void HoldGates(double dt)
+        // Fires the diesel: it starts if the timing was right.
+        public BlackStartCrank.Fire Fire()
         {
-            if (Current != Phase.Cranking || Chosen == null || Chosen.Crank) return;
-            HeldSeconds += dt;
-            if (HeldSeconds >= HydroHoldSeconds) Started();
+            if (Current != Phase.Cranking || Diesel == null) return BlackStartCrank.Fire.NotReady;
+            var result = Diesel.TryFire();
+            if (result == BlackStartCrank.Fire.Caught) Started();
+            return result;
+        }
+
+        public void SetGates(double opening)
+        {
+            if (Current == Phase.Cranking) Hydro?.Set(opening);
         }
 
         private void Started()
@@ -207,6 +222,7 @@ namespace IdlePowerGen.Controllers
             IslandCapacity = Chosen.Watts;
             if (Chosen.Unit != null) { Chosen.Unit.SetState(UnitState.Online); OnIsland.Add(Chosen.Unit); }
             LastMessage = $"{Chosen.Name} is running: {NumberFormatter.FormatWatts(IslandCapacity)} to build an island on.";
+            Transient = 0;
             Go(Phase.Island);
         }
 
@@ -236,28 +252,92 @@ namespace IdlePowerGen.Controllers
             double inrush = running * (IsIndustrial(areaId) ? IndustrialInrush : HouseholdInrush);
             if (IslandLoad + inrush > IslandCapacity)
             {
-                Collapses++;
                 if (Current == Phase.Island)
-                {
-                    // Back to the cranking with everything dark again (bible §10.3.3).
-                    LastMessage = $"{AreaName(areaId)}'s inrush pulled the island down. Start again, and pick smaller loads first.";
-                    foreach (var id in Energised.Keys) _grid.Area(id).Shed = true;
-                    Energised.Clear();
-                    IslandLoad = 0;
-                    foreach (var u in OnIsland) u.SetState(UnitState.AwaitingSync);
-                    OnIsland.Clear();
-                    Chosen = null;
-                    Go(Phase.Cranking);
-                }
+                    Collapse($"{AreaName(areaId)}'s inrush pulled the island down. Start again, and pick smaller loads first.");
                 else LastMessage = $"Not enough on the island to pick up {AreaName(areaId)} yet. Bring on another unit.";
+                return false;
+            }
+            if (IslandLoad + Transient + inrush > IslandCapacity)
+            {
+                // It would have fitted, had the last pickup's dip died away first.
+                if (Current == Phase.Island)
+                    Collapse($"{AreaName(areaId)} came on before the frequency had recovered, and the dips together " +
+                             "pulled the island down. Start again, and let the needle settle between pickups.");
+                else ReliefTrip();
                 return false;
             }
             a.Shed = false;
             Energised[areaId] = ChunksOn(areaId) + 1;
             IslandLoad += running;
+            Transient += inrush - running;
+            _picked.Push((areaId, running));
             LastMessage = ChunksOn(areaId) >= Chunks ? $"{AreaName(areaId)} is back." : $"{AreaName(areaId)}: {ChunksOn(areaId)} of {Chunks} substations back.";
             return true;
         }
+
+        // Back to the cranking with everything dark again (bible §10.3.3).
+        private void Collapse(string message)
+        {
+            Collapses++;
+            LastMessage = message;
+            foreach (var id in Energised.Keys) _grid.Area(id).Shed = true;
+            Energised.Clear();
+            _picked.Clear();
+            IslandLoad = 0;
+            Transient = 0;
+            foreach (var u in OnIsland) u.SetState(UnitState.AwaitingSync);
+            OnIsland.Clear();
+            Chosen = null;
+            Diesel = null;
+            Hydro = null;
+            Go(Phase.Cranking);
+        }
+
+        // In restoration the island is big enough to ride a deep dip, but the under-frequency
+        // relays throw the last substation picked up back off to save it.
+        private void ReliefTrip()
+        {
+            ReliefTrips++;
+            Transient *= 0.5;
+            if (_picked.Count == 0)
+            {
+                LastMessage = "The frequency dipped too far. Let it recover before the next pickup.";
+                return;
+            }
+            var (id, running) = _picked.Pop();
+            IslandLoad = Math.Max(0, IslandLoad - running);
+            if (--Energised[id] <= 0)
+            {
+                Energised.Remove(id);
+                _grid.Area(id).Shed = true;
+            }
+            LastMessage = $"The frequency dipped too far: the relays threw {AreaName(id)}'s last substation back off. " +
+                          "Let it recover between pickups.";
+        }
+
+        // The next substation would fit with the island as it is now, the last dip included.
+        public bool FitsNow(string areaId)
+        {
+            if (!Fits(areaId)) return false;
+            double running = RunningLoadOf(areaId) / Chunks;
+            return IslandLoad + Transient + running * (IsIndustrial(areaId) ? IndustrialInrush : HouseholdInrush) <= IslandCapacity;
+        }
+
+        // The island's frequency: down by the share of its headroom the inrush is taking.
+        // The governor holds it at 50 Hz once the inrush has died away.
+        public double IslandHz
+        {
+            get
+            {
+                if (Current == Phase.Synchronise) return IslandFrequency;
+                double headroom = IslandCapacity - IslandLoad;
+                if (headroom <= 0) return GridDispatch.Nominal - DipHz;
+                return GridDispatch.Nominal - DipHz * Math.Min(1, Transient / headroom);
+            }
+        }
+
+        // The frequency at which the island is past saving.
+        public static double CollapseHz => GridDispatch.Nominal - DipHz;
 
         private string AreaName(string id) => _grid.AreaName(id);
 
@@ -282,29 +362,75 @@ namespace IdlePowerGen.Controllers
             if (!CanHold) return;
             SecondUnit = Candidates.OrderByDescending(u => u.Capacity(SimulationTick.Instance?.Grid)).FirstOrDefault();
             if (SecondUnit == null) { Go(Phase.Restore); return; }
-            StepIndex = 0;
-            StepElapsed = 0;
-            StepFailed = false;
+            BeginSequence();
             Go(Phase.SecondUnit);
         }
 
         // ---- Phase 3: the second unit's start sequence ----
 
+        private void BeginSequence()
+        {
+            StepIndex = 0;
+            StepFailed = false;
+            Sequence = new BlackStartSequence(_rng);
+        }
+
+        // The player's hands for each step.
+        public bool CloseAuxiliary(string breaker) =>
+            Current == Phase.SecondUnit && !StepFailed && CurrentStep?.Kind == BlackStartSequence.Kind.Breakers &&
+            Sequence.CloseBreaker(breaker);
+
+        public void HoldPump(bool held)
+        {
+            if (Sequence != null) Sequence.PumpHeld = held && Current == Phase.SecondUnit && !StepFailed;
+        }
+
+        public void SetSteamValve(double opening)
+        {
+            if (Current == Phase.SecondUnit && !StepFailed) Sequence?.SetValve(opening);
+        }
+
+        // A step done by hand still has to take: neglected plant fails more (bible §11.2).
+        private void FinishStep()
+        {
+            if (!_bypassed && _rng.NextDouble() < StepFailureChance)
+            {
+                StepFailed = true;
+                LastMessage = $"{CurrentStep.Name}: it didn't take.";
+                return;
+            }
+            AdvanceStep();
+        }
+
+        private void AdvanceStep()
+        {
+            _bypassed = false;
+            StepIndex++;
+            LastMessage = null;
+            if (StepIndex >= Steps.Count)
+            {
+                Scope = new Synchroscope(IslandFrequency, _rng);
+                Go(Phase.Synchronise);
+            }
+        }
+
+        // The step again from its start: the time it takes is the cost.
         public void Retry()
         {
             if (!StepFailed) return;
             StepFailed = false;
-            StepElapsed = -60; // a minute's penalty (bible §10.3.4), on top of the step again
+            Sequence.Reset(CurrentStep.Kind);
+            LastMessage = null;
         }
 
-        // Faster, with a chance of damage to the unit later (bible §10.3.4).
+        // Skips the step, with a chance of damage to the unit later (bible §10.3.4).
         public void Bypass()
         {
             if (!StepFailed) return;
             StepFailed = false;
             _bypassed = true;
-            StepElapsed = Steps[StepIndex].Seconds;
             if (_rng.NextDouble() < 0.25) _bypassDamage = true;
+            AdvanceStep();
         }
         private bool _bypassDamage;
 
@@ -314,9 +440,7 @@ namespace IdlePowerGen.Controllers
             if (!StepFailed) return;
             SecondUnit.SetState(UnitState.Faulted, Data.Era4Data.RepairHours);
             SecondUnit = Candidates.OrderByDescending(u => u.Capacity(SimulationTick.Instance?.Grid)).FirstOrDefault();
-            StepIndex = 0;
-            StepElapsed = 0;
-            StepFailed = false;
+            BeginSequence();
             if (SecondUnit == null) Go(Phase.Restore);
         }
 
@@ -334,8 +458,7 @@ namespace IdlePowerGen.Controllers
                 SecondUnit.SetState(UnitState.Faulted, Data.Era4Data.SlamRepairHours);
                 LastMessage = $"Unit {SecondUnit.Number}'s breaker slammed. Bring up another.";
                 SecondUnit = Candidates.OrderByDescending(u => u.Capacity(SimulationTick.Instance?.Grid)).FirstOrDefault();
-                StepIndex = 0;
-                StepElapsed = 0;
+                BeginSequence();
                 Go(SecondUnit != null ? Phase.SecondUnit : Phase.Restore);
                 return result;
             }
@@ -418,7 +541,10 @@ namespace IdlePowerGen.Controllers
             TrustLost = (float)Math.Clamp(minutes * 0.05, 1, 12);
             if (_grid.MaintenanceScore < 60) Factors.Add($"Maintenance at {_grid.MaintenanceScore:0}: units were overdue for service.");
             if (_grid.HasCoalUnits && _grid.FuelScore < 60) Factors.Add($"Fuel cover at {_grid.FuelScore:0}: the coal yard was low.");
-            if (Collapses > 0) Factors.Add($"The island went down {Collapses} time{(Collapses == 1 ? "" : "s")}: big loads first are the trap.");
+            if (Collapses > 0) Factors.Add($"The island went down {Collapses} time{(Collapses == 1 ? "" : "s")}: big loads first, " +
+                                           "or pickups too close together, are the trap.");
+            if (ReliefTrips > 0) Factors.Add($"The relays threw {ReliefTrips} pickup{(ReliefTrips == 1 ? "" : "s")} back off: " +
+                                             "the frequency needs a moment between them.");
             if (StartUnits.Count == 1) Factors.Add("Only the old diesel set could start a dead grid.");
             if (LeftDark.Count > 0)
                 Factors.Add($"Not enough units to carry {string.Join(", ", LeftDark.Take(3).Select(AreaName))}" +

@@ -117,8 +117,8 @@ Midlands region, 12th November 1952. 1 GW → 50 GW. One new concept: power isn'
 
 ## Black start (bible §10)
 
-Triage → cranking (tap the Era 1 crank) → establish an island (pick loads under capacity, mind
-industrial inrush) → second unit's start sequence (step failures driven by the Maintenance and
+Triage → cranking (the Era 1 crank, or a hydro unit's gates) → establish an island (pick loads
+under capacity, mind industrial inrush) → second unit's start sequence (step failures driven by the Maintenance and
 Fuel scores) → synchronise (the synchroscope again) → restoration to 95 % of the load → post-mortem.
 No way out once it starts (bible §15.3); a blackout that would happen offline is never simulated.
 
@@ -127,6 +127,29 @@ back to 95 %. Once there is no unit left to bring on and no substation that fits
 be finished anyway; the grid restarts carrying only what its units can (with a 5 % margin), and the
 rest stays dropped, named in the post-mortem, to be picked up once there's reserve. Without that
 the black start had no end.
+
+Every phase is played by hand, not by tapping a count or waiting out a timer:
+
+* **The diesel** is a rhythm. Each turn of the crank adds speed and the engine slows between
+  turns; about two turns a second hold it in the green, and a turn past the top of the green
+  kicks back. Three seconds in the green builds compression; then Fire, as the piston comes over
+  the top (a window of about a fifth of a second). A miss, a kick or a slow fire costs some
+  compression, never the whole start.
+* **A hydro unit** is run up on its gate lever. The water follows the gates a moment behind, so
+  a turbine opened wide keeps accelerating after the gates are eased back: overshoot 112 % and the
+  governor trips and shuts them for two seconds. Three seconds at rated speed (97–103 %) and it's
+  running.
+* **The island's frequency** dips with each pickup's inrush (above its running load) and recovers
+  over a few seconds. A pickup that would fit at rest pulls the island down if it comes on top of
+  the last one's dip; in restoration the under-frequency relays throw the last substation back off
+  instead. The list says which substations must wait for the needle to settle.
+* **The second unit's start sequence** is three hands-on steps: close the auxiliary breakers
+  supply-first (transformer, unit board, feed pumps; shown shuffled, and a load before its supply
+  opens them all), hold the oil pump until the pressure has sat in its band for three seconds (past
+  full the relief valve dumps it), and warm the turbine on the steam valve. Half open never
+  stresses the casing; wider is quicker but builds stress, and full stress fails the step. A step
+  done by hand still rolls the preparedness failure chance, as before; Retry starts the step again,
+  Bypass skips it at a risk of damage.
 
 ## Pacing
 

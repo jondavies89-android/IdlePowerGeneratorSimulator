@@ -432,24 +432,7 @@ public static class UnitGridScreenKit
         var order = ScreenKit.Button(t, panel, "Order", "", 44, t.PanelRaised, 15);
         var manager = Stack("Manager", panel, spacing: 2);
         var label = Text(t, manager, "Label", "", 13, t.TextMuted);
-        var sliderRt = Rect("Target", manager);
-        Fixed(sliderRt, 32);
-        var slider = sliderRt.gameObject.AddComponent<Slider>();
-        var track = Rect("Background", sliderRt);
-        track.anchorMin = new Vector2(0, 0.5f); track.anchorMax = new Vector2(1, 0.5f); track.sizeDelta = new Vector2(0, 6);
-        AddImage(track, Era1SpriteFactory.White, t.Track).raycastTarget = false;
-        var fillArea = Rect("Fill Area", sliderRt);
-        fillArea.anchorMin = new Vector2(0, 0.5f); fillArea.anchorMax = new Vector2(1, 0.5f); fillArea.sizeDelta = new Vector2(-20, 6);
-        var sfill = Rect("Fill", fillArea);
-        sfill.sizeDelta = new Vector2(10, 0);
-        AddImage(sfill, Era1SpriteFactory.White, t.Money).raycastTarget = false;
-        var handleArea = Rect("Handle Slide Area", sliderRt);
-        Stretch(handleArea);
-        handleArea.offsetMin = new Vector2(10, 0); handleArea.offsetMax = new Vector2(-10, 0);
-        var handle = Rect("Handle", handleArea);
-        handle.sizeDelta = new Vector2(26, 0);
-        var hImg = AddImage(handle, Era1SpriteFactory.Disc, t.Money);
-        slider.fillRect = sfill; slider.handleRect = handle; slider.targetGraphic = hImg;
+        var slider = LeverSlider(t, manager, "Target", 32, 26, t.Money);
 
         var view = holder.gameObject.AddComponent<FuelPanelView>();
         Wire(view, ("_grid", grid), ("_panel", panel.gameObject), ("_stockLabel", stock), ("_fill", fill), ("_order", order),
@@ -458,6 +441,67 @@ public static class UnitGridScreenKit
         SetColours(view, ("_healthy", t.Healthy), ("_caution", t.Caution), ("_alarm", t.Alarm));
         manager.gameObject.SetActive(false);
         panel.gameObject.SetActive(false);
+    }
+
+    // A horizontal slider with a round handle: the fuel target, the gates and the steam valve.
+    public static Slider LeverSlider(ScreenTheme t, Transform parent, string name, float height, float handleSize, Color colour)
+    {
+        var sliderRt = Rect(name, parent);
+        Fixed(sliderRt, height);
+        var slider = sliderRt.gameObject.AddComponent<Slider>();
+        var track = Rect("Background", sliderRt);
+        track.anchorMin = new Vector2(0, 0.5f); track.anchorMax = new Vector2(1, 0.5f); track.sizeDelta = new Vector2(0, 6);
+        AddImage(track, Era1SpriteFactory.White, t.Track).raycastTarget = false;
+        var fillArea = Rect("Fill Area", sliderRt);
+        fillArea.anchorMin = new Vector2(0, 0.5f); fillArea.anchorMax = new Vector2(1, 0.5f); fillArea.sizeDelta = new Vector2(-20, 6);
+        var sfill = Rect("Fill", fillArea);
+        sfill.sizeDelta = new Vector2(10, 0);
+        AddImage(sfill, Era1SpriteFactory.White, colour).raycastTarget = false;
+        var handleArea = Rect("Handle Slide Area", sliderRt);
+        Stretch(handleArea);
+        handleArea.offsetMin = new Vector2(handleSize / 2, 0); handleArea.offsetMax = new Vector2(-handleSize / 2, 0);
+        var handle = Rect("Handle", handleArea);
+        handle.sizeDelta = new Vector2(handleSize, 0);
+        var hImg = AddImage(handle, Era1SpriteFactory.Disc, colour);
+        slider.fillRect = sfill; slider.handleRect = handle; slider.targetGraphic = hImg;
+        return slider;
+    }
+
+    // A labelled band gauge (BandGaugeView): the name and reading above, the track below.
+    private static BandGaugeView Gauge(ScreenTheme t, Transform parent, string name)
+    {
+        var holder = Stack(name, parent, spacing: 3);
+        var top = Row(holder, "Top");
+        var label = Text(t, top, "Label", "", 13, t.TextMuted);
+        Flexible(label);
+        var value = Text(t, top, "Value", "", 15, t.Text, TextAlignmentOptions.Right, numerals: true);
+        value.textWrappingMode = TextWrappingModes.NoWrap;
+        var track = Rect("Track", holder);
+        Fixed(track, 20);
+        AddImage(track, Era1SpriteFactory.White, t.Track).raycastTarget = false;
+        RectTransform Zone(string zoneName, Color c)
+        {
+            var z = Rect(zoneName, track);
+            AddImage(z, Era1SpriteFactory.White, new Color(c.r, c.g, c.b, 0.45f)).raycastTarget = false;
+            return z;
+        }
+        var band = Zone("Band", t.Healthy);
+        var red = Zone("Red", t.Alarm);
+        // The reading over the zones, half the track's height so the bands show either side.
+        var fillRt = Rect("Fill", track);
+        fillRt.anchorMin = new Vector2(0, 0.25f); fillRt.anchorMax = new Vector2(1, 0.75f);
+        fillRt.offsetMin = fillRt.offsetMax = Vector2.zero;
+        var fill = AddImage(fillRt, Era1SpriteFactory.White, t.Caution);
+        fill.raycastTarget = false;
+        fill.type = Image.Type.Filled;
+        fill.fillMethod = Image.FillMethod.Horizontal;
+        var marker = Rect("Marker", track);
+        marker.sizeDelta = new Vector2(6, 28);
+        AddImage(marker, Era1SpriteFactory.White, t.Text).raycastTarget = false;
+        var view = holder.gameObject.AddComponent<BandGaugeView>();
+        Wire(view, ("_label", label), ("_value", value), ("_fill", fill), ("_band", band), ("_red", red), ("_marker", marker));
+        holder.gameObject.SetActive(false);
+        return view;
     }
 
     public static void Areas(ScreenTheme t, Transform content, UnitGridController grid, string heading)
@@ -506,12 +550,21 @@ public static class UnitGridScreenKit
         var bar = Bar(t, barRow, "Bar", 10, t.Caution);
         var barLabel = Text(t, barRow, "Label", "", 12, t.TextMuted, TextAlignmentOptions.Center);
 
+        // The hands-on controls: two gauges, a lever for the gates or the steam valve, the
+        // crank and its Fire button, and the hold button for the gates' old place (the oil pump).
+        var gaugeA = Gauge(t, column, "GaugeA");
+        var gaugeB = Gauge(t, column, "GaugeB");
+        var lever = Stack("Lever", column, spacing: 2);
+        var leverLabel = Text(t, lever, "Label", "", 13, t.Text);
+        var leverSlider = LeverSlider(t, lever, "Slider", 44, 40, t.Caution);
+        lever.gameObject.SetActive(false);
+
         var crank = Rect("Crank", column);
-        Fixed(crank, 160);
+        Fixed(crank, 140);
         var crankImg = Rect("Wheel", crank);
         crankImg.anchorMin = crankImg.anchorMax = new Vector2(0.5f, 0.5f);
-        crankImg.sizeDelta = new Vector2(130, 130);
-        crankImg.anchoredPosition = new Vector2(0, 12);
+        crankImg.sizeDelta = new Vector2(116, 116);
+        crankImg.anchoredPosition = new Vector2(0, 10);
         var wheel = AddImage(crankImg, Era1SpriteFactory.Crank, Color.white);
         var crankButton = crankImg.gameObject.AddComponent<UnityEngine.UI.Button>();
         crankButton.targetGraphic = wheel;
@@ -523,7 +576,8 @@ public static class UnitGridScreenKit
         crankLabel.rectTransform.pivot = new Vector2(0.5f, 0);
         crankLabel.rectTransform.sizeDelta = new Vector2(0, 20);
 
-        var gates = ScreenKit.Button(t, column, "Gates", "Hold the gates open", 64, t.PanelRaised, 17);
+        var fire = ScreenKit.Button(t, column, "Fire", "Fire", 56, t.PanelRaised, 18);
+        var gates = ScreenKit.Button(t, column, "Gates", "Hold to run the oil pump", 64, t.PanelRaised, 17);
         var hold = gates.gameObject.AddComponent<HoldButton>();
 
         var listScroll = ScreenKit.Scroll(column);
@@ -540,8 +594,10 @@ public static class UnitGridScreenKit
                    ("_gatesLabel", gates.GetComponentInChildren<TextMeshProUGUI>()), ("_bar", bar), ("_barLabel", barLabel),
                    ("_primary", primary), ("_primaryLabel", primary.GetComponentInChildren<TextMeshProUGUI>()),
                    ("_secondary", secondary), ("_secondaryLabel", secondary.GetComponentInChildren<TextMeshProUGUI>()),
-                   ("_tertiary", tertiary), ("_tertiaryLabel", tertiary.GetComponentInChildren<TextMeshProUGUI>()), ("_sync", sync));
-        SetColours(view, ("_ready", t.Healthy), ("_caution", t.Caution), ("_muted", t.TextMuted));
+                   ("_tertiary", tertiary), ("_tertiaryLabel", tertiary.GetComponentInChildren<TextMeshProUGUI>()), ("_sync", sync),
+                   ("_gaugeA", gaugeA), ("_gaugeB", gaugeB), ("_lever", leverSlider), ("_leverLabel", leverLabel),
+                   ("_fire", fire), ("_fireLabel", fire.GetComponentInChildren<TextMeshProUGUI>()));
+        SetColours(view, ("_ready", t.Healthy), ("_caution", t.Caution), ("_muted", t.TextMuted), ("_alarm", t.Alarm));
         panel.gameObject.SetActive(false);
     }
 }

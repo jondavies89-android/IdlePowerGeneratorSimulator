@@ -328,13 +328,26 @@ namespace IdlePowerGen.Tests
             Assert.That(s.Current, Is.EqualTo(BlackStartSession.Phase.Cranking));
         }
 
+        // The diesel cranked steadily and fired at the top, as a player does it.
         private static BlackStartSession Cranked()
         {
             var s = Dark();
             s.Tick(BlackStartSession.TriageSeconds + 0.1);
             s.Choose(0);
-            for (int i = 0; i < 12; i++) s.Crank();
+            for (int i = 0; i < 600 && s.Current == BlackStartSession.Phase.Cranking; i++)
+            {
+                if (s.Diesel.Speed < 0.62) s.Crank();
+                s.Tick(0.05);
+                if (s.Diesel.Ready && s.Diesel.AtTop) s.Fire();
+            }
             return s;
+        }
+
+        // A pickup, then long enough for its inrush to die away.
+        private static void Pick(BlackStartSession s, string id)
+        {
+            s.Energise(id);
+            s.Tick(10);
         }
 
         [UnityTest]
@@ -366,12 +379,12 @@ namespace IdlePowerGen.Tests
         private static BlackStartSession Restored()
         {
             var s = Cranked();
-            s.Energise("f4_oldtown");
-            s.Energise("f4_oldtown");
+            Pick(s, "f4_oldtown");
+            Pick(s, "f4_oldtown");
             s.IslandHolding(); // no other unit: straight to restoration
             s.BringOnNext();   // the old station
-            s.Energise("f4_oldtown");
-            s.Energise("f4_oldtown");
+            Pick(s, "f4_oldtown");
+            Pick(s, "f4_oldtown");
             s.FinishRestoration();
             return s;
         }
@@ -409,7 +422,7 @@ namespace IdlePowerGen.Tests
             for (int i = 0; i < 500; i++)
             {
                 var next = s.LitBefore.FirstOrDefault(s.Fits);
-                if (next != null) s.Energise(next);
+                if (next != null) Pick(s, next);
                 else if (s.Current == BlackStartSession.Phase.Island) s.IslandHolding();
                 else if (s.CanBringOn) s.BringOnNext();
                 else break;
@@ -450,9 +463,110 @@ namespace IdlePowerGen.Tests
             yield return StartEra4();
             OnlineCoalUnit();
             var s = Cranked();
-            s.Energise("f4_oldtown");
+            Pick(s, "f4_oldtown");
             s.IslandHolding();
             Assert.That(s.Current, Is.EqualTo(BlackStartSession.Phase.SecondUnit));
+        }
+
+        // The second unit's start sequence played by hand, a failed step bypassed.
+        private static BlackStartSession SequencePlayed()
+        {
+            OnlineCoalUnit();
+            var s = Cranked();
+            Pick(s, "f4_oldtown");
+            s.IslandHolding();
+            for (int i = 0; i < 2000 && s.Current == BlackStartSession.Phase.SecondUnit; i++)
+            {
+                if (s.StepFailed) { s.Bypass(); continue; }
+                switch (s.CurrentStep.Kind)
+                {
+                    case BlackStartSequence.Kind.Breakers:
+                        s.CloseAuxiliary(BlackStartSequence.BreakerOrder[s.Sequence.BreakersClosed]);
+                        break;
+                    case BlackStartSequence.Kind.OilPump:
+                        s.HoldPump(s.Sequence.Pressure < 0.7);
+                        break;
+                    default:
+                        s.SetSteamValve(BlackStartSequence.SafeOpening);
+                        break;
+                }
+                s.Tick(0.05);
+            }
+            return s;
+        }
+
+        [UnityTest]
+        public IEnumerator TheStartSequenceDoneByHandReachesSynchronising()
+        {
+            yield return StartEra4();
+            Assert.That(SequencePlayed().Current, Is.EqualTo(BlackStartSession.Phase.Synchronise));
+        }
+
+        [UnityTest]
+        public IEnumerator TheStartSequenceDoesNotRunItself()
+        {
+            yield return StartEra4();
+            OnlineCoalUnit();
+            var s = Cranked();
+            Pick(s, "f4_oldtown");
+            s.IslandHolding();
+            s.Tick(120);
+            Assert.That(s.StepIndex, Is.EqualTo(0));
+        }
+
+        // --- The island's frequency ---
+
+        [UnityTest]
+        public IEnumerator APickupDipsTheIslandsFrequency()
+        {
+            yield return StartEra4();
+            var s = Cranked();
+            s.Energise("f4_oldtown");
+            Assert.That(s.IslandHz, Is.LessThan(49.9));
+        }
+
+        [UnityTest]
+        public IEnumerator TheIslandsFrequencyRecovers()
+        {
+            yield return StartEra4();
+            var s = Cranked();
+            Pick(s, "f4_oldtown");
+            Assert.That(s.IslandHz, Is.GreaterThan(49.95));
+        }
+
+        // Pickups made one straight after another until one would fit at rest but not on
+        // top of the last one's dip. Every area is lit, for loads of every size.
+        private static (BlackStartSession s, string id) StackedDips()
+        {
+            foreach (var a in Station.Areas) a.Connected = true;
+            var s = Cranked();
+            for (int i = 0; i < 40; i++)
+            {
+                var stacked = s.LitBefore.FirstOrDefault(x => s.Fits(x) && !s.FitsNow(x));
+                if (stacked != null) return (s, stacked);
+                var next = s.LitBefore.Where(s.FitsNow).OrderBy(s.RunningLoadOf).FirstOrDefault();
+                if (next == null) break;
+                s.Energise(next);
+            }
+            return (s, null);
+        }
+
+        [UnityTest]
+        public IEnumerator APickupOnTopOfTheLastOnesDipPullsTheIslandDown()
+        {
+            yield return StartEra4();
+            var (s, id) = StackedDips();
+            Assume.That(id, Is.Not.Null);
+            s.Energise(id);
+            Assert.That(s.Current, Is.EqualTo(BlackStartSession.Phase.Cranking));
+        }
+
+        [UnityTest]
+        public IEnumerator PickupsInQuickSuccessionStackTheirDips()
+        {
+            yield return StartEra4();
+            var (_, id) = StackedDips();
+            Assert.That(id, Is.Not.Null);
         }
     }
 }
